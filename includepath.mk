@@ -1,0 +1,6 @@
+LOADERFOLDER = loader
+KERNELFOLDER = kernel
+KRNLIBRARYFOLDER = library
+ROOTBINARYFOLDER = bin
+
+HALFOLDER = hardware

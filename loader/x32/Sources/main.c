@@ -2,7 +2,7 @@
 #include <strings.h>
 #include <stdarg.h>
 
-#include <Paging.h>
+#include <intel_paging.h>
 
 typedef struct m_mmap_x32 {
 	unsigned int size;

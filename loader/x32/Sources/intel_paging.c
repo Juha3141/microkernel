@@ -1,4 +1,4 @@
-#include <Paging.h>
+#include <intel_paging.h>
 
 void SetPageEntry(struct PageEntry *PageEntry , unsigned int BaseAddressLow , unsigned int BaseAddressHigh , unsigned short Flags) {
     PageEntry->BaseAddressLow = (BaseAddressLow >> 12)|(BaseAddressHigh<<(32-12));

@@ -4,3 +4,5 @@ KRNLIBRARYFOLDER = library
 ROOTBINARYFOLDER = bin
 
 HALFOLDER = hardware
+
+KERNELTARGET = Kernel.krn

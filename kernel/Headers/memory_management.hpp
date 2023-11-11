@@ -14,7 +14,7 @@
 
 #define MEMMANAGER_SIGNATURE 0x3141
 
-namespace Memory {
+namespace memory {
     struct Node {
         struct Node *next;
         struct Node *previous;
@@ -23,28 +23,21 @@ namespace Memory {
         byte occupied:1;
         short signature:15;
     }; // Total 18 bytes
-    enum Alignment {
-        NO_ALIGN = 0 , 
-        ALIGN_4K = 4096 , 
-        ALIGN_8K = 8192
-    };
     class NodeManager {
         public:
-            void Initialize(max_t start_address , max_t total_usable_mem , int memmap_count , memory_map *memmap);
-            struct Node *SearchReasonableNode(max_t size);
-            struct Node *SearchAlignedNode(max_t size , Alignment alignment);
-            struct Node *SearchNewNodeLocation(max_t *prev_node);
+            void init(max_t start_address , max_t total_usable_mem , int memmap_count , memory_map *memmap);
+            struct Node *search_first_fit(max_t size);
+            struct Node *search_aligned(max_t size , max_t alignment);
+            struct Node *search_new_node_location(max_t *prev_node);
             
-            struct Node *CreateNewNode(max_t size , Alignment alignment);
-            void WriteNodeData(struct Node *node , unsigned char occupied , max_t Size , Alignment alignment , max_t next_node=INVALID , max_t previous_node=INVALID);
+            struct Node *create_new_node(max_t size , max_t alignment);
+            void write_node_data(struct Node *node , unsigned char occupied , max_t Size , max_t alignment , max_t next_node=INVALID , max_t previous_node=INVALID);
             
-            struct Node *AdjustNode(struct Node *node); // If node violated reserved memory, adjust it.
-            struct Node *AlignNode(struct Node *node , Alignment alignment , max_t previous_node); // Align newly created node
-            
+            struct Node *align(struct Node *node , max_t alignment , max_t previous_node); // Align newly created node
+            /*
             int IsNodeInUnusableMemory(struct Node *node , memory_map *violated);
             void AddUnusableMemory(max_t start_address , max_t size);
-            
-            void MapNodes(void);
+            */
             
             struct Node *node_start;
             struct Node *current_node; // Next address of lastly allocated node
@@ -55,16 +48,14 @@ namespace Memory {
             int unusable_memories_count;
             memory_map unusable_memories[512];
     };
-    void Initialize(void);
+    void init(void);
 
-    max_t AlignAddress(max_t address , Alignment alignment);
+    max_t align_address(max_t address , max_t alignment);
     
-    max_t GetNodeSize(struct Node *node);
-    bool IsMemoryInside(max_t source , max_t s_length , max_t target , max_t t_length);
-    void *Allocate(max_t size , Alignment alignment=NO_ALIGN);
-    void Free(ptr_t *ptr);
+    max_t get_node_size(struct Node *node);
+    void *kmem_alloc(max_t size , max_t alignment=0);
+    void kmem_free(ptr_t *ptr);
     // Protect memory from being allocated by kernel.
-    void ProtectMemory(max_t start_address , max_t size);
 }
 
 #endif

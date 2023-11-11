@@ -4,8 +4,10 @@
 extern "C" void kernel_main(void) {
     Debug::Initialize();
     Debug::SetPosition(0 , 0);
+    Debug::printf("Hello world!\n");
     
-    Memory::Initialize();
+    memory::init();
+    // TaskManagement::Initialize();
     
     while(1) {
         ;

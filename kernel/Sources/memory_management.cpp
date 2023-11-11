@@ -10,12 +10,11 @@
 #include <string.hpp>
 #include <debug.hpp>
 
-void Memory::Initialize(void) {
+void memory::init(void) {
 	word memmap_entry_count = 0;
 	max_t total_memory = 0;
-	Memory::NodeManager *NodeManager;
 	memory_map memmap[64];
-	memmap_entry_count = Architecture::get_memory_map(memmap);
+	// memmap_entry_count = get_memory_map(memmap);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,26 +75,29 @@ static bool is_aligned_8K(max_t addr) {
 	return false;
 }
 
-void *Memory::Allocate(max_t size , Memory::Alignment alignment) {
+/// @brief Allocate physical kernel memory
+/// @param size Size to allocate
+/// @param alignment Alignment
+/// @return 
+void *memory::kmem_alloc(max_t size , max_t alignment) {
 	default_t i;
 	max_t address;
 	max_t total_node_size = 0;	// TotalNodeSize : Size of the total node that is going to be used for allocation
 	// Load the node_mgr from the local address
 	
-	// Don't use macro.
 	NodeManager *node_mgr = (NodeManager *)/*MEMORYMANAGEMENT_MEMORY_STARTADDRESS*/0x00;
 	if(size == 0) {
 		Debug::printf("Allocation Error #0 : Zero allocated size\n");
 		return 0x00;
 	}
-	struct Node *node = (struct Node *)node_mgr->SearchReasonableNode(size); // Search available node
+	struct Node *node = (struct Node *)node_mgr->search_first_fit(size); // Search available node
 	struct Node *separated_node;
 	if(node->next != 0) {			// If the next node is present, set TotalNodeSize to the size of searched node.
 		total_node_size = ((max_t)node->next)-((max_t)node)-sizeof(struct Node);	// TotalNodeSize : size of the current node
 	}
 	if(node == 0x00) { // If we have to create new node, create new node at the end of the segments
 		// Debug::printf("Creating new node\n");
-		node = node_mgr->CreateNewNode(size , alignment);
+		node = node_mgr->create_new_node(size , alignment);
 		if(node == 0x00) {
 			Debug::printf("Error! no node can be created anymore\n");
 			while(1) {
@@ -111,16 +113,16 @@ void *Memory::Allocate(max_t size , Memory::Alignment alignment) {
 	else {	// Using already existing node
 		// Debug::printf("Using existing node\n");
 		// Debug::printf("NodeLocation : 0x%X\n" , Node);
-		if(alignment != NO_ALIGN) {
+		if(alignment != 0) { // is it not aligned
 			// Search New alignable location
 			// Debug::printf("Alignment : %d\n" , Alignment);
-			node = (struct Node *)node_mgr->SearchAlignedNode(size , alignment);
+			node = (struct Node *)node_mgr->search_aligned(size , alignment);
 			// Debug::printf("Found aligned, new one : 0x%X\n" , Node);
 			if(node == 0) {
-				node = node_mgr->CreateNewNode(size , alignment);
+				node = node_mgr->create_new_node(size , alignment);
 			}
 		}
-		node_mgr->WriteNodeData(node , 1 , size , NO_ALIGN);
+		node_mgr->write_node_data(node , 1 , size , 0);
 		// Seperate node
 		if(total_node_size >= size) {
 			// Separate node to prevent internal fragmentation(Allow residual unused area usable)
@@ -132,7 +134,7 @@ void *Memory::Allocate(max_t size , Memory::Alignment alignment) {
 					;
 				}
 			}
-			node_mgr->WriteNodeData(separated_node , 0 , total_node_size-size-sizeof(struct Node) , NO_ALIGN , (max_t)node->next , (max_t)node);
+			node_mgr->write_node_data(separated_node , 0 , total_node_size-size-sizeof(struct Node) , 0 , (max_t)node->next , (max_t)node);
 		}
 	}
 	node_mgr->currently_using_mem += size;
@@ -172,8 +174,10 @@ void *Memory::Allocate(max_t size , Memory::Alignment alignment) {
 // +--------------------------------------+  +--------------------------------------+         //
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-// problem in memory free system
-void Memory::Free(ptr_t *address) {
+
+/// @brief Deallocate physical kernel memory
+/// @param address Address of memory chunk
+void memory::kmem_free(ptr_t *address) {
 	bool merged = false;
 	max_t total_merging_size = 0;
 	struct Node *node_ptr;
@@ -212,7 +216,7 @@ void Memory::Free(ptr_t *address) {
 		Debug::printf("Total Merging size : %d\n" , (((max_t)node_ptr->next)-((max_t)current_node)-sizeof(struct Node)));
 		*/
 		// Done erasing : Modify the next node location to the end of the node(It's going to be using node).
-		node_mgr->WriteNodeData(((struct Node *)current_node) , 0 , (((max_t)node_ptr->next)-((max_t)current_node)-sizeof(struct Node)) , NO_ALIGN , (max_t)node_ptr->next); // Free the node
+		node_mgr->write_node_data(((struct Node *)current_node) , 0 , (((max_t)node_ptr->next)-((max_t)current_node)-sizeof(struct Node)) , 0 , (max_t)node_ptr->next); // Free the node
 	}
 	// If the previous node is usable, and present, the node can be merged.
 	// (Why are we merging and seperating the segment? Because, it can reduce the external fragmentation)
@@ -234,12 +238,12 @@ void Memory::Free(ptr_t *address) {
 		Debug::printf("current_node->next : 0x%X\n" , current_node->next);
 		Debug::printf("Size : %d\n" , (((max_t)current_node->next)-((max_t)node_ptr)-sizeof(struct Node)));
 		*/
-		node_mgr->WriteNodeData(node_ptr , 0 , (((max_t)current_node->next)-((max_t)node_ptr)-sizeof(struct Node)) , NO_ALIGN , (max_t)current_node->next);
+		node_mgr->write_node_data(node_ptr , 0 , (((max_t)current_node->next)-((max_t)node_ptr)-sizeof(struct Node)) , 0 , (max_t)current_node->next);
 		node_mgr->last_freed_node = node_ptr;
 		/*
 		next_node = node->next; // Next node of original node
 		node_prev = node->previous->previous;
-		node_mgr->WriteNodeData(node->previous , 0 , ((max_t)Node)-(max_t)node->previous-sizeof(struct Node) , (max_t)next_node , (max_t)node_prev);
+		node_mgr->write_node_data(node->previous , 0 , ((max_t)Node)-(max_t)node->previous-sizeof(struct Node) , (max_t)next_node , (max_t)node_prev);
 		*/
 	}
 	if(merged == false) {
@@ -262,29 +266,12 @@ void Memory::Free(ptr_t *address) {
 	}
 }
 
-void Memory::ProtectMemory(max_t start_address , max_t size) {
-	Memory::NodeManager *NodeManager = (Memory::NodeManager *)/*MEMORYMANAGEMENT_MEMORY_STARTADDRESS*/0x00;
-	NodeManager->AddUnusableMemory(start_address , size);
-	Debug::printf("Added to unusable memory list : 0x%X~0x%X\n" , start_address , start_address+size);
-}
-
-/// @brief Dump informations of every node
-void Memory::NodeManager::MapNodes(void) {
-	int i = 0;
-	struct Node *Node = this->node_start;	// Start from StartAddress, 
-	while(Node->signature == MEMMANAGER_SIGNATURE) {
-		Debug::printf("%02d:%d|%d " , i++ , Node->occupied , ((max_t)Node->next)-(max_t)Node-sizeof(struct Node));
-		Node = Node->next;				// Print the information of the node, until the node runs out.
-	}
-	Debug::printf("\n");
-}
-
 /// @brief Initializes the variables of class
 /// @param start_address start address of memory
 /// @param total_usable_mem size of total usable memory
 /// @param memmap_count number of memory maps
 /// @param memmap memory maps structure
-void Memory::NodeManager::Initialize(max_t start_address , max_t total_usable_mem , int memmap_count , memory_map *memmap) {
+void memory::NodeManager::init(max_t start_address , max_t total_usable_mem , int memmap_count , memory_map *memmap) {
 	int i;
 	this->node_start = (struct Node *)start_address;   // StartAddress 	       : The location of the memory pool
 	this->current_node = (struct Node *)start_address; // CurrentAddress       : The location of current position
@@ -305,7 +292,7 @@ void Memory::NodeManager::Initialize(max_t start_address , max_t total_usable_me
 /// @brief Search the node that is bigger than the given size from the argument
 /// @param size "Least minimum" size of desired node
 /// @return Location of the desired node
-struct Memory::Node *Memory::NodeManager::SearchReasonableNode(max_t size) {
+struct memory::Node *memory::NodeManager::search_first_fit(max_t size) {
 	struct Node *node;
 	node = this->node_start;
 	while(node->signature == MEMMANAGER_SIGNATURE) {
@@ -322,14 +309,14 @@ struct Memory::Node *Memory::NodeManager::SearchReasonableNode(max_t size) {
 /// @param Size Size of the node
 /// @param Alignment Option of alignment
 /// @return Location of the node
-struct Memory::Node *Memory::NodeManager::SearchAlignedNode(max_t size , Alignment alignment) {
+struct memory::Node *memory::NodeManager::search_aligned(max_t size , max_t alignment) {
 	struct Node *node;
 	max_t aligned_addr;
 	node = (struct Node *)((this->last_freed_node == 0) ? this->current_node : this->last_freed_node);
 	while(node->signature == MEMMANAGER_SIGNATURE) { // going forward until we meet invalid node
 		if(node->occupied == 0) { // If node is usable
 			// Check whether this node is aligned, or if aligned in future, fits the required size.
-			aligned_addr = AlignAddress(((max_t)node)+sizeof(struct Node) , alignment);
+			aligned_addr = align_address(((max_t)node)+sizeof(struct Node) , alignment);
 			// Get the aligned address of the node
 			if(((aligned_addr+size+sizeof(struct Node)) <= (max_t)node->next)) { // If address of aligned node is above the region of the node -> Skip.
 				return (struct Node *)(aligned_addr-sizeof(struct Node));
@@ -343,7 +330,7 @@ struct Memory::Node *Memory::NodeManager::SearchAlignedNode(max_t size , Alignme
 /// @brief Search the location for new node
 /// @param prev_node Recipient variable for the location of previous node of new node
 /// @return Location of new node, and location of previous node of That node(prev_node)
-struct Memory::Node *Memory::NodeManager::SearchNewNodeLocation(max_t *prev_node) {
+struct memory::Node *memory::NodeManager::search_new_node_location(max_t *prev_node) {
 	struct Node *node;
 	if(this->node_start->occupied == 0) {
 		// If current address is start of the memory,
@@ -365,33 +352,33 @@ struct Memory::Node *Memory::NodeManager::SearchNewNodeLocation(max_t *prev_node
 /// @param size Size of the new node
 /// @param alignment Alignment of address of node
 /// @return Location of created node
-struct Memory::Node *Memory::NodeManager::CreateNewNode(max_t size , Memory::Alignment alignment) {
-	Memory::NodeManager *node_mgr = (Memory::NodeManager *)/*MEMORYMANAGEMENT_MEMORY_STARTADDRESS*/0x00;
+struct memory::Node *memory::NodeManager::create_new_node(max_t size , max_t alignment) {
+	memory::NodeManager *node_mgr = (memory::NodeManager *)/*MEMORYMANAGEMENT_MEMORY_STARTADDRESS*/0x00;
 	max_t prev_node = 0x00;
 	// Create new node
-	struct Node *node = SearchNewNodeLocation(&(prev_node));
+	struct Node *node = search_new_node_location(&(prev_node));
 	// Align
-	node = AlignNode(node , alignment , prev_node);
+	node = align(node , alignment , prev_node);
 	// If not aligned, and there is no node in entire allocation system
 	// register to node_start
-	if((alignment != NO_ALIGN) && (node_mgr->node_start->occupied == 0)) {
+	if((alignment != 0) && (node_mgr->node_start->occupied == 0)) {
 		node_mgr->node_start = node;
 		node_mgr->current_node = node;
 		// Debug::printf("Adjusting node from alignment\n");
 	}
 	// Next node : Offset + Size of the node + Size of the node structure
-	WriteNodeData(node , 1 , size , alignment , 0x00 , prev_node);
-	node = node_mgr->AdjustNode(node);
+	write_node_data(node , 1 , size , alignment , 0x00 , prev_node);
 	return node;
 }
 
-/// @brief Write the data to the node. 
-/// @param Node 
-/// @param Using 
-/// @param Size 
-/// @param NextNode 
-/// @param PreviousNode 
-void Memory::NodeManager::WriteNodeData(struct Node *node , unsigned char occupied , max_t size , Alignment alignment , max_t next_node , max_t previous_node) {
+/// @brief Write data to the node
+/// @param node Target node
+/// @param occupied occupied flag, 1 = node is occupied
+/// @param size size of the node
+/// @param alignment alignment byte
+/// @param next_node next node pointer
+/// @param previous_node previous node pointer
+void memory::NodeManager::write_node_data(struct Node *node , unsigned char occupied , max_t size , max_t alignment , max_t next_node , max_t previous_node) {
 	node->occupied = occupied;
 	if(previous_node != INVALID) { // auto
 		node->previous = (struct Node *)previous_node;
@@ -412,92 +399,30 @@ void Memory::NodeManager::WriteNodeData(struct Node *node , unsigned char occupi
 		node->next->previous = node;
 	}
 	node->signature = MEMMANAGER_SIGNATURE;   // Write a signature to mark that it's a valid node
-	node->aligned = (alignment == NO_ALIGN) ? 0 : 1;
+	node->aligned = (alignment != 0);
 }
 
-int Memory::NodeManager::IsNodeInUnusableMemory(struct Node *node , memory_map *violated) {
-	int i;
-	int ViolatedMemoryCount = 0;
-	for(i = 0; i < unusable_memories_count; i++) {
-		if(IsMemoryInside(unusable_memories[i].start_address , unusable_memories[i].end_address , (max_t)node , (max_t)node+node->size) == true) {
-			memcpy(&(violated[ViolatedMemoryCount++]) , &(unusable_memories[i]) , sizeof(memory_map));
-			Debug::printf("Pre-violation detected!(0x%X~0x%X), Writing..\n" , unusable_memories[i].start_address , unusable_memories[i].end_address);
-		}
+max_t memory::align_address(max_t address , max_t alignment) {
+	if(alignment == 0) {
+		return address;
 	}
-	return ViolatedMemoryCount;
+	return (((max_t)(address/alignment))+1)*alignment;
 }
 
-void Memory::NodeManager::AddUnusableMemory(max_t statr_address , max_t size) {
-	unusable_memories[unusable_memories_count].start_address;
-	unusable_memories[unusable_memories_count].end_address = statr_address+size;
-	unusable_memories[unusable_memories_count].system_specific = false;
-	unusable_memories[unusable_memories_count].type = MEMMAP_TYPE_RESERVED;
-	unusable_memories_count++;
-}
-
-/// @brief Adjust location of the node, if it's in an incessible area (Which means it's in ViolatedMemoryList)
-/// @param Node Pointer of the node to check whether the node violated the area
-/// @return Adjusted location of the node, If it wasn't violating anything, return original address(=Node)
-struct Memory::Node *Memory::NodeManager::AdjustNode(struct Memory::Node *Node) {
-	// this function has the error haha
-	int i;
-	int violated_memory_count;
-	max_t start_addr = 0;
-	max_t end_addr;
-	memory_map ViolatedMemoryList[unusable_memories_count];
-	memset(ViolatedMemoryList , 0 , sizeof(ViolatedMemoryList));
-	// Debug::printf("Node->size : %d\n" , Node->size);
-	if((violated_memory_count = IsNodeInUnusableMemory(Node , ViolatedMemoryList)) == 0) {
-		// Debug::printf("Node is not in reserved memory\n");
-		return Node;
-	}
-	start_addr = ViolatedMemoryList[0].start_address;
-	end_addr = ViolatedMemoryList[0].end_address;
-	for(i = 0; i < violated_memory_count; i++) {
-		start_addr = MIN(start_addr , ViolatedMemoryList[i].start_address);
-		end_addr = MAX(end_addr , ViolatedMemoryList[i].end_address);
-	}
-	Debug::printf("Memory Violation Detected , Violated : %d\n" , violated_memory_count);
-	Debug::printf("Location : 0x%X~0x%X\n" , start_addr , end_addr);
-	Debug::printf("Violated : 0x%X~0x%X\n" , Node , ((max_t)Node)+Node->size);
-	return Node;
-}
-
-max_t Memory::AlignAddress(max_t Address , Memory::Alignment Alignment) {
-	if(Alignment == NO_ALIGN) {
-		return Address;
-	}
-	Address = (((max_t)(Address/Alignment))+1)*Alignment;
-	return Address;
-}
-
-struct Memory::Node *Memory::NodeManager::AlignNode(struct Memory::Node *Node , Memory::Alignment Alignment , max_t PreviousNode) {
-	max_t AlignedAddress = 0;   // PreviousNodeAddress : Previous Node Address before aligning to 4K
-	max_t OriginalAddress = (max_t)Node;
-	if(Alignment == NO_ALIGN) {
-//		Debug::printf("No alignment\n");
-		return Node;
-	}
-	AlignedAddress = AlignAddress((((max_t)Node)+sizeof(struct Node)) , Alignment); // Get the aligned address
-	((struct Node *)(AlignedAddress-sizeof(struct Node)))->previous = Node->previous; // Write previous node information to new aligned node
+struct memory::Node *memory::NodeManager::align(struct memory::Node *node , max_t alignment , max_t prev_node) {
+	max_t aligned = 0;   // PreviousNodeAddress : Previous Node Address before aligning to 4K
+	max_t original = (max_t)node;
+	if(alignment == 0) return node; // no need to align
+	aligned = align_address((((max_t)node)+sizeof(struct Node)) , alignment);  // Get the aligned address
+	((struct Node *)(aligned-sizeof(struct Node)))->previous = node->previous; // Write previous node information to new aligned node
 	
-	Node = (struct Node *)(AlignedAddress-sizeof(struct Node));							      // Relocate node to aligned address
-	if(OriginalAddress != (max_t)this->node_start) {
-		Node->previous = (struct Node *)PreviousNode;
-		Node->previous->next = (struct Node *)(AlignedAddress-sizeof(struct Node));	  // Rewrite new node information(new aligned one)
+	node = (struct Node *)(aligned-sizeof(struct Node));							      // Relocate node to aligned address
+	if(original != (max_t)this->node_start) {
+		node->previous = (struct Node *)prev_node;
+		node->previous->next = (struct Node *)(aligned-sizeof(struct Node));	  // Rewrite new node information(new aligned one)
 	}
 	else {
-		Node->previous = 0x00;
+		node->previous = 0x00;
 	}
-	// Debug::printf("Node start address : 0x%X\n" , Node);
-	// Debug::printf("Previous Node      : 0x%X\n" , Node->previous);
-	return Node;
-}
-
-bool Memory::IsMemoryInside(max_t src_start , max_t src_end , max_t target_start , max_t target_end) {
-	if(((src_start <= target_start) && (target_start <= src_end))
-	|| ((src_start <= target_end) && (target_end <= src_end))) {
-		return true;
-	}
-	return false;
+	return node;
 }

@@ -1,5 +1,5 @@
-include ../includepath.mk
-include Common.mk
+include ../global_variables.mk
+include common.mk
 
 BINARYFOLDER = ../$(ROOTBINARYFOLDER)
 MAINBINARYFOLDER = $(BINARYFOLDER)/$(KERNELFOLDER)
@@ -10,7 +10,6 @@ ASMSOURCES = $(notdir $(wildcard $(SOURCESFOLDER)/*.asm))
 LINKERSCRIPT = Linker.ld
 
 ELF = Kernel.elf
-TARGET = Kernel.krn
 
 LIBRARIES = $(patsubst %.a,%,$(subst lib,-l,$(notdir $(wildcard $(BINARYFOLDER)/$(KRNLIBRARYFOLDER)/*.a))))
 FIRSTPRIORITYOBJ = $(MAINBINARYFOLDER)/main.obj
@@ -20,9 +19,7 @@ all: $(ASMSOURCES) $(MAINSOURCES)
 	echo $(wildcard $(MAINBINARYFOLDER)/*.obj)
 	
 	x86_64-elf-ld -nostdlib -T $(LINKERSCRIPT) -o $(ELF) $(FIRSTPRIORITYOBJ) $(OBJECTS) -L $(BINARYFOLDER)/$(KRNLIBRARYFOLDER) $(LIBRARIES)
-	x86_64-elf-objcopy -O binary $(ELF) $(TARGET)
-
-	cp $(TARGET) ../Loader/iso
+	x86_64-elf-objcopy -O binary $(ELF) $(KERNELTARGET)
 
 clean:
 	rm -rf $(MAINBINARYFOLDER)/*.*

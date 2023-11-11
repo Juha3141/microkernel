@@ -1,4 +1,4 @@
-include includepath.mk
+include global_variables.mk
 
 BASH = bash
 QEMU = qemu-system-x86_64
@@ -13,6 +13,8 @@ BuildKernel:
 	make -C $(KERNELFOLDER)/$(HALFOLDER) all
 	make -C $(KERNELFOLDER) all
 
+	cp $(KERNELFOLDER)/$(KERNELTARGET) $(LOADERFOLDER)/iso/$(KERNELTARGET)
+
 BuildLoader:
 	make -C $(LOADERFOLDER) all
 
@@ -21,6 +23,8 @@ clean:
 	make -C $(KERNELFOLDER)/$(HALFOLDER) all
 	make -C $(KERNELFOLDER) clean
 	make -C $(LOADERFOLDER) clean
+
+	rm -rf $(TARGET)
 
 run: virtualbox
 

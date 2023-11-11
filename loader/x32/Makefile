@@ -1,4 +1,4 @@
-include ../../includepath.mk
+include ../../global_variables.mk
 
 SOURCESFOLDER = Sources
 HEADERSFOLDER = Headers

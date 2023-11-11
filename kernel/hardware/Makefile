@@ -1,5 +1,5 @@
-include ../../includepath.mk
-include ../Common.mk
+include ../../global_variables.mk
+include ../common.mk
 
 BINARYFOLDER = ../../$(ROOTBINARYFOLDER)/$(KERNELFOLDER)/$(HALFOLDER)
 KERNELINCLUDE = ..

@@ -1,4 +1,4 @@
-include ../../includepath.mk
+include ../../global_variables.mk
 
 BINARYFOLDER = ../../$(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER)
 OBJECTSBINARYFOLDER = $(BINARYFOLDER)/EssentialLibrary

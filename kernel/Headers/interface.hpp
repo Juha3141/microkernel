@@ -1,9 +1,16 @@
-#ifndef _ARCHITECTURE_HPP_
-#define _ARCHITECTURE_HPP_
+/**
+ * @file interface.hpp
+ * @author Ian Juha Cho (ianisnumber2027@gmail.com)
+ * @brief Basic interfaces for kernel systems
+ * @date 2023-11-12
+ */
 
-#include <architecture_type.hpp>
+#ifndef _INTERFACE_HPP_
+#define _INTERFACE_HPP_
 
-namespace Architecture {
+#include <interface_type.hpp>
+
+namespace interface {
     // I/O port
     io_data IO_read(io_port port);
     io_data IO_write(io_port port);

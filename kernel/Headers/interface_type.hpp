@@ -1,12 +1,12 @@
 /**
- * @file architecture_type.hpp
- * @brief Provides basic type for operating system
- * @author Ian Juha Cho
- * Contact : ianisnumber2027@gmail.com
+ * @file interface_type.hpp
+ * @author Ian Juha Cho(ianisnumber2027@gmail.com)
+ * @brief Provides basic interface type for operating system
+ * @date 2023-08-20
  */
 
-#ifndef _ARCHITECTURE_TYPE_HPP_
-#define _ARCHITECTURE_TYPE_HPP_
+#ifndef _INTERFACE_TYPE_HPP_
+#define _INTERFACE_TYPE_HPP_
 
 #define MEMMODEL_PHYSICAL_MAPPING 0x01 // 1:1 scale of physical memory and virtual memory
 #define MEMMODEL_DEMAND_PAGING    0x02 // Demand Paging

@@ -8,6 +8,8 @@
 #ifndef _INTERFACE_TYPE_HPP_
 #define _INTERFACE_TYPE_HPP_
 
+#include <kernel_argument.hpp>
+
 #define MEMMODEL_PHYSICAL_MAPPING 0x01 // 1:1 scale of physical memory and virtual memory
 #define MEMMODEL_DEMAND_PAGING    0x02 // Demand Paging
 
@@ -56,18 +58,5 @@ typedef struct {
     char brand_string[48];
     qword CPU_speed;
 }general_cpu_info;
-
-#define MEMMAP_TYPE_USABLE     1
-#define MEMMAP_TYPE_RESERVED   2
-#define MEMMAP_TYPE_SYSTEM_ETC 3
-
-/// @brief Describes one segment of memory
-typedef struct {
-    max_t start_address;
-    max_t end_address;
-    bool system_specific; // true  : "type" variable will be customized
-                          // false : "type" variable will follow memory type from MEMMAP_TYPE
-    byte type;   // indicates what type is this segment of memory
-}memory_map;
 
 #endif

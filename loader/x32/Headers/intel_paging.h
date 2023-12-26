@@ -1,6 +1,8 @@
 #ifndef _PAGING_H_
 #define _PAGING_H_
 
+#include <../../../kernel/Headers/kernel_argument.hpp>
+
 #define PAGE_MAX_ENTRY_COUNT     512
 #define PAGE_PML4ENTRY_FLAGS_P   0b000000000001
 #define PAGE_PML4ENTRY_FLAGS_RW  0b000000000010
@@ -42,13 +44,6 @@ PageEntry ,
 PageDirectoryPointerEntry , 
 PageDirectoryEntry , 
 PageTableEntry;
-
-struct MemoryMap {
-	// unsigned int Size;
-	unsigned int addr_low , addr_high;
-	unsigned int length_low , length_high;
-	unsigned int type;
-};
 
 void SetPageEntry(struct PageEntry *PageEntry , unsigned int BaseAddressLow , unsigned int BaseAddressHigh , unsigned short Flags);
 void SetupPML4_custom(unsigned int start_address , struct MemoryMap *memmap);

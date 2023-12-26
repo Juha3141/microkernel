@@ -9,7 +9,8 @@ JumpToKernel64:
     push ebp
     mov ebp , esp
 
-    mov ebx , dword[ebp+8]
+    mov edi , dword[ebp+8] ; kernel structure
+    mov ebx , dword[edi+28] ; kstruct->pml4t_entry_location
 
     cli 
     xor edx , edx
@@ -35,7 +36,6 @@ JumpToKernel64:
     or eax , 0x80000000     ; Set PG(Paging Enable) bit to 1
     mov cr0 , eax
     lgdt [LongModeGDTR]     ; Load long mode GDT so that we can use Data and Code segments without an issue
-    
 
     mov ax , 0x10
     mov ds , ax
@@ -44,8 +44,9 @@ JumpToKernel64:
     mov gs , ax
     mov ss , ax
 
-
-    jmp 0x08:0x103000       ; Finally jump to long mode kernel (Main Kernel)
+    mov edi , dword[ebp+8]
+    
+    jmp 0x08:LongModeEntry       ; Finally jump to long mode kernel (Main Kernel)
 
 LongModeGDT:
     ; In long mode
@@ -93,5 +94,19 @@ LongModeGDTR:
 
 [BITS 64]
 
-longmode:
+LongModeEntry:
+    xor rax , rax
+
+    mov eax , dword[rdi+20] ; kernel_stack_location
+    add eax , dword[rdi+24] ; kernel_stack_size
+    sub rax , 8
+    mov rbp , rax
+    mov rsp , rax
+
+    xor rdx , rdx
+    mov edx , dword[rdi+4]
+
+    push rdi
+    call rdx
+
     jmp $

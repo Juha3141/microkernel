@@ -1,5 +1,5 @@
 OUTPUT_FORMAT(elf64-x86-64)
-ENTRY(kernel_main)
+ENTRY(init_temp_stack)
 SECTIONS {
   .text : {
     *(.text .text.*)

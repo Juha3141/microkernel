@@ -16,51 +16,6 @@ void memory::NodesManager::init(max_t start_address , max_t end_address) {
 	allocation_available = true;
 }
 
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-// Description : Find the suitable node for required size, and if it requires, seperate the node.    //
-// The function allocates segment by this sequence :                                                 //
-// 1. Search the suitable node, if there is no suitable node, create one.                            //
-// 2. If the size of suitable node, seperate the node                                                //
-// Creating Node : Create new node after the last node                                               //
-// If there is no node : Create new one                                                              //
-// Seperating Sequence :                                                                             //
-// 1. Create new node in the existing node(Existing node should be set to required size,             //
-//      more specifics on the actual code.)                                                          //
-// 2. Set the NextNode value of the newly created node to existing node's NextNode value.            //
-// 3. Set the PreviousNode value of the newly created node to address of existing node.              //
-// 4. Set the NextNode value of the existing node to address of newly created node                   //
-// -> the PreviousNode value of the existing node should not be changed.                             //
-//                                                                                                   //
-// Examples of the situation :                                                                       //
-// 1. There is no suitable segment                 2. There is suitable segment                      //
-// +-----------------+                               +-----------------+                             //
-// |  Require : 3MB  |                             |  Require : 3MB  |                               //
-// +-----------------+                               +-----------------+                             //
-// Memory Pool :                                    Memory Pool :                                    //
-// +-----+-----+-----+---------------------+       +-----------------+-----------------------+       //
-// | 1MB | 1MB | 1MB | ...                   |       |       3MB       | ...                   |     //
-// +-----+-----+-----+---------------------+       +-----------------+-----------------------+       //
-// -> Solve : Create new node after the last node  -> Solve : Allot the suitable memory              //
-// +-----+-----+-----+---------------+-----+       +-----------------+-----------------------+       //
-// | 1MB | 1MB | 1MB | Soothed : 3MB | ... |       |  Soothed : 3MB  | ...                   |       //
-// +-----+-----+-----+---------------+-----+       +-----------------+-----------------------+       //
-//                                                                                                   //
-// 3. There is bigger segment                        4. The worst case : External Fragmentation      //
-// +-----------------+                               +-----------------+                             //
-// |  Require : 3MB  |                               |  Require : 3MB  |                             //
-// +-----------------+                               +-----------------+                             //
-// Memory Pool :                                    Memory Pool :                                    //
-// +-----------------------------+---------+       +-----+-----+-----+-----------+-----+-----+       //
-// |              5MB            | ...     |       |1MB U|1MB F|1MB U|   2MB F   |1MB U|1MB U|       //
-// +-----------------------------+---------+       +-----+-----+-----+-----------+-----+-----+       //
-// -> Solve : Seperate the segment                   -> There is no space to allocate, even there is //
-// +-----------------+-----------+---------+       actually available space.                         //
-// |  Soothed : 3MB  |    2MB    | ...     |       -> Solve : To optimize the allocation             //
-// +-----------------+-----------+---------+                                                         //
-//                    ^~~~~~~~~~~ Usable                                                             //
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /// @brief Allocate physical kernel memory
 /// @param size Size to allocate
 /// @param alignment Alignment
@@ -74,9 +29,6 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 	if(!allocation_available) return 0x00; // no available node
 	struct Node *node = (struct Node *)search_first_fit(size); // Search available node
 	struct Node *separated_node;
-	if(node->next != 0) {			// If the next node is present, set TotalNodeSize to the size of searched node.
-		total_node_size = ((max_t)node->next)-((max_t)node)-sizeof(struct Node);	// TotalNodeSize : size of the current node
-	}
 	if(node == 0x00) { // If we got to create new node, create new node at the end of the segments
 		node = create_new_node(size , alignment);
 		if(node == 0x00) return 0x00; // not available
@@ -84,11 +36,14 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 		total_node_size = 0;								// Set the value to 0 so that the <Node Seperation Sequence> can't be executed.	
 	}
 	else {
+		if(node->next != 0) {			// If the next node is present, set TotalNodeSize to the size of searched node.
+			total_node_size = ((max_t)node->next)-((max_t)node)-sizeof(struct Node);	// TotalNodeSize : size of the current node
+		}
 		if(alignment != 0) { // is it not aligned
 			// Search New alignable location
-			// Debug::printf("Alignment : %d\n" , Alignment);
+			// printf("Alignment : %d\n" , Alignment);
 			node = (struct Node *)search_aligned(size , alignment);
-			// Debug::printf("Found aligned, new one : 0x%X\n" , Node);
+			// printf("Found aligned, new one : 0x%X\n" , Node);
 			if(node == 0x00) node = create_new_node(size , alignment);
 			if(node == 0x00) return 0x00; // not available for now
 		}
@@ -108,38 +63,6 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 																		// Address after area of node
 }
 
-/* To-do : Create a allocation optimizing system */
-
-// Description : Find the node, deallocate it, and if it's needed, merge the segments that is linearly usable.
-////////////////////////////////////////////////////////////////////////////////////////////////
-// For example, the function merges segments in those situations :                            //
-// Situation #1 :                              Situation #2 :                                 //
-//                                                                                            //
-// Node to deallocate                                                 Node to deallocate      //
-//  VVVVVVVVVVVVVVV                                                  VVVVVVVVVVVVVVV          //
-// +---------------+----------------------+  +----------------------+---------------+         //
-// |  Using(1MB)   |      Usable(2MB)     |  |      Usable(2MB)     |  Using(1MB)   |         //
-// +---------------+----------------------+  +----------------------+---------------+         //
-// <Deallocation Sequence>                   <Deallocation Sequence>                          //
-// 1. Go to the next node and check if       1. Go to the previous node and check if          //
-//    it's usable(mergable) until we hit     it's usable until we hit not usable node         //
-//    not usable node                                                                         //
-// 2. Change the target node(= Node to       2. Change the NextNode of the last node          //
-//    deallocate)'s NextNode to the node     that we lastly found from searching to           //
-//       that we lastly found from searching     target node's next node.                     //
-// 3. Change the node's PreviousNode to      3. Set the last node's flag to usable            //
-//    target node                                                                             //
-// 4. Set the target node's flag to usable                                                    //
-// +---------------+----------------------+  +---------------+----------------------+         //
-// |  Usable(1MB)  |      Usable(2MB)     |  |      Usable(2MB)     |  Usable(1MB)  |         //
-// +---------------+----------------------+  +---------------+----------------------+         //
-// This can be merged to :                      This can be also merged to :                  //
-// +--------------------------------------+  +--------------------------------------+         //
-// |             Usable(3MB)              |  |             Usable(3MB)              |         //
-// +--------------------------------------+  +--------------------------------------+         //
-////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 /// @brief Deallocate physical kernel memory
 /// @param address Address of memory chunk
 bool memory::NodesManager::free(max_t address) {
@@ -153,24 +76,23 @@ bool memory::NodesManager::free(max_t address) {
 	if(address < mem_start_address||address > mem_end_address) return false;
 	struct Node *node = (struct Node *)(((max_t)address)-sizeof(struct Node));  // address of Node : address - Size of the node structure
 	if((node->occupied == 0)||(node->signature != MEMMANAGER_SIGNATURE)) {			// If Node is not using, or not present, print error and leave.
-		Debug::printf("Deallocation Error #1 : Not Allocated Memory , 0x%X(or possible memory corruption?)\n" , address);
 		return false;
 	}
 	// Allocated Size : Location of the next node - Location of current node
 	// If next node is usable, and present, the node can be merged.
 	currently_using_mem -= node->size-sizeof(struct Node);
 	if((node->next != 0x00) && (node->next->occupied == 0) && (node->next->signature == MEMMANAGER_SIGNATURE)) {
-		// Debug::printf("Next mergable\n");
+		// printf("Next mergable\n");
 		merged = true;
 		current_node = node;									// current_node : Saves the current node for later
 		node_ptr = node;									// Save the current node, and move to next node
-		while((node_ptr->next->occupied == 0) && (node_ptr->signature == MEMMANAGER_SIGNATURE)) {
+		while((node_ptr->next != 0x00) && (node_ptr->next->occupied == 0) && (node_ptr->signature == MEMMANAGER_SIGNATURE)) {
 			if(node_ptr->next == 0x00) break;
 			node_ptr = (struct Node *)node_ptr->next; 				// Go to the next node and keep search
 		}
 		/*
-		Debug::printf("Merging Node(Next) : 0x%X~0x%X\n" , current_node , node_ptr);
-		Debug::printf("Total Merging size : %d\n" , (((max_t)node_ptr->next)-((max_t)current_node)-sizeof(struct Node)));
+		printf("Merging Node(Next) : 0x%X~0x%X\n" , current_node , node_ptr);
+		printf("Total Merging size : %d\n" , (((max_t)node_ptr->next)-((max_t)current_node)-sizeof(struct Node)));
 		*/
 		// Done erasing : Modify the next node location to the end of the node(It's going to be using node).
 		write_node_data(((struct Node *)current_node) , 0 , (((max_t)node_ptr->next)-((max_t)current_node)-sizeof(struct Node)) , 0 , (max_t)node_ptr->next); // Free the node
@@ -178,28 +100,28 @@ bool memory::NodesManager::free(max_t address) {
 	// If the previous node is usable, and present, the node can be merged.
 	// (Why are we merging and seperating the segment? Because, it can reduce the external fragmentation)
 	if((node->previous != 0x00) && (node->previous->occupied == 0) && (node->previous->signature == MEMMANAGER_SIGNATURE)) {
-		// Debug::printf("Previous mergable\n");
+		// printf("Previous mergable\n");
 		merged = true;
 		current_node = node;				// current_node : Saves the current node for later
 		node_ptr = node;
-		while((node_ptr->previous->occupied == 0) && (node_ptr->signature == MEMMANAGER_SIGNATURE)) {
+		while((node_ptr->previous != 0x00) && (node_ptr->previous->occupied == 0) && (node_ptr->signature == MEMMANAGER_SIGNATURE)) {
 			// Search the nodes that is available for merging, and erase all usable node to make a free space 
 			// -> until we find already using node, or not present node.
 			if(node_ptr->previous == 0x00) break;
 			node_ptr = (struct Node *)node_ptr->previous; 	    // Head to previous node 
 		}
 		/*
-		Debug::printf("Merging Node(Prev) : 0x%X~0x%X\n" , current_node , node_ptr);
-		Debug::printf("current_node->next : 0x%X\n" , current_node->next);
-		Debug::printf("Size : %d\n" , (((max_t)current_node->next)-((max_t)node_ptr)-sizeof(struct Node)));
+		printf("Merging Node(Prev) : 0x%X~0x%X\n" , current_node , node_ptr);
+		printf("current_node->next : 0x%X\n" , current_node->next);
+		printf("Size : %d\n" , (((max_t)current_node->next)-((max_t)node_ptr)-sizeof(struct Node)));
 		*/
 		write_node_data(node_ptr , 0 , (((max_t)current_node->next)-((max_t)node_ptr)-sizeof(struct Node)) , 0 , (max_t)current_node->next);
 	}
 	if(merged == false) {
-		// Debug::printf("No merge\n");
+		// printf("No merge\n");
 		node->occupied = 0;
 		if(node->next == 0x00) {
-			// Debug::printf("No next free\n");
+			// printf("No next free\n");
 			node->previous->next = 0x00;
 			memset(node , 0 , sizeof(struct Node));
 		}
@@ -214,7 +136,6 @@ bool memory::NodesManager::free(max_t address) {
 }
 
 
-
 /// @brief Search the node that is bigger than the given size from the argument
 /// @param size "Least minimum" size of desired node
 /// @return Location of the desired node
@@ -223,7 +144,7 @@ struct memory::Node *memory::NodesManager::search_first_fit(max_t size) {
 	node = node_start;
 	while(node->signature == MEMMANAGER_SIGNATURE) {
 		if((node->occupied == 0) && (node->size >= size) && (node->size-size > sizeof(struct Node))) {
-			// Debug::printf("Free Node Found : At 0x%X, Size : %d, %d\n" , Node , (((max_t)Node->next)-(max_t)Node-sizeof(struct Node)) , Node->Size);
+			// debug::out::printf("Free Node Found : At 0x%X, Size : %d, %d\n" , Node , (((max_t)Node->next)-(max_t)Node-sizeof(struct Node)) , Node->Size);
 			return node;
 		}
 		node = node->next;
@@ -289,7 +210,7 @@ struct memory::Node *memory::NodesManager::create_new_node(max_t size , max_t al
 	// register to node_start
 	if((alignment != 0) && (node_mgr->node_start->occupied == 0)) {
 		node_mgr->node_start = node;
-		// Debug::printf("Adjusting node from alignment\n");
+		// debug::out::printf("Adjusting node from alignment\n");
 	}
 	// Next node : Offset + Size of the node + Size of the node structure
 	write_node_data(node , 1 , size , alignment , 0x00 , prev_node);
@@ -345,7 +266,7 @@ struct memory::Node *memory::NodesManager::align(struct memory::Node *node , max
 	return node;
 }
 
-max_t memory::NodesManager::align_address(max_t address , max_t alignment) {
+max_t memory::align_address(max_t address , max_t alignment) {
 	if(alignment == 0) {
 		return address;
 	}

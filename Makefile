@@ -2,6 +2,7 @@ include global_variables.mk
 
 BASH = bash
 QEMU = qemu-system-x86_64
+QEMU_OPTION = -m 8192 -rtc base=localtime -M pc -boot c
 TARGET = OS.iso
 
 all: BuildLibrary BuildKernel BuildLoader
@@ -29,16 +30,16 @@ clean:
 run: virtualbox
 
 qemu:
-	$(QEMU) -cdrom $(TARGET) -m 8192 -rtc base=localtime -M pc -boot c
+	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION)
 
 debug: 
-	$(QEMU) -cdrom $(TARGET) -m 8192 -rtc base=localtime -M pc -boot c -s -S -serial stdio
+	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION) -s -S -serial stdio
 
 qemu_hd_old:
-	$(QEMU) -hda $(TARGET) -m 8192 -rtc base=localtime -M pc -boot c
+	$(QEMU) -hda $(TARGET) $(QEMU_OPTION) -boot c
 
 debug_hd_old: 
-	$(QEMU) -hda $(TARGET) -m 8192 -rtc base=localtime -M pc -boot c -s -S -serial stdio
+	$(QEMU) -hda $(TARGET) $(QEMU_OPTION) -boot c -s -S -serial stdio
 
 virtualbox:
 	# qemu-img convert -O qcow2 $(TARGET) $(patsubst %.img,%.qcow2,$(TARGET))

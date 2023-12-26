@@ -17,6 +17,7 @@ Entry:
     mov ebp , KernelStack
     mov esp , KernelStack
     push ebx ; Multiboot information pointer
+
     call Main
     
     jmp $

@@ -32,7 +32,6 @@ namespace interface {
 
     // memory model & memory model
     byte system_memory_model(void); // work just as like a constant
-    int get_memory_map(memory_map *memmap);
 
     // paging
     bool supportation_paging();

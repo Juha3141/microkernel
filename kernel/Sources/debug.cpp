@@ -109,7 +109,7 @@ void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
     if(debug_info.function_display && debug_info.function_stack_index > 0) {
         if(debug_info.func_indent) { // indent for debugging the flow of function
             for(int i = 0; i < debug_info.function_stack_index-1; i++) {
-                print_str("-");
+                print_str(" ");
             }
         }
         print_str("(");

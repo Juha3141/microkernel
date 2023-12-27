@@ -12,7 +12,7 @@ void SetPageEntry(struct PageEntry *PageEntry , unsigned int BaseAddressLow , un
     PageEntry->Flags = Flags & 0xFFF;
 }
 
-void SetupPML4_custom(unsigned int start_address , struct MemoryMap *memmap) {
+unsigned int SetupPML4_custom(unsigned int start_address , struct MemoryMap *memmap) {
     unsigned int pml4_entry_address = start_address; // total 512 entries
     unsigned int pdpt_entry_address = pml4_entry_address+(PAGE_MAX_ENTRY_COUNT*sizeof(struct PageEntry)); // total 512 entries
     unsigned int pde_entry_address = pdpt_entry_address+(PAGE_MAX_ENTRY_COUNT*sizeof(struct PageEntry));
@@ -32,4 +32,5 @@ void SetupPML4_custom(unsigned int start_address , struct MemoryMap *memmap) {
         }
         pde_entry_address += PAGE_MAX_ENTRY_COUNT*sizeof(struct PageEntry);
     }
+    return pde_entry_address;
 }

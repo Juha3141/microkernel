@@ -26,6 +26,10 @@ struct KernelInfoStructure {
 	unsigned int kernel_stack_location;   // 20
 	unsigned int kernel_stack_size;       // 24
 	unsigned int pml4t_entry_location;    // 28
+	unsigned int pml4_entry_size; 		  // 32
+
+	unsigned int total_kernel_area_start; // 36
+	unsigned int total_kernel_area_end;
 };
 
 #endif

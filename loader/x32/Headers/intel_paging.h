@@ -46,6 +46,6 @@ PageDirectoryEntry ,
 PageTableEntry;
 
 void SetPageEntry(struct PageEntry *PageEntry , unsigned int BaseAddressLow , unsigned int BaseAddressHigh , unsigned short Flags);
-void SetupPML4_custom(unsigned int start_address , struct MemoryMap *memmap);
+unsigned int SetupPML4_custom(unsigned int start_address , struct MemoryMap *memmap);
 
 #endif

@@ -77,6 +77,10 @@ void Main(struct multiboot_info *multiboot_info) {
 	PrintString(0x07 , "Kernel structure : 0x%X\n" , kernel_struct_addr);
 	memset(kinfostruct , 0 , sizeof(struct KernelInfoStructure));
 	kinfostruct->signature = KERNEL_STRUCTURE_SIGNATURE;
+	// total_kernel_boundary : total boundary that contains kernel and other necessary stuff
+	// physical memory manager will protect the "total bound"
+	kinfostruct->total_kernel_area_start = kernel_module->mod_start;
+	
 	kinfostruct->kernel_address = kernel_module->mod_start;
 	kinfostruct->kernel_size = kernel_module->mod_end-kernel_module->mod_start;
 
@@ -101,9 +105,12 @@ void Main(struct multiboot_info *multiboot_info) {
 	kernel_struct_addr = align(kernel_struct_addr , 4096);
 	kinfostruct->pml4t_entry_location = kernel_struct_addr;
 	PrintString(0x07 , "PML4 table location  : 0x%X\n" , kernel_struct_addr);
-	SetupPML4_custom(kernel_struct_addr , memmap);
+	unsigned int pml4_entry_end = SetupPML4_custom(kernel_struct_addr , memmap);
+	kinfostruct->pml4_entry_size = pml4_entry_end-kinfostruct->pml4t_entry_location;
 
+	kinfostruct->total_kernel_area_end = pml4_entry_end;
 	JumpToKernel64((unsigned int)kinfostruct);
+
 	while(1) {
 		;
 	}

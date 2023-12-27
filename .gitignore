@@ -1,3 +1,4 @@
 .vscode
 *.workspace
 *.obj
+.gdb_history

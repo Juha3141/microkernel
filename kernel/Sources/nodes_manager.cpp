@@ -16,6 +16,12 @@ void memory::NodesManager::init(max_t start_address , max_t end_address) {
 	allocation_available = true;
 }
 
+/// @brief Gives boolean value of whether manager is available
+/// @return Return true if manager is available to allot
+bool memory::NodesManager::available(void) {
+	return allocation_available;
+}
+
 /// @brief Allocate physical kernel memory
 /// @param size Size to allocate
 /// @param alignment Alignment
@@ -32,7 +38,6 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 	if(node == 0x00) { // If we got to create new node, create new node at the end of the segments
 		node = create_new_node(size , alignment);
 		if(node == 0x00) return 0x00; // not available
-
 		total_node_size = 0;								// Set the value to 0 so that the <Node Seperation Sequence> can't be executed.	
 	}
 	else {
@@ -80,7 +85,7 @@ bool memory::NodesManager::free(max_t address) {
 	}
 	// Allocated Size : Location of the next node - Location of current node
 	// If next node is usable, and present, the node can be merged.
-	currently_using_mem -= node->size-sizeof(struct Node);
+	currently_using_mem -= node->size+sizeof(struct Node);
 	if((node->next != 0x00) && (node->next->occupied == 0) && (node->next->signature == MEMMANAGER_SIGNATURE)) {
 		// printf("Next mergable\n");
 		merged = true;

@@ -1,19 +1,15 @@
-OUTPUT_FORMAT(elf64-x86-64)
+kernel_linear_address = 0xC0000000;
+
 ENTRY(init_temp_stack)
 SECTIONS {
-  .text 0x103000 : {
-    *(.text .text.*)
+  . = kernel_linear_address;
+  .text : AT(kernel_linear_address) {
+    *(.text) *(.text.*)
   }
-  .data : {
-    *(.data .data.*)
+  .data ALIGN(4096) : {
+    *(.data)
   }
-  .bss : {
-    *(.bss .bss.*)
-  }
-  .rodata : {
-    *(.rodata .rodata.*)
-  }
-  .rodata1 : {
-    *(.rodata1)
+  .bss ALIGN(4096) : {
+    *(.bss) *(.rodata) *(.bss.*) *(COMMON)
   }
 }

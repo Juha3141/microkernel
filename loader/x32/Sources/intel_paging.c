@@ -27,11 +27,9 @@ unsigned int SetupPML4_custom(unsigned int start_address , struct MemoryMap *mem
         SetPageEntry(&(pdpt_entry[i]) , pde_entry , 0x00 , PAGE_PDPTENTRY_FLAGS_P|PAGE_PDPTENTRY_FLAGS_RW);
         
         for(unsigned int j = 0; j < PAGE_MAX_ENTRY_COUNT; j++) {
-            SetPageEntry(&(pde_entry[j]) , ((unsigned int)j << 21)|(((unsigned int)i & 0b11) << 30) , ((unsigned int)i >> 2) , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
-            /*if(((j << 21)|((i & 0b11) << 30)) == 0xC0000000) {
-                SetPageEntry(&(pde_entry[j]) , 0xC0000000 , k , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
-                k += 1;
-            }*/
+            unsigned int base_low = ((unsigned int)j << 21)|(((unsigned int)i & 0b11) << 30);
+            unsigned int base_high = ((unsigned int)i >> 2);
+            SetPageEntry(&(pde_entry[j]) , base_low , base_high , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
         }
         pde_entry += PAGE_MAX_ENTRY_COUNT*sizeof(struct PageEntry);
     }

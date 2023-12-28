@@ -9,7 +9,7 @@ JumpToKernel64:
     push ebp
     mov ebp , esp
 
-    mov edi , dword[ebp+8] ; kernel structure
+    mov edi , dword[ebp+8]  ; kernel structure
     mov ebx , dword[edi+28] ; kstruct->pml4t_entry_location
 
     cli 
@@ -104,7 +104,7 @@ LongModeEntry:
     mov rsp , rax
 
     xor rdx , rdx
-    mov edx , dword[rdi+4]
+    mov edx , dword[rdi+44] ; kernel_linear_address
 
     push rdi
     call rdx

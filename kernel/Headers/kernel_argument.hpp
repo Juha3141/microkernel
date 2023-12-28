@@ -29,7 +29,9 @@ struct KernelInfoStructure {
 	unsigned int pml4_entry_size; 		  // 32
 
 	unsigned int total_kernel_area_start; // 36
-	unsigned int total_kernel_area_end;
+	unsigned int total_kernel_area_end;   // 40
+
+	unsigned int kernel_linear_address;   // 44
 };
 
 #endif

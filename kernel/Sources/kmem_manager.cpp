@@ -125,7 +125,7 @@ void memory::SegmentsManager::init(int segment_count , struct Boundary *usable_s
 	for(int i = 0; i < managers_count; i++) {
 		node_managers[i].init(usable_segments[i].start_address , usable_segments[i].end_address-usable_segments[i].start_address);
 		total_memory += (usable_segments[i].end_address-usable_segments[i].start_address);
-		debug::out::printf(DEBUG_SPECIAL , "why? %d. 0x%X~0x%X (0x%X)\n" , i , usable_segments[i].start_address , usable_segments[i].end_address , (usable_segments[i].end_address-usable_segments[i].start_address));
+		debug::out::printf(DEBUG_SPECIAL , "%d. 0x%X~0x%X (0x%X)\n" , i , usable_segments[i].start_address , usable_segments[i].end_address , (usable_segments[i].end_address-usable_segments[i].start_address));
 	}
 	debug::pop_function();
 }
@@ -202,12 +202,11 @@ void memory::pmem_free(ptr_t *ptr) {
 	debug::pop_function();
 }
 
+bool memory::pmem_protect(struct Boundary boundary) {
+	return false;
+}
+
 max_t memory::pmem_usage(void) {
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	return segments_mgr->get_currently_using_mem();
 }
-
-/* To-do (2023.12.27) : 
- * 2. What about higher-half kernel???
- * 3. turn on fPIC (for only debugging : use fixed address)  
-*/

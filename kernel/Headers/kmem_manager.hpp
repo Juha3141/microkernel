@@ -17,14 +17,6 @@
 #define KERNEL_MEMORY_SEGMENT_THRESHOLD 512*1024  // 512KB
 
 namespace memory {
-    /*
-    class MemoryMapManager {
-        public:
-            void init(void);
-            void add_memory_map(const char *component , struct MemoryMap *memmap);
-            void 
-    };
-    */
     struct Boundary {
         max_t start_address;
         max_t end_address;
@@ -60,6 +52,7 @@ namespace memory {
     void pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct KernelInfoStructure *kinfostruct);
     ptr_t *pmem_alloc(max_t size , max_t alignment=0);
     void pmem_free(ptr_t *ptr);
+    bool pmem_protect(struct Boundary boundary);
 
     max_t pmem_total_size(void);
     max_t pmem_usage(void);

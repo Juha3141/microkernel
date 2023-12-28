@@ -2,3 +2,4 @@
 *.workspace
 *.obj
 .gdb_history
+bochsrc.txt

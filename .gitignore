@@ -3,3 +3,4 @@
 *.obj
 .gdb_history
 bochsrc.txt
+custom_vsprintf*

@@ -43,4 +43,4 @@ debug_hd_old:
 
 virtualbox:
 	# qemu-img convert -O qcow2 $(TARGET) $(patsubst %.img,%.qcow2,$(TARGET))
-	vboxmanage startvm "OS - Embedded" -E VBOX_GUI_DBG_AUTO_SHOW=true -E VBOX_GUI_DBG_ENABLED=truesw
+	vboxmanage startvm "microkernel" -E VBOX_GUI_DBG_AUTO_SHOW=true -E VBOX_GUI_DBG_ENABLED=truesw

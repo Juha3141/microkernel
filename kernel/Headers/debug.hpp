@@ -46,6 +46,8 @@ namespace debug {
     }
     void init(void);
 
+    void dump_memory(max_t address , max_t length);
+
     void push_function(const char *function);
     void pop_function(void);
     

@@ -1,5 +1,7 @@
 #include <debug.hpp>
 
+#define DEBUG_PRINTF_STR_STACK 1024
+
 struct {
     int function_stack_index;
     char function_stack[DEBUG_FUNCTION_NAME_LEN][DEBUG_FUNCTION_STACK_MAX];
@@ -18,6 +20,26 @@ void debug::init(void) {
     set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_FIRST_INFO|DEBUG_DISPLAY_INDENTATION , true);
     debug_info.option_flags = 0b11111111;
     debug::out::init();
+}
+
+void debug::dump_memory(max_t address , max_t length) {
+    byte *ptr = (byte *)address;
+    const int charperline = 25;
+    debug::out::printf("dumping memory from 0x%X - 0x%X\n" , address , address+length);
+
+    // remove for display
+    debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , false);
+    for(max_t j = 1; j <= length/charperline; j++) {
+        debug::out::printf("");
+        for(max_t i = 1; i <= ((j == (int)(length/charperline)) ? ((length%charperline) ? (length%charperline) : charperline) : charperline); i++) {
+            if(*ptr < 0x10) debug::out::print_str("0");
+            debug::out::raw_printf("%X " , *ptr);
+            ptr++;
+        }
+        debug::out::print_str("\n");
+    }
+
+    debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , true);
 }
 
 void debug::enable(void) { debug_info.enable_debug = true; }
@@ -117,7 +139,7 @@ void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
         print_str(") ");
     }
 
-    char string[512];
+    char string[DEBUG_PRINTF_STR_STACK];
     vsprintf(string , fmt , ap);
     print_str(string);
 
@@ -143,7 +165,7 @@ void debug::out::raw_printf(const char *fmt , ...) {
     va_list ap;
     va_start(ap , fmt);
 
-    char string[512];
+    char string[DEBUG_PRINTF_STR_STACK];
     vsprintf(string , fmt , ap);
     print_str(string);
     va_end(ap);

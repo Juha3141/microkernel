@@ -77,7 +77,7 @@ int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *n
 			
 			new_msegment_list[seg_index].start_address = new_addr;
 			new_msegment_list[seg_index].end_address = new_addr+new_length;
-			debug::out::printf("seg%d. 0x%X~0x%X\n" , seg_index , new_addr , new_addr+new_length);
+			debug::out::printf("seg%d. 0x%lX~0x%lX\n" , seg_index , new_addr , new_addr+new_length);
 			seg_index++;
 
 		}
@@ -87,11 +87,11 @@ int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *n
 
 			new_msegment_list[seg_index].start_address = new_addr;
 			new_msegment_list[seg_index].end_address = new_addr+new_length;
-			debug::out::printf("seg%d. 0x%X~0x%X\n" , seg_index , new_addr , new_addr+new_length);
+			debug::out::printf("seg%d. 0x%lX~0x%lX\n" , seg_index , new_addr , new_addr+new_length);
 			seg_index++;
 		}
 		else if(protect.start_address <= address+length) {
-			debug::out::printf("seg%d. 0x%X~0x%X\n" , seg_index , address , address+length);
+			debug::out::printf("seg%d. 0x%lX~0x%lX\n" , seg_index , address , address+length);
 			
 			new_msegment_list[seg_index].start_address = address;
 			new_msegment_list[seg_index].end_address = address+length;
@@ -125,7 +125,7 @@ void memory::SegmentsManager::init(int segment_count , struct Boundary *usable_s
 	for(int i = 0; i < managers_count; i++) {
 		node_managers[i].init(usable_segments[i].start_address , usable_segments[i].end_address-usable_segments[i].start_address);
 		total_memory += (usable_segments[i].end_address-usable_segments[i].start_address);
-		debug::out::printf(DEBUG_SPECIAL , "%d. 0x%X~0x%X (0x%X)\n" , i , usable_segments[i].start_address , usable_segments[i].end_address , (usable_segments[i].end_address-usable_segments[i].start_address));
+		debug::out::printf(DEBUG_SPECIAL , "%d. 0x%016lX~0x%016lX (size:%dkB)\n" , i , usable_segments[i].start_address , usable_segments[i].end_address , (usable_segments[i].end_address-usable_segments[i].start_address)/1024);
 	}
 	debug::pop_function();
 }
@@ -192,12 +192,12 @@ void memory::pmem_free(ptr_t *ptr) {
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	int index;
 	if((index = segments_mgr->get_segment_index((max_t)ptr)) == -1) {
-		debug::out::printf("Warning : Memory release request out of range(0x%X)\n" , (max_t)ptr);
+		debug::out::printf("Warning : Memory release request out of range(0x%lX)\n" , (max_t)ptr);
 		debug::pop_function();
 		return;
 	}
 	if(segments_mgr->node_managers[index].free((max_t)ptr) == false) {
-		debug::out::printf("Warning : Memory release request not allocated(0x%X)\n" , (max_t)ptr);
+		debug::out::printf("Warning : Memory release request not allocated(0x%lX)\n" , (max_t)ptr);
 	}
 	debug::pop_function();
 }

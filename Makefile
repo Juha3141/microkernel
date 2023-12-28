@@ -32,6 +32,9 @@ run: virtualbox
 qemu:
 	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION)
 
+debug_interrupt:
+	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION) -d int -M smm=off -D qemulog.txt
+
 debug: 
 	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION) -s -S -serial stdio
 

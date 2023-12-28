@@ -1,5 +1,7 @@
 #include <stdarg.h>
 
+// use old vsprintf for primitive kernel
+
 void vsprintf(char *Destination , const char *Format , va_list ap) {
 	int i;
 	int j = 0;

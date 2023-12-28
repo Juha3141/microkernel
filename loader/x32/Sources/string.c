@@ -1,186 +1,164 @@
 #include <stdarg.h>
 
-unsigned int memset(void *Destination , int Data , unsigned int Size) {
-	int i;
-	for(i = 0; i < Size; i++) {
-		((unsigned char*)Destination)[i] = Data;
-	}
-	return Size;
-}
+#define size_t unsigned int
 
-unsigned int memcpy(void *Destination , const void *Source , unsigned int Size) {
-    int i;
-    for(i = 0; i < Size; i++) {
-        ((unsigned char*)Destination)[i] = ((unsigned char*)Source)[i];
+void *memset(void *s , int c , size_t n) {
+    unsigned char *ptr = (unsigned char *)s;
+    for(size_t i = 0; i < n; i++) {
+        *ptr++ = c;
     }
-	return Size;
+    return ptr;
 }
 
-int strlen(const char *Destination) {
-    int i;
-	for(i = 0; Destination[i] != '\0'; i++) {
-		;
-	}
-	return i;
+void *memcpy(void *dest , const void *src , size_t n) {
+    unsigned char *dest_ptr = (unsigned char *)dest;
+    unsigned char *src_ptr = (unsigned char *)src;
+    for(size_t i = 0; i < n; i++) {
+        *dest_ptr++ = *src_ptr++;
+    }
+    return dest;
 }
 
-char *strcpy(char *Destination , const char *Source) {
-	int i;
-	memset(Destination , 0 , sizeof(Destination));
-	for(i = 0; (Destination[i] != '\0')||(Source[i] != '\0'); i++) {
-		Destination[i] = Source[i];
-	}
-	return Destination;
+int memcmp(const void *s1 , const void *s2 , size_t n) {
+    unsigned char *s1_ptr = (unsigned char *)s1;
+    unsigned char *s2_ptr = (unsigned char *)s2;
+    for(size_t i = 0; i < n; i++) {
+        if(*(s1_ptr+i) < *(s2_ptr+i)) return -1;
+        else if(*(s1_ptr+i) > *(s2_ptr+i)) return 1;
+    }
+    return 0;
 }
 
-char *strncpy(char *Destination , const char *Source , int Length) {
-	int i;
-	memset(Destination , 0 , sizeof(Destination));
-	for(i = 0; i < Length; i++) {
-		Destination[i] = Source[i];
-	}
-	return Destination;
+size_t strlen(const char *s) {
+    size_t sz = 0;
+    while(s[sz] != 0) {
+        sz++;
+    }
+    return sz;
 }
 
-char *strcat(char *Destination , const char *Source) {
-	int i = 0;
-	int j = 0;
-	while(Destination[i] != '\0') {
-		i++;
-	}
-	while(Source[j] != '\0') {
-		Destination[i++] = Source[j++];
-	}
-	Destination[i] = '\0';
-	return Destination;
+char *strcpy(char *dest , const char *src) {
+    unsigned long i;
+    unsigned long OriginLength = strlen(src);
+    for(i = 0; i < OriginLength; i++) {
+        dest[i] = src[i];
+    }
+    dest[i] = 0x00;
+    return dest;
 }
 
-char *strncat(char *Destination , const char *Source , int Length) {
-	int i = 0;
-	int j;
-	while(Destination[i] != '\0') {
-		i++;
-	}
-	for(j = 0; j < Length; j++) {
-		Destination[i++] = Source[j++];
-	}
-	Destination[i] = '\0';
-	return Destination;
+char *strncpy(char *dest , const char *src , size_t n) {
+    size_t i;
+    size_t length = strlen(src);
+    if(length > n) length = n;
+    for(i = 0; i < length; i++) {
+        dest[i] = src[i];
+    }
+    dest[i]  = 0;
+    return dest;
 }
 
-int strcmp(const char *FirstString , const char *SecondString) {
-	int i;
-	int NotEqual = 0;
-	for(i = 0; (FirstString[i] != '\0')||(SecondString[i] != '\0'); i++) {
-		if(FirstString[i] != SecondString[i]) {
-			NotEqual++;
-		}
-	}
-	return NotEqual;
+char *strcat(char *dest , char *src) {
+    size_t i;
+    size_t dest_sz = strlen(dest);
+    size_t src_sz = strlen(src);
+    for(i = dest_sz; i < dest_sz+src_sz; i++) {
+        dest[i] = src[i-dest_sz];
+    }
+    dest[i] = 0;
+    return dest;
 }
 
-int strncmp(const char *FirstString , const char *SecondString , int Length) {
-	int i;
-	int NotEqual = 0;
-	for(i = 0; i < Length; i++) {
-		if(FirstString[i] != SecondString[i]) {
-			NotEqual++;
-		}
-	}
-	return NotEqual;
+char *strncat(char *dest , const char *src , size_t n) {
+    size_t i;
+    size_t dest_sz = strlen(dest);
+    for(i = dest_sz; i < dest_sz+n; i++) {
+        dest[i] = src[i-dest_sz];
+    }
+    dest[i] = 0;
+    return dest;
 }
 
-unsigned long atoi(const char *String) {
-	unsigned long Number = 0;
-	int Positive = 1;
-	if(*String == '-') {
-		Positive = -1;
-		String++;
-	}
-	if(*String == '+') {
-		Positive = 1;
-		String++;
-	}
-	if(*String == '\0') {
-		return 0;
-	}
-	while(*String != 0x00) {
-		if((*String >= '0') && (*String <= '9')) {
-			Number = Number*10+(*String)-'0';
-			String++;
-		}
-	}
-	Number *= Positive;
-	return Number;
+int strcmp(const char *s1 , const char *s2) {
+    size_t i;
+    size_t s1_sz = strlen(s1) , s2_sz = strlen(s2);
+    if(s1_sz > s2_sz) return 1;
+    if(s1_sz < s2_sz) return -1;
+    for(int i = 0; s1[i] != 0 && s2[i] != 0; i++) {
+        if(s1[i] > s2[i]) return 1;
+        else if(s1[i] < s2[i]) return -1;
+    }
+    return 0;
 }
 
-unsigned long atol(const char *String) {
-	unsigned long Number = 0;
-	int Positive = 1;
-	if(*String == '-') {
-		Positive = -1;
-		String++;
-	}
-	if(*String == '+') {
-		Positive = 1;
-		String++;
-	}
-	if(*String == '\0') {
-		return 0;
-	}
-	while(*String != 0x00) {
-        Number *= 16;
-		if(((*String >= 'A') && (*String <= 'Z'))) {
-			Number += ((*String)-'A')+10;
-			String++;
-		}
-        else if(((*String >= 'a') && (*String <= 'z'))) {
-			Number += ((*String)-'a')+10;
-			String++;
-        }
-        else {
-            Number += ((*String)-'0');
-            String++;
-        }
-	}
-	Number *= Positive;
-	return Number;
+int strncmp(const char *s1 , const char *s2 , size_t n) {
+    size_t i;
+    size_t s1_sz = strlen(s1) , s2_sz = strlen(s2);
+    for(int i = 0; s1[i] != 0 && s2[i] != 0 && i < n; i++) {
+        if(s1[i] > s2[i]) return 1;
+        else if(s1[i] < s2[i]) return -1;
+    }
+    return 0;
 }
 
-char *itoa(unsigned long Number , char *String , int Radix) {
-	int i = 0;
-	int Length;
-	unsigned long TempBuffer;
-	char Temp;
-	if(Number == 0) {
-		String[0] = '0';
-		String[1] = '\0';
-		return String;
+
+int atoi(const char *nptr) {
+    int result = 0;
+    int sign = (nptr[0] == '-') ? -1 : 1;
+    int i = (sign > 0) ? 0 : 1;
+    if(nptr[0] == '+') i = sign = 1;
+    for(; nptr[i] != 0; i++) {
+        result = result*10+(nptr[i]-'0');
+    }
+    return result*sign;
+}
+
+long int atol(const char *nptr) {
+    long int result = 0;
+    long int sign = (nptr[0] == '-') ? -1 : 1;
+    int i = (sign > 0) ? 0 : 1;
+    if(nptr[0] == '+') i = sign = 1;
+    for(; nptr[i] != 0; i++) {
+        result = result*10+(nptr[i]-'0');
+    }
+    return result*sign;
+}
+
+long long int atoll(const char *nptr) {
+    long long int result = 0;
+    long long int sign = (nptr[0] == '-') ? -1 : 1;
+    int i = (sign > 0) ? 0 : 1;
+    if(nptr[0] == '+') i = sign = 1;
+    for(; nptr[i] != 0; i++) {
+        result = result*10+(nptr[i]-'0');
+    }
+    return result*sign;
+}
+
+// Source from https://www.strudel.org.uk/itoa/
+/**
+ * C++ version 0.4 char* style "itoa":
+ * Written by Lukás Chmela
+ * Released under GPLv3.
+ * 
+ */
+char* itoa(int value, char* result, int base) {
+	// check that the base if valid
+	if (base < 2 || base > 36) { *result = '\0'; return result; }
+	char* ptr = result, *ptr1 = result, tmp_char;
+	int tmp_value;
+	do {
+		tmp_value = value;
+		value /= base;
+		*ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
+	} while ( value );
+	// Apply negative sign
+	if (tmp_value < 0) *ptr++ = '-';
+	*ptr-- = '\0';
+	while(ptr1 < ptr) {
+		tmp_char = *ptr;
+		*ptr--= *ptr1;
+		*ptr1++ = tmp_char;
 	}
-	while(1) {
-		if(Number == 0) {
-			break;
-		}
-		if(Radix <= 10) {
-			String[i++] = (Number%Radix)+'0';
-		}
-		else {
-			TempBuffer = Number%Radix;
-			if(TempBuffer <= 9) {
-				String[i++] = TempBuffer+'0';
-			}
-			else {
-				String[i++] = TempBuffer-10+'A';
-			}
-		}
-		Number /= Radix;
-	}
-	String[i] = 0x00;
-	Length = i;
-	for(i = 0; i < Length/2; i++) {
-		Temp = String[i];
-		String[i] = String[strlen(String)-i-1];
-		String[strlen(String)-i-1] = Temp;
-	}
-	return String;
+	return result;
 }

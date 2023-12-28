@@ -33,6 +33,7 @@ typedef unsigned char byte;
 typedef signed char byte_s;
 
 typedef void ptr_t;
+typedef unsigned int size_t;
 
 typedef int default_t;
 

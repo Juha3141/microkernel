@@ -72,7 +72,7 @@ void Main(struct multiboot_info *multiboot_info) {
 	// Relocate Kernel in 4MB Area??
 	PrintString(0x07 , "Kernel Image : 0x%X~0x%X\n" , kernel_module->mod_start , kernel_module->mod_end);
 	unsigned int kernel_addr = align(kernel_module->mod_start , PAGE_SIZE);
-	unsigned int kernel_size = kernel_module->mo`d_end-kernel_module->mod_start;
+	unsigned int kernel_size = kernel_module->mod_end-kernel_module->mod_start;
 
 	unsigned int temporary_addr = kernel_addr+kernel_size;
 	// Relocate kernel to new aligned memory address
@@ -126,7 +126,7 @@ void Main(struct multiboot_info *multiboot_info) {
 	PrintString(0x07 , "kernel_page_size : %d\n" , ((kinfostruct->kernel_size)/PAGE_SIZE)+((kinfostruct->kernel_size%PAGE_SIZE != 0)));
 	RelocatePage(kinfostruct->kernel_address , ((kinfostruct->kernel_size)/PAGE_SIZE)+((kinfostruct->kernel_size%PAGE_SIZE != 0)) , kinfostruct->kernel_linear_address , kinfostruct->pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
 	// Make original kernel not present
-	RelocatePage(kinfostruct->kernel_address , ((kinfostruct->kernel_size)/PAGE_SIZE)+((kinfostruct->kernel_size%PAGE_SIZE != 0)) , kinfostruct->kernel_address , kinfostruct->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
+	// RelocatePage(kinfostruct->kernel_address , ((kinfostruct->kernel_size)/PAGE_SIZE)+((kinfostruct->kernel_size%PAGE_SIZE != 0)) , kinfostruct->kernel_address , kinfostruct->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
 
 	kinfostruct->total_kernel_area_end = pml4_entry_end;
 	JumpToKernel64((unsigned int)kinfostruct);

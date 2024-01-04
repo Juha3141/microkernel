@@ -21,7 +21,7 @@ BuildLoader:
 
 clean:
 	make -C $(KRNLIBRARYFOLDER) clean
-	make -C $(KERNELFOLDER)/$(HALFOLDER) all
+	make -C $(KERNELFOLDER)/$(HALFOLDER) clean
 	make -C $(KERNELFOLDER) clean
 	make -C $(LOADERFOLDER) clean
 

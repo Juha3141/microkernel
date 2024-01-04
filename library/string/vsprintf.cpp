@@ -27,7 +27,7 @@ template <typename T> char* itoa_variation(T value, char* result, int base , boo
 /// @return flag
 char get_flag(const char *fmt , int &local_i) {
     char flag_list[] = {'-' , '+' , '#' , '0'};
-    for(int i = 0; i < sizeof(flag_list); i++) {
+    for(size_t i = 0; i < sizeof(flag_list); i++) {
         if(fmt[local_i] == flag_list[i]) {
             return fmt[local_i++];
         }
@@ -212,12 +212,6 @@ int vsprintf(char *buf , const char *fmt , va_list ap) {
             fd.precision = get_precision(fmt , local_i , ap);
             fd.size = get_size(fmt , local_i);
             fd.type = get_type(fmt , local_i);
-            // printf("--------\n");
-            // printf("flag      : '%c'\n" , fd.flag);
-            // printf("width     : %d\n" , fd.width);
-            // printf("precision : %d\n" , fd.precision);
-            // printf("size      : %d\n" , fd.size);
-            // printf("type      : %c\n" , fd.type);
             process_format(buf , fd , buf_i , ap);
             i = local_i;
         }

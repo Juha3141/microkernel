@@ -1,5 +1,5 @@
 clean:
-	make -C EssentialLibrary clean
+	make -C string clean
 
 all:
-	make -C EssentialLibrary all
+	make -C string all

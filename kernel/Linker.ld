@@ -1,6 +1,5 @@
 kernel_linear_address = 0xC0000000;
 
-ENTRY(init_temp_stack)
 SECTIONS {
   . = kernel_linear_address;
   .text : AT(kernel_linear_address) {

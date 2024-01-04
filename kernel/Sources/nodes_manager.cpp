@@ -205,7 +205,6 @@ struct memory::Node *memory::NodesManager::search_new_node_location(max_t *prev_
 /// @param alignment Alignment of address of node
 /// @return Location of created node
 struct memory::Node *memory::NodesManager::create_new_node(max_t size , max_t alignment) {
-	memory::NodesManager *node_mgr = (memory::NodesManager *)/*MEMORYMANAGEMENT_MEMORY_STARTADDRESS*/0x00;
 	max_t prev_node = 0x00;
 	// Create new node
 	struct Node *node = search_new_node_location(&(prev_node));
@@ -213,8 +212,8 @@ struct memory::Node *memory::NodesManager::create_new_node(max_t size , max_t al
 	node = align(node , alignment , prev_node);
 	// If not aligned, and there is no node in entire allocation system
 	// register to node_start
-	if((alignment != 0) && (node_mgr->node_start->occupied == 0)) {
-		node_mgr->node_start = node;
+	if((alignment != 0) && (node_start->occupied == 0)) {
+		node_start = node;
 		// debug::out::printf("Adjusting node from alignment\n");
 	}
 	// Next node : Offset + Size of the node + Size of the node structure

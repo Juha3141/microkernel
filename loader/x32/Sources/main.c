@@ -86,50 +86,50 @@ void Main(struct multiboot_info *multiboot_info) {
 	unsigned int kernel_struct_addr = align(kernel_addr+kernel_size , PAGE_SIZE);
 	
 	// write the signature to the kernel struct area
-	struct KernelInfoStructure *kinfostruct = (struct KernelInfoStructure *)kernel_struct_addr;
+	struct KernelArgument *kargument = (struct KernelArgument *)kernel_struct_addr;
 	PrintString(0x07 , "Kernel structure : 0x%X\n" , kernel_struct_addr);
-	memset(kinfostruct , 0 , sizeof(struct KernelInfoStructure));
-	kinfostruct->signature = KERNEL_STRUCTURE_SIGNATURE;
+	memset(kargument , 0 , sizeof(struct KernelArgument));
+	kargument->signature = KERNEL_STRUCTURE_SIGNATURE;
 	// total_kernel_boundary : total boundary that contains kernel and other necessary stuff
 	// physical memory manager will protect the "total bound"
-	kinfostruct->total_kernel_area_start = kernel_addr;
+	kargument->total_kernel_area_start = kernel_addr;
 	
-	kinfostruct->kernel_address = kernel_addr;
-	kinfostruct->kernel_size = kernel_size;
+	kargument->kernel_address = kernel_addr;
+	kargument->kernel_size = kernel_size;
 
-	kernel_struct_addr += sizeof(struct KernelInfoStructure);
+	kernel_struct_addr += sizeof(struct KernelArgument);
 	
 	// Global memory map
 	struct MemoryMap *memmap = (struct MemoryMap *)kernel_struct_addr;
-	kinfostruct->memmap_ptr = (struct MemMap *)kernel_struct_addr;
+	kargument->memmap_ptr = (struct MemMap *)kernel_struct_addr;
 	// initialize memory map area
 	memset(memmap , 0 , sizeof(struct MemoryMap)*32);
 	kernel_struct_addr += sizeof(struct MemoryMap)*32; // maximum 32
 	
 	PrintString(0x07 , "memmap location : 0x%X\n" , memmap);
-	kinfostruct->memmap_count = DetectMemory(memmap , multiboot_info);
+	kargument->memmap_count = DetectMemory(memmap , multiboot_info);
 
-	kinfostruct->kernel_stack_location = kernel_struct_addr;
-	kinfostruct->kernel_stack_size = KERNEL_STRUCTURE_STACKSIZE;
-	memset((unsigned char *)kinfostruct->kernel_stack_location , 0 , kinfostruct->kernel_stack_size);
-	kernel_struct_addr += kinfostruct->kernel_stack_size; // 128kb kernel stack
+	kargument->kernel_stack_location = kernel_struct_addr;
+	kargument->kernel_stack_size = KERNEL_STRUCTURE_STACKSIZE;
+	memset((unsigned char *)kargument->kernel_stack_location , 0 , kargument->kernel_stack_size);
+	kernel_struct_addr += kargument->kernel_stack_size; // 128kb kernel stack
 	
-	PrintString(0x07 , "kernel stack address : 0x%X\n" , kinfostruct->kernel_stack_location);
+	PrintString(0x07 , "kernel stack address : 0x%X\n" , kargument->kernel_stack_location);
 	kernel_struct_addr = align(kernel_struct_addr , 4096);
-	kinfostruct->pml4t_entry_location = kernel_struct_addr;
+	kargument->pml4t_entry_location = kernel_struct_addr;
 	PrintString(0x07 , "PML4 table location  : 0x%X\n" , kernel_struct_addr);
 	unsigned int pml4_entry_end = SetupPML4_custom(kernel_struct_addr , memmap);
-	kinfostruct->pml4_entry_size = pml4_entry_end-kinfostruct->pml4t_entry_location;
+	kargument->pml4_entry_size = pml4_entry_end-kargument->pml4t_entry_location;
 
 	// address should be aligned to 2MB
-	kinfostruct->kernel_linear_address = KERNEL_NEW_HIGHER_HALF;
-	PrintString(0x07 , "kernel_page_size : %d\n" , ((kinfostruct->kernel_size)/PAGE_SIZE)+((kinfostruct->kernel_size%PAGE_SIZE != 0)));
-	RelocatePage(kinfostruct->kernel_address , ((kinfostruct->kernel_size)/PAGE_SIZE)+((kinfostruct->kernel_size%PAGE_SIZE != 0)) , kinfostruct->kernel_linear_address , kinfostruct->pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
+	kargument->kernel_linear_address = KERNEL_NEW_HIGHER_HALF;
+	PrintString(0x07 , "kernel_page_size : %d\n" , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)));
+	RelocatePage(kargument->kernel_address , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)) , kargument->kernel_linear_address , kargument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
 	// Make original kernel not present
-	// RelocatePage(kinfostruct->kernel_address , ((kinfostruct->kernel_size)/PAGE_SIZE)+((kinfostruct->kernel_size%PAGE_SIZE != 0)) , kinfostruct->kernel_address , kinfostruct->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
+	// RelocatePage(kargument->kernel_address , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)) , kargument->kernel_address , kargument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
 
-	kinfostruct->total_kernel_area_end = pml4_entry_end;
-	JumpToKernel64((unsigned int)kinfostruct);
+	kargument->total_kernel_area_end = pml4_entry_end;
+	JumpToKernel64((unsigned int)kargument);
 
 	while(1) {
 		;

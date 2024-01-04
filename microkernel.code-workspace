@@ -3,5 +3,19 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"files.associations": {
+			"array": "cpp",
+			"string": "cpp",
+			"string_view": "cpp",
+			"*.tcc": "cpp",
+			"unordered_map": "cpp",
+			"fstream": "cpp",
+			"istream": "cpp",
+			"numeric": "cpp",
+			"ostream": "cpp",
+			"sstream": "cpp"
+		}
+	}
 }

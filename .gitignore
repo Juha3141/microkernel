@@ -4,3 +4,4 @@
 .gdb_history
 bochsrc.txt
 custom_vsprintf*
+*.code-workspace

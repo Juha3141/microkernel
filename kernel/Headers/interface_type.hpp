@@ -3,6 +3,9 @@
  * @author Ian Juha Cho(ianisnumber2027@gmail.com)
  * @brief Provides basic interface type for operating system
  * @date 2023-08-20
+ * 
+ * @copyright Copyright (c) 2023 Ian Juha Cho
+ * 
  */
 
 #ifndef _INTERFACE_TYPE_HPP_
@@ -18,6 +21,20 @@
 
 #define INVALID ARCHITECTURE_LIMIT
 
+#define SINGLETON_PATTERN_KSTRUCT(type) \
+static type *get_self(void) {\
+    static type *p = 0x00;\
+    if(!p) p = (type *)memory::kstruct_alloc(sizeof(type));\
+    return p;\
+}
+
+#define SINGLETON_PATTERN_PMEM(type) \
+static type *get_self(void) {\
+    static type *p = 0x00;\
+    if(!p) p = (type *)memory::pmem_alloc(sizeof(type));\
+    return p;\
+}
+
 // Maximum calculatable data size, corresponds to architecture(16-bit,32-bit, ...)
 typedef unsigned long max_t;
 typedef signed long max_s_t;
@@ -32,13 +49,14 @@ typedef signed short word_s;
 typedef unsigned char byte;
 typedef signed char byte_s;
 
-typedef void ptr_t;
+typedef max_t ptr_t;
+typedef void vptr_t;
+
 typedef unsigned int size_t;
 
 typedef int default_t;
 
 // Size of IO port
-typedef unsigned char io_data;
 typedef unsigned short io_port;
 
 // Size of interrupt handler pointer (function pointer)

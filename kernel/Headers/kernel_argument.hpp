@@ -17,7 +17,8 @@ struct MemoryMap {
 	unsigned int type;
 };
 
-struct KernelInfoStructure {
+// To-do : Remove pml4 entry field
+struct KernelArgument {
 	unsigned int signature;               // 0 
 	unsigned int kernel_address;          // 4
     unsigned int kernel_size;             // 8

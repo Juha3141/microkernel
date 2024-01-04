@@ -8,7 +8,6 @@
 #ifndef _KERNEL_MEMORY_MANAGER_H_
 #define _KERNEL_MEMORY_MANAGER_H_
 
-#include <interface.hpp>
 #include <interface_type.hpp>
 #include <nodes_manager.hpp>
 
@@ -23,8 +22,8 @@ namespace memory {
     };
     void get_kstruct_boundary(struct Boundary &boundary);
 
-    void determine_kstruct_boundary(struct Boundary &new_mboundary , struct KernelInfoStructure *kinfostruct);
-    int determine_pmem_boundary(struct Boundary protect , struct Boundary *new_mboundary , struct KernelInfoStructure *kinfostruct);
+    void determine_kstruct_boundary(struct Boundary &new_mboundary , struct KernelArgument *kargument);
+    int determine_pmem_boundary(struct Boundary protect , struct Boundary *new_mboundary , struct KernelArgument *kargument);
 
     void kstruct_init(struct Boundary boundary);
     void *kstruct_alloc(max_t size , max_t alignment=0);
@@ -33,13 +32,8 @@ namespace memory {
     // Global class, use singleton pattern
     struct SegmentsManager {
         void init(int segment_count , struct Boundary *usable_segments);
-        static SegmentsManager *get_self(void) {
-            static SegmentsManager *ptr = 0x00;
-            if(ptr == 0x00) {
-                ptr = (SegmentsManager *)kstruct_alloc(sizeof(SegmentsManager));
-            }
-            return ptr;
-        }
+        SINGLETON_PATTERN_KSTRUCT(struct SegmentsManager);
+        
         int get_segment_index(max_t address);
         
         max_t get_currently_using_mem(void);
@@ -49,9 +43,9 @@ namespace memory {
     };
     
     // pmem (physical memory) allocation
-    void pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct KernelInfoStructure *kinfostruct);
-    ptr_t *pmem_alloc(max_t size , max_t alignment=0);
-    void pmem_free(ptr_t *ptr);
+    void pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct KernelArgument *kargument);
+    vptr_t *pmem_alloc(max_t size , max_t alignment=0);
+    void pmem_free(vptr_t *ptr);
     bool pmem_protect(struct Boundary boundary);
 
     max_t pmem_total_size(void);

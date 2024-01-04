@@ -21,10 +21,10 @@ void memory::get_kstruct_boundary(struct Boundary &boundary) {
 	memcpy(&boundary , &kstruct_mgr.boundary , sizeof(struct Boundary));
 }
 
-void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , struct KernelInfoStructure *kinfostruct) {
+void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , struct KernelArgument *kargument) {
 	debug::push_function("d_kstruct_b");
-	struct MemoryMap *memmap = (struct MemoryMap *)kinfostruct->memmap_ptr;
-	max_t kernel_end_address = kinfostruct->total_kernel_area_end;
+	struct MemoryMap *memmap = (struct MemoryMap *)kargument->memmap_ptr;
+	max_t kernel_end_address = kargument->total_kernel_area_end;
 	debug::out::printf("kernel_end_address : 0x%X\n" , kernel_end_address);
 	new_mboundary.start_address = align_address(kernel_end_address , 4096); // padding
 	/* The "kstruct" is location of all sorts of kernel structures that requires static memory location.
@@ -32,12 +32,12 @@ void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary ,
 	 * This code (haha) basically searches what "memmap[i]" has the kernel image and calculates whether
 	 * the kstruct area is available to be created.
 	 */
-	for(int i = 0; i < kinfostruct->memmap_count; i++) {
+	for(int i = 0; i < kargument->memmap_count; i++) {
 		max_t address = ((max_t)memmap[i].addr_high << 32)|memmap[i].addr_low;
 		max_t length = ((max_t)memmap[i].length_high << 32)|memmap[i].length_low;
 		// debug::out::printf("seg%d : 0x%X~0x%X\n" , i , address , address+length);
 		if(kernel_end_address >= address && kernel_end_address <= address+length
-		&& kinfostruct->total_kernel_area_start >= address && kinfostruct->total_kernel_area_start <= address+length) { // is kernel inside?
+		&& kargument->total_kernel_area_start >= address && kargument->total_kernel_area_start <= address+length) { // is kernel inside?
 			// determine boundary
 			// If segment cannot hold more than designated size, just use maximum size for the segment
 			new_mboundary.end_address = MIN(address+length , new_mboundary.start_address+KERNELSTRUCTURE_LENGTH);
@@ -52,11 +52,11 @@ void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary ,
 	return;
 }
 
-int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *new_msegment_list , struct KernelInfoStructure *kinfostruct) {
+int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *new_msegment_list , struct KernelArgument *kargument) {
 	debug::push_function("d_pmem_b");
 
 	int seg_index = 0;
-	struct MemoryMap *memmap = (struct MemoryMap *)kinfostruct->memmap_ptr;
+	struct MemoryMap *memmap = (struct MemoryMap *)kargument->memmap_ptr;
 	struct Boundary kstruct_boundary;
 	get_kstruct_boundary(kstruct_boundary);
 	// unnecessary but necessary I guess
@@ -67,9 +67,10 @@ int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *n
 	 * ..and saves the address of the segments to new_msegment_list
 	 * ..effectively excluding kernel boundary from physical memory pool
 	*/
-	for(int i = 0; i < kinfostruct->memmap_count; i++) {
+	for(int i = 0; i < kargument->memmap_count; i++) {
 		max_t address = ((max_t)memmap[i].addr_high << 32)|memmap[i].addr_low;
 		max_t length = ((max_t)memmap[i].length_high << 32)|memmap[i].length_low;
+		if(memmap[i].type != MEMORYMAP_USABLE) continue;
 		// If the segment is larger than certain "threshold" -> save it 
 		if(protect.start_address >= address && protect.start_address <= address+length && protect.start_address-address >= KERNEL_MEMORY_SEGMENT_THRESHOLD) {
 			max_t new_addr = address;
@@ -139,7 +140,7 @@ int memory::SegmentsManager::get_segment_index(max_t address) {
 	return -1;
 }
 
-void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct KernelInfoStructure *kinfostruct) {
+void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct KernelArgument *kargument) {
 	debug::push_function("pmem_init");
 	
 	int usable_seg_count = 0;
@@ -149,9 +150,9 @@ void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct Ke
 	int pmem_entry_count = 0;
 
 	// determine kernel struct address
-	determine_kstruct_boundary(kstruct_boundary , kinfostruct);
+	determine_kstruct_boundary(kstruct_boundary , kargument);
 	// determine physical memory address
-	if((pmem_entry_count = determine_pmem_boundary({kinfostruct->total_kernel_area_start , kstruct_boundary.end_address} , pmem_boundary , kinfostruct)) == 0) {
+	if((pmem_entry_count = determine_pmem_boundary({kargument->total_kernel_area_start , kstruct_boundary.end_address} , pmem_boundary , kargument)) == 0) {
 		debug::panic("kmem_manager.cpp" , 55 , "pmem_init() : zero detected usable memory\n");
 	}
 	kstruct_init(kstruct_boundary); // initialize kernel structure area
@@ -170,13 +171,13 @@ max_t memory::SegmentsManager::get_currently_using_mem(void) {
 	return currently_using_mem;
 }
 
-ptr_t *memory::pmem_alloc(max_t size , max_t alignment) {
-	ptr_t *ptr = 0x00;
+vptr_t *memory::pmem_alloc(max_t size , max_t alignment) {
+	vptr_t *ptr = 0x00;
 	debug::push_function("pmem_alloc");
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	for(int i = 0; i < segments_mgr->managers_count; i++) {
 		if(!segments_mgr->node_managers[i].available()) continue;
-		if((ptr = (ptr_t *)segments_mgr->node_managers[i].allocate(size , alignment)) != 0x00) {
+		if((ptr = (vptr_t *)segments_mgr->node_managers[i].allocate(size , alignment)) != 0x00) {
 			break;
 		}
 	}
@@ -187,7 +188,7 @@ ptr_t *memory::pmem_alloc(max_t size , max_t alignment) {
 	return ptr;
 }
 
-void memory::pmem_free(ptr_t *ptr) {
+void memory::pmem_free(vptr_t *ptr) {
 	debug::push_function("pmem_free");
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	int index;

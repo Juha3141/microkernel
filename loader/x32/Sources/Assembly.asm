@@ -96,7 +96,6 @@ LongModeGDTR:
 
 LongModeEntry:
     xor rax , rax
-
     mov eax , dword[rdi+20] ; kernel_stack_location
     add eax , dword[rdi+24] ; kernel_stack_size
     sub rax , 8
@@ -106,7 +105,6 @@ LongModeEntry:
     xor rdx , rdx
     mov edx , dword[rdi+44] ; kernel_linear_address
 
-    push rdi
     call rdx
 
     jmp $

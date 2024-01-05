@@ -15,6 +15,9 @@ void x86_64::pic::init(void) {
     io_write_byte(PIC_SLAVE_DATA , 32+8); // start vector of interrupt (Slave)
     io_write_byte(PIC_SLAVE_DATA , 0b00000010); // ??
     io_write_byte(PIC_SLAVE_DATA , PIC_ICW4_8086);
+
+    io_write_byte(PIC_MASTER_DATA , 0x00);
+    io_write_byte(PIC_SLAVE_DATA , 0x00);
 }
 
 void x86_64::pic::disable(void) {

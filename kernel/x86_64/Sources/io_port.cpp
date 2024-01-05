@@ -2,14 +2,14 @@
 #include <arch_inline_asm.hpp>
 
 void io_write_byte(io_port port , byte data) {
-    IA ("mov dx , %0":"=r"(port));
-    IA ("mov al , %0":"=r"(data));
+    IA ("mov dx , %0"::"r"(port));
+    IA ("mov al , %0"::"r"(data));
     IA ("out dx , al");
 }
 
 byte io_read_byte(io_port port) {
     byte data;
-    IA ("mov dx , %0":"=r"(port));
+    IA ("mov dx , %0"::"r"(port));
     IA ("in %0 , dx"::"r"(data));
     return data;
 }

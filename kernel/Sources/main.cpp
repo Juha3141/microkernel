@@ -30,10 +30,12 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
     memory::pmem_init(kargument->memmap_count , (struct MemoryMap *)((max_t)kargument->memmap_ptr) , kargument);
     set_initial_kernel_info();
 
+    interrupt::hardware::disable();
     segmentation::init();
     interrupt::init();
-    // paging::init();
-    
+
+    debug::out::printf("hello world\n");
+
     while(1) {
         ;
     }

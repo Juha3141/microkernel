@@ -4,7 +4,7 @@
 #include <x86_64_descriptor_table.hpp>
 #include <debug.hpp>
 
-#define GDT_ENTRYCOUNT 64
+#define GDT_ENTRYCOUNT (SEGMENT_MAXCOUNT+1)
 #define GDT_TYPE_RW                  0b00000010
 #define GDT_TYPE_DC                  0b00000100
 #define GDT_TYPE_E                   0b00001000
@@ -61,11 +61,16 @@ namespace x86_64 {
 
         void init(int entries_count) {
             DescriptorTableContainer<struct GDTEntry>::init(entries_count);
-            current_index = 0;
+            current_index = 1; // we skip first entry for null descriptor
         }
     };
-    void gdt_register_raw(int index , dword base_address , dword limit , byte type , byte flags);
-    int gdt_register_tss(qword base_address , dword limit , byte type , byte flags);
+    namespace gdt {
+        void convert_type_flags(word segment_flags , byte &type , byte &flags , byte &rpl);
+        segment_t get_segment_value(int index , byte rpl);
+        int get_segment_index(segment_t segment_value);
+        void register_raw(int index , dword base_address , dword limit , byte type , byte flags);
+        int register_tss(qword base_address , dword limit , byte type , byte flags);
+    }
 }
 
 

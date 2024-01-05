@@ -32,6 +32,7 @@ void segmentation::SegmentsManager::register_segment(const char *segment_name , 
     debug::out::raw_printf("%s\n" , segments_data[index].name);
     segments_data[index].value = segment_value;
     segments_count++;
+    
     debug::pop_function();
 }
 
@@ -49,6 +50,14 @@ segment_t segmentation::SegmentsManager::discard_segment(const char *segment_nam
     return segments_data[index].value;
 }
 
+segment_t segmentation::SegmentsManager::search_segment(const char *segment_name) {
+    int index = 0;
+    for(; index < segments_maxcount; index++) {
+        if(strcmp(segments_data[index].name , segment_name) == 0) return segments_data[index].value;
+    }
+    return SEGMENT_VALUE_INVALID;
+}
+
 void segmentation::init(void) {
     debug::push_function("seg::init");
     struct kernel_segments_info kseginfo;
@@ -56,14 +65,12 @@ void segmentation::init(void) {
     SegmentsManager *segment_mgr = SegmentsManager::get_self();
     segment_mgr->init(SEGMENT_MAXCOUNT);
     
-    segmentation::hardware::customize_segmentation_model(kseginfo);
+    segmentation::hardware::set_essential_kernel_segment(kseginfo);
 
     // Initialize both hardware/software
     segmentation::hardware::init(kseginfo , ksegvalue);
     segment_mgr->register_segment(SEGMENT_NAME_CODE , ksegvalue.kernel_code);
     segment_mgr->register_segment(SEGMENT_NAME_DATA , ksegvalue.kernel_data);
-    segment_mgr->register_segment(SEGMENT_NAME_USER_CODE , ksegvalue.user_code);
-    segment_mgr->register_segment(SEGMENT_NAME_USER_DATA , ksegvalue.user_data);
     debug::out::printf("segment_mgr : 0x%lX\n" , (max_t)segment_mgr);
 
     debug::out::printf(DEBUG_SPECIAL , "current segment count : %d\n" , segment_mgr->segments_count);
@@ -71,12 +78,14 @@ void segmentation::init(void) {
         if(segment_mgr->segments_data[i].occupied == false) continue;
         debug::out::printf(DEBUG_SPECIAL , "%d. \"%s\", value:0x%02x\n" , i , segment_mgr->segments_data[i].name , segment_mgr->segments_data[i].value);
     }
+
+    set_to_code_segment(SEGMENT_NAME_CODE);
+    set_to_data_segment(SEGMENT_NAME_DATA);
     debug::pop_function();
 }
-
-void segmentation::register_segment(const char *segment_name , max_t start_address , max_t length , word segment_type) {
-    segment_t segment = segmentation::hardware::register_segment(start_address , length , segment_type);
-    SegmentsManager::get_self()->register_segment(segment_name , segment);
+    
+segment_t segmentation::get_segment_value(const char *segment_name) {
+    return SegmentsManager::get_self()->search_segment(segment_name);
 }
 
 void segmentation::discard_segment(const char *segment_name) {
@@ -85,9 +94,12 @@ void segmentation::discard_segment(const char *segment_name) {
 }
 
 void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) {
-    
+    segment_t segment = SegmentsManager::get_self()->search_segment(segment_name);
+    if(new_point == ARCHITECTURE_LIMIT) segmentation::hardware::set_to_code_segment(segment);
+    else segmentation::hardware::set_to_code_segment(segment , new_point);
 }
 
 void segmentation::set_to_data_segment(const char *segment_name) {
-
+    segment_t segment = SegmentsManager::get_self()->search_segment(segment_name);
+    segmentation::hardware::set_to_data_segment(segment);
 }

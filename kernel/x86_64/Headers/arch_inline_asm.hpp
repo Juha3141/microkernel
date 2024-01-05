@@ -5,4 +5,6 @@
 #define IA_DISABLE_INTERRUPT __asm__ ("cli");
 #define IA_ENABLE_INTERRUPT  __asm__ ("sti");
 
+#define IA_RETURN            __asm__ ("ret");
+
 #endif

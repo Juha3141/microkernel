@@ -10,8 +10,10 @@
 #define SEGMENT_TYPE_USER_PRIVILEGE    0x02
 #define SEGMENT_TYPE_CODE_SEGMENT      0x04
 #define SEGMENT_TYPE_DATA_SEGMENT      0x08
-#define SEGMENT_TYPE_1TO1_CORRESPONDED 0x10
 #define SEGMENT_TYPE_CUSTOM            0x00
+
+#define SEGMENT_TYPE_SYSTEM_SEGMENT    0x12
+#define SEGMENT_TYPE_TASK_SEGMENT      0x14
 
 // Default segments for system
 #define SEGMENT_NAME_CODE      "code"
@@ -39,6 +41,9 @@ namespace segmentation {
             char name[32];
             segment_t value;
         }*segments_data;
+
+        int current_code_segment_index;
+        int current_data_segment_index;
     };
     // Packed data of information for segment
     struct segment_info {
@@ -49,14 +54,10 @@ namespace segmentation {
     struct kernel_segments_info {
         segment_info kernel_code;
         segment_info kernel_data;
-        segment_info user_code;
-        segment_info user_data;
     };
     struct kernel_segments_value {
         segment_t kernel_code;
-        segment_t kernel_data;
-        segment_t user_code;
-        segment_t user_data;        
+        segment_t kernel_data;    
     };
     void init(void);
     // register segment
@@ -66,7 +67,7 @@ namespace segmentation {
     segment_t get_segment_value(const char *segment_name);
     
     // renew the segment (if necessary)
-    void set_to_code_segment(const char *segment_name , ptr_t new_point);
+    void set_to_code_segment(const char *segment_name , ptr_t new_point=ARCHITECTURE_LIMIT);
     void set_to_data_segment(const char *segment_name);
 }
 

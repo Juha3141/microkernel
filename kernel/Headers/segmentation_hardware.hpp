@@ -5,14 +5,16 @@
 
 namespace segmentation {
     namespace hardware {
-        void customize_segmentation_model(kernel_segments_info &kseginfo);
+        void set_essential_kernel_segment(kernel_segments_info &kseginfo);
         
         void init(kernel_segments_info kseginfo , kernel_segments_value &ksegvalues);
         void init_ist(void); // If necessary
 
-        segment_t register_segment(max_t start_address , max_t length , word segment_type);
+        segment_t register_system_segment(max_t start_address , max_t length , word segment_type);
+        segment_t register_task_segment(max_t start_address , max_t length , word segment_type);
         void discard_segment(segment_t segment);
 
+        void set_to_code_segment(segment_t segment);
         void set_to_code_segment(segment_t segment , ptr_t new_point);
         void set_to_data_segment(segment_t segment);
     }

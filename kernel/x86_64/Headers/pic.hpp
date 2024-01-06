@@ -26,8 +26,6 @@ namespace x86_64 {
         void irq_mask(int irq);
         void irq_unmask(int irq);
 
-
-
         void send_EOI(bool master);
     }
 }

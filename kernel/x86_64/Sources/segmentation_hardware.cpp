@@ -14,23 +14,14 @@
 #include <interrupt.hpp>
 #include <gdt.hpp>
 #include <arch_inline_asm.hpp>
+#include <kernel_info.hpp>
 
 #include <string.hpp>
 #include <debug.hpp>
 
-/// @brief memory model customizer, decides what segment goes to what address or what type it should have
-/// @param kseginfo Return value, should contain the overall location/length of essential kernel segments
-void segmentation::hardware::set_essential_kernel_segment(kernel_segments_info &kseginfo) {
-    /* We use 1-to-1 corresponded memory map for x86_64 intel architecture. */
-    kseginfo.kernel_code.start_address = 0x00;
-    kseginfo.kernel_code.length = ARCHITECTURE_LIMIT;
-    kseginfo.kernel_code.segment_type = SEGMENT_TYPE_CODE_SEGMENT|SEGMENT_TYPE_KERNEL_PRIVILEGE;
-
-    kseginfo.kernel_data.start_address = 0x00;
-    kseginfo.kernel_data.length = ARCHITECTURE_LIMIT;
-    kseginfo.kernel_data.segment_type = SEGMENT_TYPE_DATA_SEGMENT|SEGMENT_TYPE_KERNEL_PRIVILEGE;
-}
-
+/// @brief Hardware-level segmentation initialization, based on kseginfo and ksegvalues
+/// @param kseginfo Information for Default kernel segment 
+/// @param ksegvalues Actual segment value(or anything like that) of the default kernel segment
 void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segments_value &ksegvalues) {
     interrupt::hardware::disable();
 
@@ -40,38 +31,40 @@ void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segment
 
     ksegvalues.kernel_code = register_system_segment(kseginfo.kernel_code.start_address , kseginfo.kernel_code.length , kseginfo.kernel_code.segment_type);
     ksegvalues.kernel_data = register_system_segment(kseginfo.kernel_data.start_address , kseginfo.kernel_data.length , kseginfo.kernel_data.segment_type);
-    init_ist();
 
     gdt_container->reg.size = GDT_ENTRYCOUNT*sizeof(struct x86_64::GDTEntry);
     max_t gdtr_ptr = (max_t)&gdt_container->reg;
     debug::out::printf("gdtr_ptr      : 0x%X\n" , gdtr_ptr);
     debug::out::printf("gdt base_addr : 0x%X\n" , gdt_container->entries);
+    debug::out::printf(DEBUG_INFO , "sizeof(GDTEntry) : %d\n" , sizeof(x86_64::GDTEntry));
+    debug::out::printf(DEBUG_INFO , "sizeof(LDTEntry) : %d\n" , sizeof(x86_64::LDTEntry));
 
     IA ("lgdt [%0]"::"r"(gdtr_ptr));
-    debug::out::printf("gdt_container->tss_segment : 0x%X\n" , gdt_container->tss_segment);
-    IA ("ltr %0"::"r"((word)gdt_container->tss_segment));
     debug::pop_function();
 }
 
-void segmentation::hardware::init_ist(void) {
+void segmentation::hardware::init_ist(KernelInfo::ist_info_t &ist_info) {
     x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
     struct x86_64::TSS *tss = (struct x86_64::TSS *)memory::kstruct_alloc(sizeof(struct x86_64::TSS));
-    int index = x86_64::gdt::register_tss((qword)tss , sizeof(struct x86_64::TSS)-1 , GDT_TYPE_32BIT_TSS_AVAILABLE , GDT_FLAGS_P|GDT_FLAGS_DPL0|GDT_FLAGS_G);
+    int index = x86_64::gdt::register_ldt((qword)tss , sizeof(struct x86_64::TSS)-1 , GDT_TYPE_32BIT_TSS_AVAILABLE , GDT_FLAGS_P|GDT_FLAGS_DPL0|GDT_FLAGS_G);
     gdt_container->tss_segment = (index << 3)|0; // RPL : 0
     // initialize TSS
     memset(tss , 0 , sizeof(struct x86_64::TSS));
+
+    // Temporary Interrupt Stack Table
     tss->ist[0] = (qword)memory::pmem_alloc(512*1024 , 4096)+(512*1024);
     debug::out::printf(DEBUG_INFO , "tss->ist[0] : 0x%X\n" , tss->ist[0]);
     tss->iopb_offset = 0xFFFF;
-
+    // Set Segment
+    IA ("ltr %0"::"r"((word)gdt_container->tss_segment));
+    
     debug::out::printf("TSS segment : 0x%X\n" , gdt_container->tss_segment);
 }
 
 segment_t segmentation::hardware::register_system_segment(max_t start_address , max_t length , word segment_type) {
     segment_t segment_value = 0x00;
     x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
-    int index = gdt_container->current_index;
-
+    
     // Determine type according to segment_type
     byte type , flags , rpl;
     x86_64::gdt::convert_type_flags(segment_type , type , flags , rpl);
@@ -80,16 +73,39 @@ segment_t segmentation::hardware::register_system_segment(max_t start_address , 
         length = length >> 12;
     }
 
-    x86_64::gdt::register_raw(index , start_address , length , type , flags);
+    int index = x86_64::gdt::register_gdt(start_address , length , type , flags);
+    segment_value = x86_64::gdt::get_segment_value(index , rpl , false);
+    return segment_value;
+}
+
+segment_t segmentation::hardware::register_task_segment(max_t start_address , max_t length , word segment_type) {
+    segment_t segment_value = 0x00;
+    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
     
-    segment_value = x86_64::gdt::get_segment_value(index , rpl);
-    gdt_container->current_index++;
+    // Determine type according to segment_type
+    byte type , flags , rpl;
+    x86_64::gdt::convert_type_flags(segment_type , type , flags , rpl);
+    if(length > 0xFFFFF) { // Enable Granularity?
+        flags |= GDT_FLAGS_G; // Granularity = 1 : Multiply 4096 to limit
+        length = length >> 12;
+    }
+
+    int index = x86_64::gdt::register_ldt(start_address , length , type , flags);
+    segment_value = x86_64::gdt::get_segment_value(index , rpl , false);
     return segment_value;
 }
 
 void segmentation::hardware::discard_segment(segment_t segment) {
+    size_t segment_size;
+    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
     int index = x86_64::gdt::get_segment_index(segment);
-    x86_64::gdt::register_raw(index , 0 , 0 , 0 , 0);
+    if((gdt_container->entries[index].type & GDT_TYPE_LDT) == GDT_TYPE_LDT) {
+        segment_size = sizeof(x86_64::LDTEntry);
+    }
+    else {
+        segment_size = sizeof(x86_64::GDTEntry);
+    }
+    memset(&(gdt_container->entries[index]) , 0 , segment_size);
 }
 
 __attribute__ ((naked)) void segmentation::hardware::set_to_code_segment(segment_t segment) {

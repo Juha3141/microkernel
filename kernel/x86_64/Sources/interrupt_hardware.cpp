@@ -62,9 +62,9 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     idt_container->entries[number].type = type & 0x0F;
     idt_container->entries[number].selector = segmentation::get_segment_value(SEGMENT_NAME_CODE); // !!!
     idt_container->entries[number].reserved = 0x00;
-    idt_container->entries[number].IST = 1;
+    idt_container->entries[number].IST = 0;
     
-    if(KernelInfo::get_self()->predet.use_ist == true) {
+    if(GLOBAL_KERNELINFO->conditions.use_ist == true) {
         idt_container->entries[number].IST = 1;
     }
     return true;
@@ -77,14 +77,11 @@ bool interrupt::hardware::discard_interrupt(int number) {
     return true;
 }
 
-bool interrupt::hardware::mask_interrupt(int number) {
-    return true;
-}
-
-bool interrupt::hardware::unmask_interrupt(int number) {
-    return false;
-}
-
-void interrupt::hardware::interrupt_received(void) {
-    // x86_64::pic::send_EOI();
+void interrupt::hardware::set_interrupt_mask(int number , bool masked) {
+    if(masked == true) {
+        x86_64::pic::irq_mask(number-32);
+    }
+    else {
+        x86_64::pic::irq_unmask(number-32);
+    }
 }

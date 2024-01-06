@@ -64,14 +64,12 @@ bool interrupt::discard_interrupt(int number) {
     return InterruptManager::get_self()->discard_interrupt(number);
 }
 
-bool interrupt::mask_interrupt(int number) {
-    if(hardware::mask_interrupt(number) == false) return false;
-    InterruptManager::get_self()->mask_interrupt(number);
-    return true;
-}
-
-bool interrupt::unmask_interrupt(int number) {
-    if(hardware::unmask_interrupt(number) == false) return false;
-    InterruptManager::get_self()->unmask_interrupt(number);
-    return true;
+void interrupt::set_interrupt_mask(int number , bool masked) {
+    if(masked == true) {
+        InterruptManager::get_self()->mask_interrupt(number);
+    }
+    else {
+        InterruptManager::get_self()->unmask_interrupt(number);
+    }
+    interrupt::hardware::set_interrupt_mask(number , masked);
 }

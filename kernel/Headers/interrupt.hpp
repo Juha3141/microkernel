@@ -55,8 +55,7 @@ namespace interrupt {
     
     bool register_interrupt(int number , ptr_t handler_ptr , word interrupt_option); // Register interrupt handler
     bool discard_interrupt(int number);                      // Discard interrupt handler
-    bool mask_interrupt(int number);
-    bool unmask_interrupt(int number);
+    void set_interrupt_mask(int number , bool masked);
 
     extern "C" void interrupt_handler_common(max_t stack_address , struct SavedRegisters *saved_regs , int int_num);
 }

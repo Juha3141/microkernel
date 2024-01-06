@@ -14,8 +14,7 @@ namespace interrupt {
         bool register_interrupt(int number , ptr_t handler_ptr , word interrupt_option); // Register interrupt handler
         bool discard_interrupt(int number);                      // Discard interrupt handler
 
-        bool mask_interrupt(int number);
-        bool unmask_interrupt(int number);
+        void set_interrupt_mask(int number , bool masked);
 
         void interrupt_received(void);        // EOI
 

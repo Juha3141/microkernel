@@ -24,3 +24,23 @@ void x86_64::pic::disable(void) {
     io_write_byte(PIC_MASTER_DATA , 0xFF);
     io_write_byte(PIC_SLAVE_DATA , 0xFF);
 }
+
+void x86_64::pic::irq_mask(int irq) {
+    word port = (irq > 8) ? PIC_SLAVE_DATA : PIC_MASTER_DATA;
+    irq = (irq > 8) ? irq-8 : irq;
+    byte value = io_read_byte(port);
+    
+    value |= (1 << irq);
+
+    io_write_byte(port , value);
+}
+
+void x86_64::pic::irq_unmask(int irq) {
+    word port = (irq > 8) ? PIC_SLAVE_DATA : PIC_MASTER_DATA;
+    irq = (irq > 8) ? irq-8 : irq;
+    byte value = io_read_byte(port);
+    
+    value &= ~(1 << irq);
+
+    io_write_byte(port , value);
+}

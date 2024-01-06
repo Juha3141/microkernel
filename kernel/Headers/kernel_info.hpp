@@ -14,8 +14,10 @@
 #include <interface_type.hpp>
 #include <kmem_manager.hpp>
 
-#define KINFO_SEGMENTATION_MODE_LINEAR_CORRESPONDENCE 1
-#define KINFO_SEGMENTATION_MODE_SEGMENTED             2
+#define GLOBAL_KERNELINFO KernelInfo::get_self()
+
+#define KINFO_TASKSEG_LINEAR_CORRESPONDENCE 1
+#define KINFO_TASKSEG_INDIVIDUAL_SPACE      2
 
 enum state_t {
     Using=0 , NotUsing=1 , Disabled=2
@@ -33,15 +35,14 @@ enum state_t {
 struct KernelInfo {
     // Use this structure as global variables
     SINGLETON_PATTERN_KSTRUCT(struct KernelInfo);
-    union {
+    struct {
         /* Segmentation related */
-        word segmentation_mode; // segmentation mode
+        word task_segmentation_mode; // segmentation mode
         bool use_ist;           // interrupt stack table
-    
         /* Multicore system related */
         state_t multicore_usage;
         
-    }predet;
+    }conditions;
     
     // Determined by other parts of system
     struct ist_info_t {

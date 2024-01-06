@@ -33,6 +33,11 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
     interrupt::hardware::disable();
     segmentation::init();
     interrupt::init();
+    
+    segmentation::SegmentsManager *segmentation_mgr = segmentation::SegmentsManager::get_self();
+    for(int i = 0; i < segmentation_mgr->segments_count; i++) {
+        debug::out::printf("seg%d. 0x%02x - %s\n" , i , segmentation_mgr->segments_data[i].value , segmentation_mgr->segments_data[i].name);
+    }
 
     debug::out::printf("hello world\n");
 

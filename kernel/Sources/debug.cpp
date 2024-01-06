@@ -82,6 +82,7 @@ const char *debug::out::debugstr(debug_m mode) {
         case DEBUG_TEXT:    return "[ ] ";
         case DEBUG_INFO:    return "[I] ";
         case DEBUG_SPECIAL: return "[S] ";
+        case DEBUG_WARNING: return "[W] ";
         case DEBUG_ERROR:   return "[E] ";
         case DEBUG_PANIC:   return "[P] ";
     }

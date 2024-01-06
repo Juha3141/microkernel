@@ -7,12 +7,13 @@
 #define DEBUG_FUNCTION_NAME_LEN  80
 #define DEBUG_FUNCTION_STACK_MAX 20
 
-#define DEBUG_NONE      0b000001
-#define DEBUG_TEXT      0b000010 // white
-#define DEBUG_INFO      0b000100 // blue
-#define DEBUG_SPECIAL   0b001000 // light green
-#define DEBUG_ERROR     0b010000 // red
-#define DEBUG_PANIC     0b100000
+#define DEBUG_NONE      0b0000001
+#define DEBUG_TEXT      0b0000010 // white
+#define DEBUG_INFO      0b0000100 // blue
+#define DEBUG_SPECIAL   0b0001000 // light green
+#define DEBUG_WARNING   0b0010000 // yellow
+#define DEBUG_ERROR     0b0100000 // red
+#define DEBUG_PANIC     0b1000000 // red
 
 #define DEBUG_DISPLAY_FIRST_INFO  0b0000001
 #define DEBUG_DISPLAY_FUNCTION    0b0000010
@@ -58,6 +59,7 @@ namespace debug {
 
     void enable(void);
     void disable(void);
+
     void panic(const char *source , int line , const char *fmt , ...);
     void panic(const char *fmt , ...);
     void panic(void);

@@ -36,6 +36,7 @@ unsigned char debug::out::debugcolor(debug_m mode) {
         case DEBUG_SPECIAL: return 0x02;
         case DEBUG_ERROR:   return 0x04;
         case DEBUG_PANIC:   return 0x04;
+        case DEBUG_WARNING: return 0x08;
     }
     return 0x07;
 }

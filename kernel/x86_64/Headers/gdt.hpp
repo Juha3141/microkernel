@@ -66,10 +66,10 @@ namespace x86_64 {
     };
     namespace gdt {
         void convert_type_flags(word segment_flags , byte &type , byte &flags , byte &rpl);
-        segment_t get_segment_value(int index , byte rpl);
+        segment_t get_segment_value(int index , byte rpl , bool is_ldt);
         int get_segment_index(segment_t segment_value);
-        void register_raw(int index , dword base_address , dword limit , byte type , byte flags);
-        int register_tss(qword base_address , dword limit , byte type , byte flags);
+        int register_gdt(dword base_address , dword limit , byte type , byte flags);
+        int register_ldt(qword base_address , dword limit , byte type , byte flags);
     }
 }
 

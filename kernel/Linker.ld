@@ -1,4 +1,5 @@
 kernel_linear_address = 0xC0000000;
+ENTRY(kernel_main)
 
 SECTIONS {
   . = kernel_linear_address;

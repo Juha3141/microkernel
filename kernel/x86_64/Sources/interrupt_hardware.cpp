@@ -12,7 +12,6 @@
 #include <interrupt_hardware.hpp>
 #include <interrupt_specification.hpp>
 #include <idt.hpp>
-#include <pic.hpp>
 #include <arch_inline_asm.hpp>
 #include <kernel_info.hpp>
 
@@ -29,7 +28,6 @@ void interrupt::hardware::disable(void) {
 
 void interrupt::hardware::init(void) {
     interrupt::hardware::disable();
-    x86_64::pic::init();
 
     debug::push_function("int::hw::init");
 
@@ -50,7 +48,7 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     byte type = 0;
     word privilege = 0;
     x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
-    if(number >= INTERRUPT_MAXCOUNT) return false;
+    if(number >= GENERAL_INTERRUPT_MAXCOUNT) return false;
     idt_container->entries[number].base_low = handler_ptr & 0xFFFF;
     idt_container->entries[number].base_high = handler_ptr >> 16;
     if((interrupt_option & INTERRUPT_HANDLER_EXCEPTION) == INTERRUPT_HANDLER_EXCEPTION) type = IDT_TYPE_32BIT_TRAP_GATE;
@@ -60,7 +58,7 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     if((interrupt_option & INTERRUPT_HANDLER_LEVEL_USER) == INTERRUPT_HANDLER_LEVEL_USER)     flags |= IDT_FLAGS_DPL3;
     idt_container->entries[number].flags = flags;
     idt_container->entries[number].type = type & 0x0F;
-    idt_container->entries[number].selector = segmentation::get_segment_value(SEGMENT_NAME_CODE); // !!!
+    idt_container->entries[number].selector = segmentation::get_segment_value(SEGMENT_NAME_CODE); 
     idt_container->entries[number].reserved = 0x00;
     idt_container->entries[number].IST = 0;
     
@@ -72,16 +70,7 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
 
 bool interrupt::hardware::discard_interrupt(int number) {
     x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
-    if(number >= INTERRUPT_MAXCOUNT) return false;
+    if(number >= GENERAL_INTERRUPT_MAXCOUNT) return false;
     memset(&(idt_container->entries[number]) , 0 , sizeof(x86_64::IDTEntry));
     return true;
-}
-
-void interrupt::hardware::set_interrupt_mask(int number , bool masked) {
-    if(masked == true) {
-        x86_64::pic::irq_mask(number-32);
-    }
-    else {
-        x86_64::pic::irq_unmask(number-32);
-    }
 }

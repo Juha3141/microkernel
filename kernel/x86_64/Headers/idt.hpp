@@ -1,9 +1,10 @@
 #ifndef _x86_64_IDT_HPP_
 #define _x86_64_IDT_HPP_
 
+#include <interrupt.hpp>
 #include <x86_64_descriptor_table.hpp>
 
-#define IDT_ENTRYCOUNT INTERRUPT_MAXCOUNT
+#define IDT_ENTRYCOUNT GENERAL_INTERRUPT_MAXCOUNT
 #define IDT_FLAGS_DPL0                0b0000
 #define IDT_FLAGS_DPL1                0b0010
 #define IDT_FLAGS_DPL2                0b0100

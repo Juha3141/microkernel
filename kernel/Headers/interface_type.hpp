@@ -62,20 +62,6 @@ typedef unsigned short io_port;
 // Size of interrupt handler pointer (function pointer)
 typedef unsigned long interrupt_handler;
 
-// Describes information of one core in system
-typedef struct {
-    // To-do : Finish up the field //
-    dword id;
-}core;
-
-/// @brief Describes general information of cores in system
-typedef struct {
-    dword total_core_cnt;
-    dword physical_core_cnt;
-    char vendor_id[12];
-
-    char brand_string[48];
-    qword CPU_speed;
-}general_cpu_info;
+typedef void (*interrupt_handler_t)(void);
 
 #endif

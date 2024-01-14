@@ -12,6 +12,7 @@ To achieve this goal, the OS is separated into three parts: Bootloader, Kernel, 
 ## Current Progress
 Currently, only available architecture implemented is Intel x86_64 architecture. Not much is actually happening for now, as even the basic device driver manager is not implemented yet.
 Here's some current progress and future plans (decoratively displayed as To-do list)
+- [ ] Documenting kernel's specific system (for end-users' accessibility to kernel's systems)
 - [ ] Much more flexible way to compile project
 - [X] GRUB Loader
 - [ ] EFI Loader

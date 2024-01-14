@@ -6,5 +6,6 @@
 #define IA_ENABLE_INTERRUPT  __asm__ ("sti");
 
 #define IA_RETURN            __asm__ ("ret");
+#define IA_INTERRUPT_RETURN  __asm__ ("iretq");
 
 #endif

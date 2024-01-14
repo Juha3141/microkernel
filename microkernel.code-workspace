@@ -15,7 +15,13 @@
 			"istream": "cpp",
 			"numeric": "cpp",
 			"ostream": "cpp",
-			"sstream": "cpp"
+			"sstream": "cpp",
+			"chrono": "cpp",
+			"variant": "cpp",
+			"typeindex": "cpp",
+			"typeinfo": "cpp",
+			"ratio": "cpp",
+			"type_traits": "cpp"
 		}
 	}
 }

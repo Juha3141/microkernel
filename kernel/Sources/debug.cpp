@@ -62,7 +62,7 @@ void debug::panic(const char *fmt , ...) {
     va_start(ap , fmt);
     char buffer[512];
     vsprintf(buffer , fmt , ap);
-    debug::out::printf(DEBUG_PANIC , "%s" , fmt);
+    debug::out::printf(DEBUG_PANIC , "%s" , buffer);
     va_end(ap);
     while(1) {
         ;

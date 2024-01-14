@@ -13,6 +13,7 @@
 
 #include <interface_type.hpp>
 #include <kmem_manager.hpp>
+#include <interrupt.hpp>
 
 #define GLOBAL_KERNELINFO KernelInfo::get_self()
 
@@ -31,7 +32,6 @@ enum state_t {
  * This is different to "Using" and "Not Using" value, which is dependently determined by
  * device driver or other kernel system(or mostly HAL)s
  */
-
 struct KernelInfo {
     // Use this structure as global variables
     SINGLETON_PATTERN_KSTRUCT(struct KernelInfo);
@@ -56,6 +56,10 @@ struct KernelInfo {
         max_t multicore_entrypoint;
     }multicore_info;
     // add more
+    struct kernel_req_interrupt_t {
+        interrupt_info_t timer;
+        /* To-do : Add more */
+    }kernel_interrupts;
 };
 
 void set_initial_kernel_info(void);

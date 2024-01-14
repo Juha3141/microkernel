@@ -11,6 +11,4 @@ void set_initial_kernel_info(void) {
 
     /* Multicore system related */
     kinfo->conditions.multicore_usage = Using;
-    
-    debug::out::printf("use_ist : %d\n" , kinfo->conditions.use_ist);
 }

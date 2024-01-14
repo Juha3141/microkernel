@@ -44,3 +44,11 @@ void x86_64::pic::irq_unmask(int irq) {
 
     io_write_byte(port , value);
 }
+
+void x86_64::pic::send_eoi_master(void) {
+    io_write_byte(PIC_MASTER_COMMAND , 0x20);
+}
+
+void x86_64::pic::send_eoi_slave(void) {
+    io_write_byte(PIC_SLAVE_COMMAND , 0x20);
+}

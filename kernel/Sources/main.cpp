@@ -40,6 +40,7 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
     }
 
     debug::out::printf("hello world\n");
+    // interrupt::hardware::enable();
 
     while(1) {
         ;

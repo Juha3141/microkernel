@@ -6,3 +6,5 @@ bochsrc.txt
 custom_vsprintf*
 *.code-workspace
 qemulog.txt
+dummyfiles
+dummyfiles/*

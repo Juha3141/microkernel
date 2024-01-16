@@ -25,15 +25,18 @@ interrupt_handler_t interrupt::GeneralInterruptManager::discard_interrupt(int nu
     return handler;
 }
 
-void interrupt::SpecialInterruptManager::init(int maxcount) {
+void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) {
+    INTERRUPT_HARDWARE_SPECIFIED_ARRAY
     interrupt_maxcount = maxcount;
     interrupt_list = (SpecialInterrupt *)memory::pmem_alloc(maxcount*sizeof(SpecialInterrupt));
     for(int i = 0; i < maxcount; i++) {
         interrupt_list[i].occupied = false;
+        interrupt_list[i].assigned_interrupt_handler = handlers[i];
     }
 }
 
-int interrupt::SpecialInterruptManager::register_interrupt_name(const char *name) {
+interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) {
+    INTERRUPT_HARDWARE_SPECIFIED_ARRAY
     int index = 0;
     for(; index < interrupt_maxcount; index++) {
         if(interrupt_list[index].occupied == false) break;
@@ -45,10 +48,12 @@ int interrupt::SpecialInterruptManager::register_interrupt_name(const char *name
     strcpy(interrupt_list[index].name , name);
     interrupt_list[index].occupied = true;
     interrupt_list[index].interrupt_handler = 0x00;
-    return index;
+    interrupt_list[index].assigned_interrupt_handler = (interrupt_handler_t)handlers[index];
+    interrupt_list[index].interrupt_handler = handler;
+    return interrupt_list[index].assigned_interrupt_handler;
 }
 
-bool interrupt::SpecialInterruptManager::discard_interrupt_name(const char *name) {
+bool interrupt::HardwareSpecifiedInterruptManager::discard_interrupt_name(const char *name) {
     int index = 0;
     for(; index < interrupt_maxcount; index++) {
         if(strcmp(interrupt_list[index].name , name) == 0) break;
@@ -61,7 +66,7 @@ bool interrupt::SpecialInterruptManager::discard_interrupt_name(const char *name
     return true;
 }
 
-bool interrupt::SpecialInterruptManager::register_kernel_handler(const char *name , ptr_t kernel_handler) {
+bool interrupt::HardwareSpecifiedInterruptManager::register_kernel_handler(const char *name , ptr_t kernel_handler) {
     int index = 0;
     for(; index < interrupt_maxcount; index++) {
         if(strcmp(interrupt_list[index].name , name) == 0) break;
@@ -74,7 +79,7 @@ bool interrupt::SpecialInterruptManager::register_kernel_handler(const char *nam
     return true;
 }
 
-bool interrupt::SpecialInterruptManager::discard_kernel_handler(const char *name) {
+bool interrupt::HardwareSpecifiedInterruptManager::discard_kernel_handler(const char *name) {
     int index = 0;
     for(; index < interrupt_maxcount; index++) {
         if(strcmp(interrupt_list[index].name , name) == 0) break;
@@ -85,22 +90,6 @@ bool interrupt::SpecialInterruptManager::discard_kernel_handler(const char *name
     if(interrupt_list[index].occupied == false) return false;
     interrupt_list[index].assigned_interrupt_handler = 0x00;
     return true;
-}
-
-void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) {
-    INTERRUPT_HARDWARE_SPECIFIED_ARRAY
-    SpecialInterruptManager::init(maxcount);
-    for(int i = 0; i < maxcount; i++) {
-        interrupt_list[i].assigned_interrupt_handler = handlers[i];
-    }
-}
-
-interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) {
-    INTERRUPT_HARDWARE_SPECIFIED_ARRAY
-    int index = SpecialInterruptManager::register_interrupt_name(name);
-    interrupt_list[index].assigned_interrupt_handler = (interrupt_handler_t)handlers[index];
-    interrupt_list[index].interrupt_handler = handler;
-    return interrupt_list[index].assigned_interrupt_handler;
 }
 
 void interrupt::init(void) {
@@ -141,7 +130,7 @@ void interrupt::general::set_interrupt_mask(int number , bool masked) {
 //                kernel_requested part                //
 /////////////////////////////////////////////////////////
 
-bool interrupt::register_interrupt_by_info(const interrupt_info_t int_info , interrupt_handler_t handler , word interrupt_option) {
+bool interrupt::register_interrupt_by_info(const interrupt::interrupt_info_t int_info , interrupt_handler_t handler , word interrupt_option) {
     if(int_info.type == INTERRUPT_TYPE_GENERAL) {
         return interrupt::general::register_interrupt(int_info.location.number , handler , interrupt_option);
     }
@@ -151,7 +140,7 @@ bool interrupt::register_interrupt_by_info(const interrupt_info_t int_info , int
     return false;
 }
 
-bool interrupt::discard_interrupt_by_info(const interrupt_info_t int_info) {
+bool interrupt::discard_interrupt_by_info(const interrupt::interrupt_info_t int_info) {
     if(int_info.type == INTERRUPT_TYPE_GENERAL) {
         return interrupt::general::discard_interrupt(int_info.location.number);
     }

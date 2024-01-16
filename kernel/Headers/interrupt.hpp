@@ -34,33 +34,44 @@
 
 #define KERNEL_REQUEST_TIMER_INTERRUPT 1
 
-typedef struct interrupt_info_s {
-    word type;
-    union {
-        int number;
-        char specified_name[32];
-    }location;
-
-    struct interrupt_info_s operator=(int int_number) {
-        this->type = INTERRUPT_TYPE_GENERAL;
-        this->location.number = int_number;
-        return *this;
-    }
-    struct interrupt_info_s operator=(const char *name) {
-        this->type = INTERRUPT_TYPE_HARDWARE_SPECIFIED;
-        strcpy(this->location.specified_name , name);
-        return *this;
-    }
-}interrupt_info_t;
-
 namespace interrupt {
-    /* GeneralInterrupt : "number-based" interrupt system (interrupt by interrupt vector) */
+    /* interrupt_info_t : Contains information about registering interrupt handler
+     * hardware part gives (to kernel) how interrupt is wired through this structure
+
+     * Say, kernel requires interrupt information about Timer interrupt
+     * The space for structure that the information is stored is already designated in 
+     * Kernel Information structure(struct KernelInfo)
+     * What hardware functions have to do is to fill interrupt_info_t structures in the KernelInfo structure.
+     * The kernel then will use the information to implement the interrupt system.
+     */
+    typedef struct interrupt_info_s {
+        word type;
+        union {
+            int number;
+            char specified_name[32];
+        }location;
+
+        struct interrupt_info_s operator=(int int_number) {
+            this->type = INTERRUPT_TYPE_GENERAL;
+            this->location.number = int_number;
+            return *this;
+        }
+        struct interrupt_info_s operator=(const char *name) {
+            this->type = INTERRUPT_TYPE_HARDWARE_SPECIFIED;
+            strcpy(this->location.specified_name , name);
+            return *this;
+        }
+    }interrupt_info_t;
+    /* GeneralInterrupt : "number-based" interrupt system (interrupt by interrupt vector) 
+     * Most interrupts fit into GeneralInterrupt, but some interrupts that has special circumstance is
+     * categorized as "SpecialInterrupt"
+     */
     struct GeneralInterrupt {
         interrupt_handler_t handler;
         word option;
     };
-    /* SpecialInterrupt : 
-     * 
+    /* SpecialInterrupt : "name-based" interrupt system that don't typically fit in number-based 
+     * interrupt categories (such as LAPIC_TIMER .. interrupts that requires some handler)
      */
     struct SpecialInterrupt {
         bool occupied;
@@ -72,53 +83,45 @@ namespace interrupt {
         // Deprecated
         // word option;
     };
-
-    /* interrupt_info_t : Contains information about registering interrupt handler
-     * hardware part gives (to kernel) how interrupt is wired through this structure
-
-     * Say, kernel requires interrupt information about Timer interrupt
-     * The space for structure that the information is stored is already designated in 
-     * Kernel Information structure(struct KernelInfo)
-     * What hardware functions have to do is to fill interrupt_info_t structures in the KernelInfo structure.
-     * The kernel then will use the information to implement the interrupt system.
-     */
     /* GeneralInterruptManager : Manages interrupts that has "Interrupt Vector Number"
      * These kinds of interrupt is registered by interrupt vector number and the interrupt handler pointer.
      */
-    struct GeneralInterruptManager {
-        void init(void);
-        SINGLETON_PATTERN_KSTRUCT(struct GeneralInterruptManager);
+    class GeneralInterruptManager {
+        public:
+            SINGLETON_PATTERN_KSTRUCT(struct GeneralInterruptManager);
+            
+            void init(void);
+            
+            bool register_interrupt(int number , interrupt_handler_t handler , word interrupt_option);
+            interrupt_handler_t discard_interrupt(int number);
+            
+            void mask_interrupt(int number) { mask_flag[number] = true; }
+            void unmask_interrupt(int number) { mask_flag[number] = false; }
+            bool is_masked(int number) { return mask_flag[number]; }
         
-        bool register_interrupt(int number , interrupt_handler_t handler , word interrupt_option);
-        interrupt_handler_t discard_interrupt(int number);
-        
-        void mask_interrupt(int number) { mask_flag[number] = true; }
-        void unmask_interrupt(int number) { mask_flag[number] = false; }
-        bool is_masked(int number) { return mask_flag[number]; }
-        
-        bool mask_flag[GENERAL_INTERRUPT_MAXCOUNT];
-        GeneralInterrupt interrupt_list[GENERAL_INTERRUPT_MAXCOUNT];
+            bool mask_flag[GENERAL_INTERRUPT_MAXCOUNT];
+            GeneralInterrupt interrupt_list[GENERAL_INTERRUPT_MAXCOUNT];
     };
-    /* SpecialInterruptManager : Manages interrupt that has no interrupt vector number
+    /* HardwareSpecifiedInterruptManager : Manages interrupt that has no interrupt vector number
      * These kinds of interrupt is only registered by 
      */
-    struct SpecialInterruptManager {
-        void init(int maxcount);
-
-        int register_interrupt_name(const char *name);
-        bool discard_interrupt_name(const char *name);
-
-        bool register_kernel_handler(const char *name , ptr_t kernel_handler);
-        bool discard_kernel_handler(const char *name);
-
-        int interrupt_maxcount;
-        SpecialInterrupt *interrupt_list;
-    };
     
-    struct HardwareSpecifiedInterruptManager : SpecialInterruptManager {
-        SINGLETON_PATTERN_KSTRUCT(HardwareSpecifiedInterruptManager);
-        void init(int maxcount);
-        interrupt_handler_t register_interrupt_name(const char *name , interrupt_handler_t handler);
+    class HardwareSpecifiedInterruptManager {
+        public:
+            SINGLETON_PATTERN_KSTRUCT(HardwareSpecifiedInterruptManager);
+
+            void init(int maxcount);
+
+            int register_interrupt_name(const char *name);
+            bool discard_interrupt_name(const char *name);
+
+            bool register_kernel_handler(const char *name , ptr_t kernel_handler);
+            bool discard_kernel_handler(const char *name);
+
+            interrupt_handler_t register_interrupt_name(const char *name , interrupt_handler_t handler);
+            
+            int interrupt_maxcount;
+            SpecialInterrupt *interrupt_list;
     };
     // interrupt_handler_common : 
     void init(void);

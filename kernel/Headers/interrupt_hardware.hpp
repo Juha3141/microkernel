@@ -16,8 +16,4 @@ namespace interrupt {
     }
 }
 
-namespace exception {
-    
-};
-
 #endif

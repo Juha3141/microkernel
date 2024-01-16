@@ -57,7 +57,7 @@ struct KernelInfo {
     }multicore_info;
     // add more
     struct kernel_req_interrupt_t {
-        interrupt_info_t timer;
+        interrupt::interrupt_info_t timer;
         /* To-do : Add more */
     }kernel_interrupts;
 };

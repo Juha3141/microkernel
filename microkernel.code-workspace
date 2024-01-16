@@ -21,7 +21,11 @@
 			"typeindex": "cpp",
 			"typeinfo": "cpp",
 			"ratio": "cpp",
-			"type_traits": "cpp"
+			"type_traits": "cpp",
+			"compare": "cpp",
+			"functional": "cpp",
+			"tuple": "cpp",
+			"utility": "cpp"
 		}
 	}
 }

@@ -2,6 +2,7 @@
 #include <debug.hpp>
 #include <random.hpp>
 #include <interrupt.hpp>
+#include <exception.hpp>
 #include <segmentation.hpp>
 #include <kernel_info.hpp>
 
@@ -33,6 +34,7 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
     interrupt::hardware::disable();
     segmentation::init();
     interrupt::init();
+    exception::init();
     
     segmentation::SegmentsManager *segmentation_mgr = segmentation::SegmentsManager::get_self();
     for(int i = 0; i < segmentation_mgr->segments_count; i++) {
@@ -40,7 +42,12 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
     }
 
     debug::out::printf("hello world\n");
-    // interrupt::hardware::enable();
+    
+    //interrupt::hardware::enable();
+
+    int i = 10;
+    int b = i-10;
+    int c = i/b;
 
     while(1) {
         ;

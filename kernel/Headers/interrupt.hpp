@@ -86,42 +86,40 @@ namespace interrupt {
     /* GeneralInterruptManager : Manages interrupts that has "Interrupt Vector Number"
      * These kinds of interrupt is registered by interrupt vector number and the interrupt handler pointer.
      */
-    class GeneralInterruptManager {
-        public:
-            SINGLETON_PATTERN_KSTRUCT(struct GeneralInterruptManager);
-            
-            void init(void);
-            
-            bool register_interrupt(int number , interrupt_handler_t handler , word interrupt_option);
-            interrupt_handler_t discard_interrupt(int number);
-            
-            void mask_interrupt(int number) { mask_flag[number] = true; }
-            void unmask_interrupt(int number) { mask_flag[number] = false; }
-            bool is_masked(int number) { return mask_flag[number]; }
+    struct GeneralInterruptManager {
+        SINGLETON_PATTERN_KSTRUCT(struct GeneralInterruptManager);
         
-            bool mask_flag[GENERAL_INTERRUPT_MAXCOUNT];
-            GeneralInterrupt interrupt_list[GENERAL_INTERRUPT_MAXCOUNT];
+        void init(void);
+        
+        bool register_interrupt(int number , interrupt_handler_t handler , word interrupt_option);
+        interrupt_handler_t discard_interrupt(int number);
+        
+        void mask_interrupt(int number) { mask_flag[number] = true; }
+        void unmask_interrupt(int number) { mask_flag[number] = false; }
+        bool is_masked(int number) { return mask_flag[number]; }
+    
+        bool mask_flag[GENERAL_INTERRUPT_MAXCOUNT];
+        GeneralInterrupt interrupt_list[GENERAL_INTERRUPT_MAXCOUNT];
     };
     /* HardwareSpecifiedInterruptManager : Manages interrupt that has no interrupt vector number
      * These kinds of interrupt is only registered by 
      */
     
-    class HardwareSpecifiedInterruptManager {
-        public:
-            SINGLETON_PATTERN_KSTRUCT(HardwareSpecifiedInterruptManager);
+    struct HardwareSpecifiedInterruptManager {
+        SINGLETON_PATTERN_KSTRUCT(HardwareSpecifiedInterruptManager);
 
-            void init(int maxcount);
+        void init(int maxcount);
 
-            int register_interrupt_name(const char *name);
-            bool discard_interrupt_name(const char *name);
+        int register_interrupt_name(const char *name);
+        bool discard_interrupt_name(const char *name);
 
-            bool register_kernel_handler(const char *name , ptr_t kernel_handler);
-            bool discard_kernel_handler(const char *name);
+        bool register_kernel_handler(const char *name , ptr_t kernel_handler);
+        bool discard_kernel_handler(const char *name);
 
-            interrupt_handler_t register_interrupt_name(const char *name , interrupt_handler_t handler);
+        interrupt_handler_t register_interrupt_name(const char *name , interrupt_handler_t handler);
             
-            int interrupt_maxcount;
-            SpecialInterrupt *interrupt_list;
+        int interrupt_maxcount;
+        SpecialInterrupt *interrupt_list;
     };
     // interrupt_handler_common : 
     void init(void);

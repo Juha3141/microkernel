@@ -25,7 +25,13 @@
 			"compare": "cpp",
 			"functional": "cpp",
 			"tuple": "cpp",
-			"utility": "cpp"
+			"utility": "cpp",
+			"random": "cpp",
+			"bitset": "cpp",
+			"algorithm": "cpp",
+			"optional": "cpp",
+			"system_error": "cpp",
+			"cstdlib": "cpp"
 		}
 	}
 }

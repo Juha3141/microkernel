@@ -1,5 +1,5 @@
 #include <segmentation.hpp>
-#include <segmentation_hardware.hpp>
+#include <hardware/segmentation_hardware.hpp>
 #include <kmem_manager.hpp>
 #include <kernel_info.hpp>
 

@@ -1,5 +1,5 @@
-#include <interrupt_controller.hpp>
-#include <interrupt_hardware.hpp>
+#include <hardware/interrupt_controller.hpp>
+#include <hardware/interrupt_hardware.hpp>
 #include <pic.hpp>
 #include <interrupt.hpp>
 

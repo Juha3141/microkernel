@@ -12,11 +12,11 @@
 #define _INTERRUPT_HPP_
 
 #include <interface_type.hpp>
-#include <interrupt_hardware.hpp>
-#include <interrupt_controller.hpp>
+#include <hardware/interrupt_hardware.hpp>
+#include <hardware/interrupt_controller.hpp>
 #include <kmem_manager.hpp>
 
-#include <interrupt_hardware_specified.hpp>
+#include <hardware/interrupt_hardware_specified.hpp>
 #include <interrupt_specification.hpp>
 
 #include <string.hpp>

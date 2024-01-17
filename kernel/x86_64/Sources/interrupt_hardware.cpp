@@ -9,7 +9,7 @@
  */
 
 #include <interrupt.hpp>
-#include <interrupt_hardware.hpp>
+#include <hardware/interrupt_hardware.hpp>
 #include <interrupt_specification.hpp>
 #include <idt.hpp>
 #include <arch_inline_asm.hpp>

@@ -1,10 +1,10 @@
-#include <interrupt_hardware_specified.hpp>
+#include <hardware/interrupt_hardware_specified.hpp>
 #include <interrupt.hpp>
 #include <debug.hpp>
 #include <arch_inline_asm.hpp>
 
-#include <interrupt_hardware.hpp>
-#include <interrupt_controller.hpp>
+#include <hardware/interrupt_hardware.hpp>
+#include <hardware/interrupt_controller.hpp>
 
 interrupt_handler_t interrupt::handler::get_hardware_specified(int index) {
     INTERRUPT_HARDWARE_SPECIFIED_ARRAY

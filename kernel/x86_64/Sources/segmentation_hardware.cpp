@@ -10,7 +10,7 @@
  */
 
 #include <segmentation.hpp>
-#include <segmentation_hardware.hpp>
+#include <hardware/segmentation_hardware.hpp>
 #include <interrupt.hpp>
 #include <gdt.hpp>
 #include <arch_inline_asm.hpp>

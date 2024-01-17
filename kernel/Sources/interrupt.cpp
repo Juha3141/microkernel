@@ -2,7 +2,7 @@
 #include <string.hpp>
 #include <io_port.hpp>
 
-#include <interrupt_hardware_specified.hpp>
+#include <hardware/interrupt_hardware_specified.hpp>
 
 #include <debug.hpp>
 
@@ -93,6 +93,7 @@ bool interrupt::HardwareSpecifiedInterruptManager::discard_kernel_handler(const 
 }
 
 void interrupt::init(void) {
+    interrupt::hardware::disable();
     interrupt::hardware::init();
     GeneralInterruptManager::get_self()->init();
     HardwareSpecifiedInterruptManager::get_self()->init(INTERRUPT_HARDWARE_SPECIFIED_MAXCOUNT);

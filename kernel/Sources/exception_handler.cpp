@@ -3,8 +3,8 @@
 #include <debug.hpp>
 #include <arch_inline_asm.hpp>
 
-#include <interrupt_hardware.hpp>
-#include <interrupt_controller.hpp>
+#include <hardware/interrupt_hardware.hpp>
+#include <hardware/interrupt_controller.hpp>
 
 #define EXCEPTION_HANDLER_FUNCTION(handler_num) \
 __attribute__ ((naked)) void exception::handlers::handler##handler_num(void) {\

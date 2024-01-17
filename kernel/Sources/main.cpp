@@ -11,43 +11,23 @@
 void pmem_alloc_test(int rand_seed);
 
 extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
+    struct KernelArgument *kargument = (struct KernelArgument *)kernel_info_struct_addr;
+    if(kargument->signature != KERNELINFO_STRUCTURE_SIGNATURE) {
+        debug::panic("kernel structure not found");
+    }
+
     debug::init();
     debug::out::clear_screen(0x07);
     debug::push_function("kmain");
 
-    struct KernelArgument *kargument = (struct KernelArgument *)kernel_info_struct_addr;
-    debug::out::printf("Dumping memory map : \n");
-    struct MemoryMap *memmap = (struct MemoryMap *)(kargument->memmap_ptr);
-    for(int i = 0; i < kargument->memmap_count; i++) {
-        max_t addr = ((max_t)memmap[i].addr_high << 32)|memmap[i].addr_low;
-        max_t len = ((max_t)memmap[i].length_high << 32)|memmap[i].length_low;
-        debug::out::printf("0x%lX~0x%lX (%d)\n" , addr , addr+len , memmap[i].type);
-    }
-    if(kargument->signature != KERNELINFO_STRUCTURE_SIGNATURE) {
-        debug::out::printf("Kernel structure not found!\n");
-        debug::panic("kernel structure not found");
-    }
-    debug::out::printf(DEBUG_INFO , "kernel code location : 0x%X~0x%X\n" , kargument->kernel_address , kargument->kernel_address+kargument->kernel_size);
     memory::pmem_init(kargument->memmap_count , (struct MemoryMap *)((max_t)kargument->memmap_ptr) , kargument);
     set_initial_kernel_info();
-
-    interrupt::hardware::disable();
+    
     segmentation::init();
     interrupt::init();
     exception::init();
     
-    segmentation::SegmentsManager *segmentation_mgr = segmentation::SegmentsManager::get_self();
-    for(int i = 0; i < segmentation_mgr->segments_count; i++) {
-        debug::out::printf("seg%d. 0x%02x - %s\n" , i , segmentation_mgr->segments_data[i].value , segmentation_mgr->segments_data[i].name);
-    }
-
-    debug::out::printf("hello world\n");
-    
     //interrupt::hardware::enable();
-
-    int i = 10;
-    int b = i-10;
-    int c = i/b;
 
     while(1) {
         ;

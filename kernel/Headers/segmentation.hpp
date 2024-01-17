@@ -3,6 +3,7 @@
 
 #include <interface_type.hpp>
 #include <kmem_manager.hpp>
+#include <object_manager.hpp>
 
 #define SEGMENT_MAXCOUNT          64
 
@@ -25,24 +26,19 @@ typedef word segment_t;
 
 namespace segmentation {
     struct segment_info_t {
-        bool occupied;
+
         char name[32];
         segment_t value;
         word segment_type;
 
         max_t task_id;
     };
-    struct SegmentsManager {
-        void init(int entry_count);
+    struct SegmentsManager : public DataManager<segment_info_t> {
         SINGLETON_PATTERN_KSTRUCT(struct SegmentsManager);
-        
+
         bool register_segment(const char *segment_name , segment_t segment_value , word segment_type , max_t task_id=INVALID);
         segment_t discard_segment(const char *segment_name);
         segment_t search_segment(const char *segment_name);
-
-        segment_info_t *segments_data;
-        int segments_maxcount;
-        int segments_count;
     };
     // Packed data of information for segment
     struct segment_info {

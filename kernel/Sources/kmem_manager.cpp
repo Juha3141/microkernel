@@ -118,7 +118,6 @@ void *memory::kstruct_alloc(max_t size , max_t alignment) {
 }
 
 void memory::SegmentsManager::init(int segment_count , struct Boundary *usable_segments) {
-	debug::push_function("SgMgr::init");
 	managers_count = segment_count;
 	total_memory = 0;
 	// allocate space for all managers
@@ -126,9 +125,7 @@ void memory::SegmentsManager::init(int segment_count , struct Boundary *usable_s
 	for(int i = 0; i < managers_count; i++) {
 		node_managers[i].init(usable_segments[i].start_address , usable_segments[i].end_address-usable_segments[i].start_address);
 		total_memory += (usable_segments[i].end_address-usable_segments[i].start_address);
-		debug::out::printf(DEBUG_SPECIAL , "%d. 0x%016lX~0x%016lX (size:%dkB)\n" , i , usable_segments[i].start_address , usable_segments[i].end_address , (usable_segments[i].end_address-usable_segments[i].start_address)/1024);
 	}
-	debug::pop_function();
 }
 
 int memory::SegmentsManager::get_segment_index(max_t address) {

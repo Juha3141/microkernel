@@ -11,6 +11,12 @@
 #include <string.hpp>
 #include <debug.hpp>
 
+// for C++ standard
+
+void *operator new(max_t size) { return memory::pmem_alloc(size); }
+void *operator new[](max_t size) { return memory::pmem_alloc(size); }
+void operator delete(void *ptr , max_t) { memory::pmem_free(ptr); }
+
 // Just temporary patch
 struct {
 	struct memory::Boundary boundary;
@@ -23,7 +29,7 @@ void memory::get_kstruct_boundary(struct Boundary &boundary) {
 
 void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , struct KernelArgument *kargument) {
 	debug::push_function("d_kstruct_b");
-	struct MemoryMap *memmap = (struct MemoryMap *)kargument->memmap_ptr;
+	struct MemoryMap *memmap = (struct MemoryMap *)((max_t)kargument->memmap_ptr);
 	max_t kernel_end_address = kargument->total_kernel_area_end;
 	debug::out::printf("kernel_end_address : 0x%X\n" , kernel_end_address);
 	new_mboundary.start_address = align_address(kernel_end_address , 4096); // padding
@@ -56,7 +62,7 @@ int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *n
 	debug::push_function("d_pmem_b");
 
 	int seg_index = 0;
-	struct MemoryMap *memmap = (struct MemoryMap *)kargument->memmap_ptr;
+	struct MemoryMap *memmap = (struct MemoryMap *)((max_t)kargument->memmap_ptr);
 	struct Boundary kstruct_boundary;
 	get_kstruct_boundary(kstruct_boundary);
 	// unnecessary but necessary I guess

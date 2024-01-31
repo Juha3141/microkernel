@@ -8,3 +8,5 @@ custom_vsprintf*
 qemulog.txt
 dummyfiles
 dummyfiles/*
+stub
+

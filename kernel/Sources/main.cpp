@@ -5,6 +5,12 @@
 #include <exception.hpp>
 #include <segmentation.hpp>
 #include <kernel_info.hpp>
+#include <io_port.hpp>
+
+#include <drivers/block_device_driver.hpp>
+#include <drivers/partition_driver.hpp>
+
+#include <integrated/integrated_drivers.hpp>
 
 #include <kernel_argument.hpp>
 
@@ -26,7 +32,11 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
     segmentation::init();
     interrupt::init();
     exception::init();
-    
+
+    blockdev::init();
+
+    integrated::register_drivers();
+
     //interrupt::hardware::enable();
 
     while(1) {

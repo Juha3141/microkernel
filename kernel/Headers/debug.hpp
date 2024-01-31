@@ -29,6 +29,7 @@ namespace debug {
         void vprintf(debug_m mode , const char *fmt , va_list ap);
 
         void printf(debug_m mode , const char *fmt , ...);
+        void printf(debug_m mode , const char *function , const char *fmt , ...);
         void printf(const char *fmt , ...);
         void print_str(const char *str);
 

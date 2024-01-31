@@ -59,9 +59,6 @@ typedef int default_t;
 // Size of IO port
 typedef unsigned short io_port;
 
-// Size of interrupt handler pointer (function pointer)
-typedef unsigned long interrupt_handler;
-
 typedef void (*interrupt_handler_t)(void);
 
 #endif

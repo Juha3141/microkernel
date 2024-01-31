@@ -4,13 +4,13 @@
 static max_t ramdisk_driver_id = 0x00;
 
 void ramdisk_driver::init_driver(void) {
-    ramdisk_driver_id = blockdev::register_driver(new ramdisk_driver , "rd");
+    ramdisk_driver_id = storagedev::register_driver(new ramdisk_driver , "rd");
 }
 
-struct blockdev::block_device *ramdisk_driver::create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr) {
+struct storagedev::storage_device *ramdisk_driver::create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr) {
     // Write some basic informations
-    blockdev::block_device *new_device = blockdev::create_empty_device(blockdev::search_driver(ramdisk_driver_id) , blockdev::physical);
-    blockdev::designate_resources_count(new_device , 0 , 0 , 0 , 1);
+    storagedev::storage_device *new_device = storagedev::create_empty_device(storagedev::search_driver(ramdisk_driver_id) , storagedev::physical);
+    storagedev::designate_resources_count(new_device , 0 , 0 , 0 , 1);
     ramdisk_info_s *disk_info = (ramdisk_info_s *)memory::pmem_alloc(sizeof(ramdisk_info_s));
 
     // Write resource informations
@@ -28,7 +28,7 @@ bool ramdisk_driver::prepare(void) {
     return true; // There's actually nothing we have to do!
 }
 
-max_t ramdisk_driver::read_sector(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) {
+max_t ramdisk_driver::read_sector(storagedev::storage_device *device , max_t sector_address , max_t count , void *buffer) {
     ramdisk_info_s *info = (ramdisk_info_s *)device->resource.etc_resources[0];
     max_t offset = 0 , mem_addr , tmp;
     max_t start_addr = info->physical_address+(sector_address*info->bytes_per_sector);
@@ -40,7 +40,7 @@ max_t ramdisk_driver::read_sector(blockdev::block_device *device , max_t sector_
     return (mem_addr-start_addr);
 }
 
-max_t ramdisk_driver::write_sector(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) {
+max_t ramdisk_driver::write_sector(storagedev::storage_device *device , max_t sector_address , max_t count , void *buffer) {
     ramdisk_info_s *info = (ramdisk_info_s *)device->resource.etc_resources[0];
     max_t offset = 0 , mem_addr , tmp;
     max_t start_addr = info->physical_address+(sector_address*info->bytes_per_sector);
@@ -52,8 +52,8 @@ max_t ramdisk_driver::write_sector(blockdev::block_device *device , max_t sector
     return (mem_addr-start_addr);
 }
 
-bool ramdisk_driver::get_device_geometry(blockdev::block_device *device , blockdev::device_geometry *geometry) {
-    memset(geometry , 0 , sizeof(blockdev::device_geometry));
+bool ramdisk_driver::get_device_geometry(storagedev::storage_device *device , storagedev::device_geometry *geometry) {
+    memset(geometry , 0 , sizeof(storagedev::device_geometry));
     ramdisk_info_s *info = (ramdisk_info_s *)device->resource.etc_resources[0];
     geometry->total_sector_count = info->total_sector_count;
     geometry->bytes_per_sector = info->bytes_per_sector;

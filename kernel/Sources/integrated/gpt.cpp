@@ -2,7 +2,7 @@
 
 #include <debug.hpp>
 
-bool GPTPartitionDriver::identify(blockdev::block_device *device) {
+bool GPTPartitionDriver::identify(storagedev::storage_device *device) {
     unsigned char buffer[512];
 
     if((device->device_driver == 0x00)
@@ -17,7 +17,7 @@ bool GPTPartitionDriver::identify(blockdev::block_device *device) {
     return true;
 }
 
-int GPTPartitionDriver::get_partitions_count(blockdev::block_device *device) {
+int GPTPartitionDriver::get_partitions_count(storagedev::storage_device *device) {
     int partition_count = 0;
     dword table_entry_size;
     unsigned char buffer[512];
@@ -43,7 +43,7 @@ int GPTPartitionDriver::get_partitions_count(blockdev::block_device *device) {
     return partition_count;
 }
 
-int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , DataLinkedList<blockdev::partition_info> &partition_info_list) {
+int GPTPartitionDriver::get_partitions_list(storagedev::storage_device *device , DataLinkedList<storagedev::partition_info> &partition_info_list) {
     int i;
     unsigned char buffer[512];
     int partition_count = 0;
@@ -63,7 +63,7 @@ int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
         && (partition_entry[i].partition_type_guid[2] == 0) && (partition_entry[i].partition_type_guid[3] == 0)) {
             continue;
         }
-        DataLinkedList<blockdev::partition_info>::node_s *node = partition_info_list.register_data_rear();
+        DataLinkedList<storagedev::partition_info>::node_s *node = partition_info_list.register_data_rear();
         node->data.physical_sector_start = partition_entry[i].start_address_lba;
         node->data.physical_sector_end = partition_entry[i].end_address_lba;
         node->data.bootable = (partition_entry[i].attribute_flag == GPT_PARTITION_LEGACY_BOOTABLE);
@@ -74,16 +74,16 @@ int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
     return partition_count;
 }
 
-bool GPTPartitionDriver::create_partition(blockdev::block_device *device , blockdev::partition_info partition) {
+bool GPTPartitionDriver::create_partition(storagedev::storage_device *device , storagedev::partition_info partition) {
     // Not implemented yet
     return false;
 }
 
-bool GPTPartitionDriver::remove_partition(blockdev::block_device *device , blockdev::partition_info partition) {
+bool GPTPartitionDriver::remove_partition(storagedev::storage_device *device , storagedev::partition_info partition) {
     // Not implemented yet
     return false;
 }
 
-bool GPTPartitionDriver::modify_partition(blockdev::block_device *device , blockdev::partition_info old_partition , blockdev::partition_info new_partition_info) {
+bool GPTPartitionDriver::modify_partition(storagedev::storage_device *device , storagedev::partition_info old_partition , storagedev::partition_info new_partition_info) {
     return false;
 }

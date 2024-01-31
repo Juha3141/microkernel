@@ -1,5 +1,5 @@
 /**
- * @file block_device_driver.cpp
+ * @file storage_device_driver.cpp
  * @author Ian Juha Cho (ianisnumber2027@gmail.com)
  * @brief Kernel block device driver
  * @date 2024-01-22 (Original version : https://github.com/Juha3141/OS, StorageDriver.cpp)
@@ -8,7 +8,7 @@
  * 
  */
 
-#include <drivers/block_device_driver.hpp>
+#include <drivers/storage_device_driver.hpp>
 #include <drivers/partition_driver.hpp>
 #include <linked_list.hpp>
 
@@ -16,9 +16,9 @@
 
 #include <debug.hpp>
 
-void blockdev::init(void) {
-    // BlockDeviceDriverContainer : global container for kernel
-    BlockDeviceDriverContainer::get_self()->init(512);
+void storagedev::init(void) {
+    // StorageDeviceDriverContainer : global container for kernel
+    StorageDeviceDriverContainer::get_self()->init(512);
     PartitionDriverContainer::get_self()->init(64);
 }
 
@@ -26,16 +26,16 @@ void blockdev::init(void) {
 /// @param driver Driver structure
 /// @param driver_name Name of the driver
 /// @return Return the id of driver
-max_t blockdev::register_driver(blockdev::block_device_driver *driver , const char *driver_name) {
+max_t storagedev::register_driver(storagedev::storage_device_driver *driver , const char *driver_name) {
     debug::push_function("bdev::reg_drv");
 
-    BlockDeviceDriverContainer *driver_container = BlockDeviceDriverContainer::get_self();
+    StorageDeviceDriverContainer *driver_container = StorageDeviceDriverContainer::get_self();
     max_t id = driver_container->register_driver(driver); // register driver to global container
     if(id == INVALID) { debug::pop_function(); return INVALID; }
     
     // assign new local device container
     // Driver contains its devices
-    driver->device_container = new class BlockDeviceContainer;
+    driver->device_container = new class StorageDeviceContainer;
     driver->device_container->init(256); // Initialize the device container
     strcpy(driver->driver_name , driver_name);
     driver->prepare();
@@ -47,15 +47,15 @@ max_t blockdev::register_driver(blockdev::block_device_driver *driver , const ch
 
 ///@brief some bridge-like functions(just basic stuff)
 
-blockdev::block_device_driver *blockdev::search_driver(const char *driver_name) { return BlockDeviceDriverContainer::get_self()->search_by_name(driver_name); }
-blockdev::block_device_driver *blockdev::search_driver(max_t driver_id) { return BlockDeviceDriverContainer::get_self()->get_object(driver_id); }
+storagedev::storage_device_driver *storagedev::search_driver(const char *driver_name) { return StorageDeviceDriverContainer::get_self()->search_by_name(driver_name); }
+storagedev::storage_device_driver *storagedev::search_driver(max_t driver_id) { return StorageDeviceDriverContainer::get_self()->get_object(driver_id); }
 
-max_t blockdev::discard_driver(const char *driver_name) { return BlockDeviceDriverContainer::get_self()->discard_object(BlockDeviceDriverContainer::get_self()->search_by_name(driver_name)); }
-max_t blockdev::discard_driver(max_t driver_id) { return BlockDeviceDriverContainer::get_self()->discard_object(BlockDeviceDriverContainer::get_self()->get_object(driver_id)); }
+max_t storagedev::discard_driver(const char *driver_name) { return StorageDeviceDriverContainer::get_self()->discard_object(StorageDeviceDriverContainer::get_self()->search_by_name(driver_name)); }
+max_t storagedev::discard_driver(max_t driver_id) { return StorageDeviceDriverContainer::get_self()->discard_object(StorageDeviceDriverContainer::get_self()->get_object(driver_id)); }
 
-static bool set_physical_block_device_info(blockdev::block_device_driver *driver , blockdev::block_device *device) {
+static bool set_physical_storage_device_info(storagedev::storage_device_driver *driver , storagedev::storage_device *device) {
     device->logical_devices = 0x00;
-    memset(&device->logical_partition_info , 0 , sizeof(blockdev::partition_info));
+    memset(&device->logical_partition_info , 0 , sizeof(storagedev::partition_info));
     if(driver->get_device_geometry(device , &device->geomtery) == false) {
         return false;
     }
@@ -68,42 +68,42 @@ static bool set_physical_block_device_info(blockdev::block_device_driver *driver
     return true;
 }
 
-static void set_logical_block_device_info(blockdev::block_device_driver *driver , blockdev::block_device *device) {
-    device->device_driver = new class blockdev::logical_block_device_driver;
+static void set_logical_storage_device_info(storagedev::storage_device_driver *driver , storagedev::storage_device *device) {
+    device->device_driver = new class storagedev::logical_storage_device_driver;
     // polymorphism!
-    ((blockdev::logical_block_device_driver *)device->device_driver)->set_super_driver(driver);
+    ((storagedev::logical_storage_device_driver *)device->device_driver)->set_super_driver(driver);
 }
 
 /// @brief Registeres device to driver(kernel), identifies/registers partition and designates file system driver for device
 /// @param driver Target driver
 /// @param device Device to be registered
 /// @return Return the id of the device
-max_t blockdev::register_device(blockdev::block_device_driver *driver , blockdev::block_device *device) {
-    debug::push_function("blockdev::reg_dev");
-    BlockDeviceDriverContainer *driver_container = BlockDeviceDriverContainer::get_self();
+max_t storagedev::register_device(storagedev::storage_device_driver *driver , storagedev::storage_device *device) {
+    debug::push_function("storagedev::reg_dev");
+    StorageDeviceDriverContainer *driver_container = StorageDeviceDriverContainer::get_self();
     
     int partition_count;
-    DataLinkedList<blockdev::partition_info>partition_info_list;
+    DataLinkedList<storagedev::partition_info>partition_info_list;
     PartitionDriver *partition_driver;
     if(driver == 0x00) return INVALID;
     if(device == 0x00) return INVALID;
     // Initialize & write necessary information to the device
-    // The function set_physical_block_device_info sets the basic information of the device
+    // The function set_physical_storage_device_info sets the basic information of the device
     // and calls get_device_geometry from the driver
 
     // The function set_logical_block_Device_info creates new device driver for logical device.
     // Upon creating new logical block device driver, the function sets the super driver
     // to the physical driver.
 
-    // What logical_block_device_driver does is interpreting the logical sector value to physical sector info.
+    // What logical_storage_device_driver does is interpreting the logical sector value to physical sector info.
     
     /* To-do : Further information & maintenance for logical block devices are required! */
     if(device->storage_type == physical) {
-        if(set_physical_block_device_info(driver , device) == false) return false;
+        if(set_physical_storage_device_info(driver , device) == false) return false;
         debug::out::printf("Registered physical block device driver : #%d(%s), driver %s\n" , device->id , (device->storage_type == physical) ? "physical" : "logical" , driver->driver_name);
     }
     if(device->storage_type == logical) {
-        set_logical_block_device_info(driver , device);
+        set_logical_storage_device_info(driver , device);
     }
     
     // add necessary logical block devices
@@ -116,7 +116,7 @@ max_t blockdev::register_device(blockdev::block_device_driver *driver , blockdev
     if(partition_driver != 0x00) {
         partition_count = partition_driver->get_partitions_list(device , partition_info_list);
 
-        device->logical_devices = new BlockDeviceContainer;
+        device->logical_devices = new StorageDeviceContainer;
         device->logical_devices->init(72); // maximum logical storages count
 
         add_logical_device(driver , device , partition_info_list);
@@ -128,27 +128,27 @@ max_t blockdev::register_device(blockdev::block_device_driver *driver , blockdev
 
 /// @brief Other form of register_device
 
-max_t blockdev::register_device(const char *driver_name , blockdev::block_device *device) { return blockdev::register_device(BlockDeviceDriverContainer::get_self()->search_by_name(driver_name) , device); }
-max_t blockdev::register_device(max_t driver_id , blockdev::block_device *device) { return blockdev::register_device(BlockDeviceDriverContainer::get_self()->get_object(driver_id) , device); }
+max_t storagedev::register_device(const char *driver_name , storagedev::storage_device *device) { return storagedev::register_device(StorageDeviceDriverContainer::get_self()->search_by_name(driver_name) , device); }
+max_t storagedev::register_device(max_t driver_id , storagedev::storage_device *device) { return storagedev::register_device(StorageDeviceDriverContainer::get_self()->get_object(driver_id) , device); }
 
-blockdev::block_device *blockdev::search_device(max_t driver_id , max_t device_id , max_t partition_id) {
-    blockdev::block_device_driver *driver = search_driver(driver_id);
-    blockdev::block_device *device = driver->device_container->get_object(device_id);
+storagedev::storage_device *storagedev::search_device(max_t driver_id , max_t device_id , max_t partition_id) {
+    storagedev::storage_device_driver *driver = search_driver(driver_id);
+    storagedev::storage_device *device = driver->device_container->get_object(device_id);
     if(partition_id == INVALID) return device;
     return device->logical_devices->get_object(partition_id);
 }
 
-blockdev::block_device *blockdev::search_device(blockdev::block_device_driver *driver , max_t device_id , max_t partition_id) {  return search_device(driver->driver_id , device_id , partition_id); }
-blockdev::block_device *blockdev::search_device(const char *driver_name , max_t device_id , max_t partition_id) { return blockdev::search_device(BlockDeviceDriverContainer::get_self()->search_by_name(driver_name) , device_id , partition_id); }
+storagedev::storage_device *storagedev::search_device(storagedev::storage_device_driver *driver , max_t device_id , max_t partition_id) {  return search_device(driver->driver_id , device_id , partition_id); }
+storagedev::storage_device *storagedev::search_device(const char *driver_name , max_t device_id , max_t partition_id) { return storagedev::search_device(StorageDeviceDriverContainer::get_self()->search_by_name(driver_name) , device_id , partition_id); }
 
-bool blockdev::discard_device(blockdev::block_device *device);
+bool storagedev::discard_device(storagedev::storage_device *device);
 
 /// @brief Create empty device with essential informations
 /// @param driver driver for device
 /// @param storage_type type of storage
 /// @return new empty device
-blockdev::block_device *blockdev::create_empty_device(blockdev::block_device_driver *driver , storage_type_t storage_type) {
-    block_device *device = (block_device *)memory::pmem_alloc(sizeof(block_device));
+storagedev::storage_device *storagedev::create_empty_device(storagedev::storage_device_driver *driver , storage_type_t storage_type) {
+    storage_device *device = (storage_device *)memory::pmem_alloc(sizeof(storage_device));
     device->device_driver = driver;
     device->storage_type = storage_type;
     return device;
@@ -156,7 +156,7 @@ blockdev::block_device *blockdev::create_empty_device(blockdev::block_device_dri
 
 template <typename T> inline T *alloc_by_cnt(int cnt) { return (T *)memory::pmem_alloc(cnt*sizeof(T)); } 
 
-void blockdev::designate_resources_count(blockdev::block_device *device , int io_port_count , int interrupt_count , int flags_count , int etc_res_count) {
+void storagedev::designate_resources_count(storagedev::storage_device *device , int io_port_count , int interrupt_count , int flags_count , int etc_res_count) {
     if(io_port_count > 0) {
         device->resource.io_port_count = io_port_count;
         device->resource.io_ports = alloc_by_cnt<io_port>(io_port_count);
@@ -180,17 +180,17 @@ void blockdev::designate_resources_count(blockdev::block_device *device , int io
 /// @param driver driver (= device->device_driver)
 /// @param device Target device
 /// @param partitions list of partitions
-void blockdev::add_logical_device(blockdev::block_device_driver *driver , blockdev::block_device *device , DataLinkedList<blockdev::partition_info> &partitions) {
+void storagedev::add_logical_device(storagedev::storage_device_driver *driver , storagedev::storage_device *device , DataLinkedList<storagedev::partition_info> &partitions) {
     int j = 0;
     int current_partition_count;
-    block_device *logical_device;
+    storage_device *logical_device;
     if(device->logical_devices == 0x00) {
-        device->logical_devices = new BlockDeviceContainer;
+        device->logical_devices = new StorageDeviceContainer;
         device->logical_devices->init(72);
     }
     current_partition_count = device->logical_devices->count;
     
-    DataLinkedList<blockdev::partition_info>::node_s *ptr = partitions.get_start_node();
+    DataLinkedList<storagedev::partition_info>::node_s *ptr = partitions.get_start_node();
 
     while(ptr != 0x00) {
         logical_device = create_empty_device(driver , logical);
@@ -204,7 +204,7 @@ void blockdev::add_logical_device(blockdev::block_device_driver *driver , blockd
 
         // to-do : fix infinite loop error
         logical_device->partition_id = device->logical_devices->register_object(logical_device);
-        blockdev::register_device(driver , logical_device);
+        storagedev::register_device(driver , logical_device);
 
         ptr = ptr->next;
     }
@@ -213,9 +213,9 @@ void blockdev::add_logical_device(blockdev::block_device_driver *driver , blockd
 /// @brief get the physical super device of the logical block device
 /// @param device the logical block device
 /// @return the physical super block device
-blockdev::block_device *blockdev::get_physical_super_device(blockdev::block_device *logical_device) {
+storagedev::storage_device *storagedev::get_physical_super_device(storagedev::storage_device *logical_device) {
     if(logical_device->storage_type != logical) return 0x00;
-    logical_block_device_driver *driver = (logical_block_device_driver *)logical_device->device_driver;
+    logical_storage_device_driver *driver = (logical_storage_device_driver *)logical_device->device_driver;
     if(driver == 0x00) return 0x00;
     if(driver->super_driver == 0x00) return 0x00;
     return driver->super_driver->device_container->get_object(logical_device->id);

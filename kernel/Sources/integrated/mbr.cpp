@@ -1,6 +1,6 @@
 #include <integrated/mbr.hpp>
 
-bool MBRPartitionDriver::identify(blockdev::block_device *device) {
+bool MBRPartitionDriver::identify(storagedev::storage_device *device) {
     int i;
 	mbr_partition_table partition_table;
     if((device->device_driver == 0x00)
@@ -10,7 +10,7 @@ bool MBRPartitionDriver::identify(blockdev::block_device *device) {
     if(partition_table.signature != 0xAA55) return false;
     for(i = 0; i < 4; i++) {
         // If storage is logical storage, and it's not extended partition -> No partition found.
-        if((device->storage_type == blockdev::logical)
+        if((device->storage_type == storagedev::logical)
 	    && (partition_table.entries[i].partition_type != 0x0F) && (partition_table.entries[i].partition_type != 0x05)) return false;
         // GPT
 		if(partition_table.entries[i].partition_type == 0xEE) return false;
@@ -21,7 +21,7 @@ bool MBRPartitionDriver::identify(blockdev::block_device *device) {
     return false;
 }
 
-int MBRPartitionDriver::get_partitions_count(blockdev::block_device *device) {
+int MBRPartitionDriver::get_partitions_count(storagedev::storage_device *device) {
 	int partition_count = 0;
 	mbr_partition_table partition_table;
 
@@ -35,14 +35,14 @@ int MBRPartitionDriver::get_partitions_count(blockdev::block_device *device) {
     return partition_count;
 }
 
-int MBRPartitionDriver::get_partitions_list(blockdev::block_device *device , DataLinkedList<blockdev::partition_info> &partition_info_list) {
+int MBRPartitionDriver::get_partitions_list(storagedev::storage_device *device , DataLinkedList<storagedev::partition_info> &partition_info_list) {
 	int partition_count = 0;
 	mbr_partition_table partition_table;
 
     if(device->device_driver->read_sector(device , 0 , 1 , &partition_table) != 512) return 0;
     for(int i = 0; i < 4; i++) {
         if(partition_table.entries[i].partition_type != 0x00) {
-			DataLinkedList<blockdev::partition_info>::node_s *node = partition_info_list.register_data_rear();
+			DataLinkedList<storagedev::partition_info>::node_s *node = partition_info_list.register_data_rear();
 
             node->data.physical_sector_start = partition_table.entries[i].starting_lba;
             node->data.physical_sector_end = partition_table.entries[i].starting_lba+partition_table.entries[i].size_lba;
@@ -54,14 +54,14 @@ int MBRPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
     return partition_count;
 }
 
-bool MBRPartitionDriver::create_partition(blockdev::block_device *device , blockdev::partition_info partition) {
+bool MBRPartitionDriver::create_partition(storagedev::storage_device *device , storagedev::partition_info partition) {
 	return false;
 }
 
-bool MBRPartitionDriver::remove_partition(blockdev::block_device *device , blockdev::partition_info partition) {
+bool MBRPartitionDriver::remove_partition(storagedev::storage_device *device , storagedev::partition_info partition) {
 	return false;
 }
 
-bool MBRPartitionDriver::modify_partition(blockdev::block_device *device , blockdev::partition_info old_partition , blockdev::partition_info new_partition_info) {
+bool MBRPartitionDriver::modify_partition(storagedev::storage_device *device , storagedev::partition_info old_partition , storagedev::partition_info new_partition_info) {
 	return false;
 }

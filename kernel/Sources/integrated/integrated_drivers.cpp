@@ -6,8 +6,8 @@
 #include <integrated/ramdisk.hpp>
 
 void integrated::register_drivers(void) {
-    blockdev::register_partition_driver(new MBRPartitionDriver);
-    blockdev::register_partition_driver(new GPTPartitionDriver);
+    storagedev::register_partition_driver(new MBRPartitionDriver);
+    storagedev::register_partition_driver(new GPTPartitionDriver);
     
     // register ramdisk driver
     ramdisk_driver::init_driver();

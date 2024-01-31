@@ -11,7 +11,7 @@ BuildLibrary:
 	make -C $(KRNLIBRARYFOLDER) all
 
 BuildKernel:
-	make -C $(KERNELFOLDER)/$(HALFOLDER) all
+	make -C $(KERNELFOLDER)/$(HARDWAREFOLDER) all
 	make -C $(KERNELFOLDER) all
 
 	cp $(KERNELFOLDER)/$(KERNELTARGET) $(LOADERFOLDER)/iso/$(KERNELTARGET)
@@ -21,7 +21,7 @@ BuildLoader:
 
 clean:
 	make -C $(KRNLIBRARYFOLDER) clean
-	make -C $(KERNELFOLDER)/$(HALFOLDER) clean
+	make -C $(KERNELFOLDER)/$(HARDWAREFOLDER) clean
 	make -C $(KERNELFOLDER) clean
 	make -C $(LOADERFOLDER) clean
 

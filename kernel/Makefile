@@ -23,6 +23,7 @@ all: $(ASMSOURCES) $(MAINTARGETS)
 
 clean:
 	rm -rf $(MAINBINARYFOLDER)/*.*
+	rm -rf $(MAINBINARYFOLDER)/*/*.*
 
 %.obj: %.cpp
 	$(CC) -m64 -c $< -o $(subst $(SOURCESFOLDER),$(KERNELFOLDER),$(BINARYFOLDER)/$@) $(CCOPTIONS) -I $(HARDWAREFOLDER)/Headers/ -I $(HEADERSFOLDER)/

@@ -31,7 +31,10 @@
 			"algorithm": "cpp",
 			"optional": "cpp",
 			"system_error": "cpp",
-			"cstdlib": "cpp"
+			"cstdlib": "cpp",
+			"thread": "cpp",
+			"cstdio": "cpp",
+			"*.ipp": "cpp"
 		}
 	}
 }

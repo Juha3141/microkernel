@@ -147,12 +147,20 @@ void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
     set_foreground_color(debugcolor(DEBUG_TEXT));
 }
 
-
 void debug::out::printf(debug_m mode , const char *fmt , ...) {
     va_list ap;
     va_start(ap , fmt);
     debug::out::vprintf(mode , fmt , ap);
     va_end(ap);
+}
+
+void debug::out::printf(debug_m mode , const char *function , const char *fmt , ...) {
+    va_list ap;
+    debug::push_function(function);
+    va_start(ap , fmt);
+    debug::out::vprintf(mode , fmt , ap);
+    va_end(ap);
+    debug::pop_function();
 }
 
 void debug::out::printf(const char *fmt , ...) {

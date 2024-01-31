@@ -99,7 +99,7 @@ template <typename T> class ObjectManager {
             for(i = 0; i < max_count; i++) {
                 if(object_container[i].object == object) {
                     count--;
-                    object_container[i].occpied = false;
+                    object_container[i].occupied = false;
                     return i;
                 }
             }
@@ -109,7 +109,15 @@ template <typename T> class ObjectManager {
             if((id >= max_count)||(object_container[id].occupied == false)) return 0x00;
             return object_container[id].object;
         }
-
+        
+        template <typename T2> max_t search(bool (*check)(T *data , T2 sample_data) , T2 sample_data) {
+            for(max_t i = 0; i < max_count; i++) {
+                if(check(object_container[i].object , sample_data) == true) {
+                    return i;
+                }
+            }
+            return INVALID;
+        }
         max_t max_count = 0;
         max_t count = 0;
     protected:

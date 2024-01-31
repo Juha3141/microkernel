@@ -1,7 +1,7 @@
 include ../../global_variables.mk
 include ../common.mk
 
-BINARYFOLDER = ../../$(ROOTBINARYFOLDER)/$(KERNELFOLDER)/$(HALFOLDER)
+BINARYFOLDER = ../../$(ROOTBINARYFOLDER)/$(KERNELFOLDER)/$(HARDWAREFOLDER)
 KERNELINCLUDE = ..
 
 MAINSOURCES = $(notdir $(wildcard $(SOURCESFOLDER)/*.cpp))

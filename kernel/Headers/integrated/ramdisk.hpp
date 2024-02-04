@@ -12,6 +12,9 @@ struct ramdisk_driver : public storagedev::storage_device_driver {
     max_t read_sector(storagedev::storage_device *device , max_t sector_address , max_t count , void *buffer) override;
     max_t write_sector(storagedev::storage_device *device , max_t sector_address , max_t count , void *buffer) override;
     bool get_device_geometry(storagedev::storage_device *device , storagedev::device_geometry *geometry) override; 
+    
+    bool io_read(storagedev::storage_device *device , max_t command , max_t arguments) override;
+    bool io_write(storagedev::storage_device *device , max_t command , max_t arguments) override;
 };
 
 struct ramdisk_info_s {

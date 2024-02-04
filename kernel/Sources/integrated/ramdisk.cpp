@@ -63,3 +63,7 @@ bool ramdisk_driver::get_device_geometry(storagedev::storage_device *device , st
     
     return true;
 }
+
+bool ramdisk_driver::io_read(storagedev::storage_device *device , max_t command , max_t arguments) { return false; }
+
+bool ramdisk_driver::io_write(storagedev::storage_device *device , max_t command , max_t arguments) { return false; }

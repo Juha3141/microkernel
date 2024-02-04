@@ -12,14 +12,7 @@
 #define _INTERFACE_TYPE_HPP_
 
 #include <kernel_argument.hpp>
-
-#define MEMMODEL_PHYSICAL_MAPPING 0x01 // 1:1 scale of physical memory and virtual memory
-#define MEMMODEL_DEMAND_PAGING    0x02 // Demand Paging
-
-#define ARCHITECTURE_LIMIT 0xFFFFFFFFFFFFFFFF
-#define ARCHITECTURE_LIMIT_BIT 64
-
-#define INVALID ARCHITECTURE_LIMIT
+#include <architecture_limits.hpp>
 
 #define SINGLETON_PATTERN_KSTRUCT(type) \
 static type *get_self(void) {\

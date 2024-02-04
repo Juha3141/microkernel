@@ -45,7 +45,7 @@ void debug::dump_memory(max_t address , max_t length) {
 void debug::enable(void) { debug_info.enable_debug = true; }
 void debug::disable(void) { debug_info.enable_debug = false; }
 
-void debug::panic(const char *source , int line , const char *fmt , ...) {
+void debug::panic_line(const char *source , int line , const char *fmt , ...) {
     va_list ap;
     va_start(ap , fmt);
     char buffer[512];
@@ -62,7 +62,7 @@ void debug::panic(const char *fmt , ...) {
     va_start(ap , fmt);
     char buffer[512];
     vsprintf(buffer , fmt , ap);
-    debug::out::printf(DEBUG_PANIC , "%s" , buffer);
+    debug::out::printf(DEBUG_PANIC , buffer);
     va_end(ap);
     while(1) {
         ;
@@ -154,7 +154,7 @@ void debug::out::printf(debug_m mode , const char *fmt , ...) {
     va_end(ap);
 }
 
-void debug::out::printf(debug_m mode , const char *function , const char *fmt , ...) {
+void debug::out::printf_function(debug_m mode , const char *function , const char *fmt , ...) {
     va_list ap;
     debug::push_function(function);
     va_start(ap , fmt);

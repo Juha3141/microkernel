@@ -3,6 +3,8 @@
 
 #include <interface_type.hpp>
 
+#ifdef USE_HARDWARE_INTERRUPT
+
 #define INTERRUPT_HARDWARE_SPECIFIED_MAXCOUNT  32
 
 #define INTERRUPT_HARDWARE_SPECIFIED_HANDLER_PTR(handler_num) interrupt::handler::hardware_specified##handler_num
@@ -58,5 +60,7 @@ namespace interrupt {
         interrupt_handler_t get_hardware_specified(int index);
     };
 };
+
+#endif
 
 #endif

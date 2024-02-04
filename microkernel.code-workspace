@@ -34,7 +34,11 @@
 			"cstdlib": "cpp",
 			"thread": "cpp",
 			"cstdio": "cpp",
-			"*.ipp": "cpp"
+			"*.ipp": "cpp",
+			"iosfwd": "cpp",
+			"limits": "cpp",
+			"stop_token": "cpp",
+			"streambuf": "cpp"
 		}
 	}
 }

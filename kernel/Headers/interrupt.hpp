@@ -16,12 +16,10 @@
 #include <hardware/interrupt_controller.hpp>
 #include <kmem_manager.hpp>
 
-#include <hardware/interrupt_hardware_specified.hpp>
+#include <interrupt_hardware_specified.hpp>
 #include <interrupt_specification.hpp>
 
 #include <string.hpp>
-
-#define GENERAL_INTERRUPT_MAXCOUNT     256
 
 #define INTERRUPT_TYPE_GENERAL              1
 #define INTERRUPT_TYPE_HARDWARE_SPECIFIED   2

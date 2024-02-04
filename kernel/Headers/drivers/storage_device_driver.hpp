@@ -1,5 +1,5 @@
-#ifndef _BLOCK_DEVICE_DRIVER_HPP_
-#define _BLOCK_DEVICE_DRIVER_HPP_
+#ifndef _STORAGE_DEVICE_DRIVER_HPP_
+#define _STORAGE_DEVICE_DRIVER_HPP_
 
 #include <interface_type.hpp>
 #include <object_manager.hpp>
@@ -35,6 +35,7 @@ namespace storagedev {
 
         // To-do : add more
     };
+    /// Partition stuff
     struct partition_info {
         max_t physical_sector_start;
         max_t physical_sector_end;
@@ -70,13 +71,13 @@ namespace storagedev {
     };
 
     struct storage_device_driver {
-        friend class StorageDeviceDriverContainer;
-
         virtual bool prepare(void) = 0; 
         virtual max_t read_sector(storage_device *device , max_t sector_address , max_t count , void *buffer) = 0;
         virtual max_t write_sector(storage_device *device , max_t sector_address , max_t count , void *buffer) = 0;
         virtual bool get_device_geometry(storage_device *device , device_geometry *geometry) = 0;
-        
+        virtual bool io_read(storage_device *device , max_t command , max_t arguments) = 0;
+        virtual bool io_write(storage_device *device , max_t command , max_t arguments) = 0;
+
         class StorageDeviceContainer *device_container;
 
         max_t driver_id;
@@ -114,11 +115,19 @@ namespace storagedev {
             return physical_super_device->device_driver->write_sector(physical_super_device , sector_address , count , buffer);
         }
         bool get_device_geometry(storage_device *device , device_geometry *geometry) override {
-            if(super_driver == 0x00) {
-                return false;
-            }
+            if(super_driver == 0x00) return false;
             return super_driver->get_device_geometry(device , geometry);
         }
+        bool io_read(storage_device *device , max_t command , max_t arguments) override {
+            if(super_driver == 0x00) return false;
+            return super_driver->io_read(device , command , arguments);
+        }
+
+        bool io_write(storage_device *device , max_t command , max_t arguments) override {
+            if(super_driver == 0x00) return false;
+            return super_driver->io_read(device , command , arguments);
+        }
+
         
         struct storage_device_driver *super_driver;
     };

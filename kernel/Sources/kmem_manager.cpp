@@ -170,6 +170,7 @@ max_t memory::SegmentsManager::get_currently_using_mem(void) {
 	max_t currently_using_mem = 0;
 	for(int i = 0; i < managers_count; i++) {
 		currently_using_mem += node_managers[i].currently_using_mem;
+		debug::out::printf("node_managers[%d].currently_using_mem : %d\n" , i , node_managers[i].currently_using_mem);
 	}
 	return currently_using_mem;
 }
@@ -210,7 +211,4 @@ bool memory::pmem_protect(struct Boundary boundary) {
 	return false;
 }
 
-max_t memory::pmem_usage(void) {
-	SegmentsManager *segments_mgr = SegmentsManager::get_self();
-	return segments_mgr->get_currently_using_mem();
-}
+max_t memory::pmem_usage(void) { return SegmentsManager::get_self()->get_currently_using_mem(); }

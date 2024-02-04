@@ -21,7 +21,7 @@ bool segmentation::SegmentsManager::register_segment(const char *segment_name , 
     return true;
 }
 
-bool checkfunc(segmentation::segment_info_t &data , const char *name) {
+static bool checkfunc(segmentation::segment_info_t &data , const char *name) {
     return (strcmp(data.name , name) == 0);
 }
 
@@ -39,6 +39,8 @@ segment_t segmentation::SegmentsManager::search_segment(const char *segment_name
     if(id == INVALID) return SEGMENT_VALUE_INVALID;
     return get_data(id).value;
 }
+
+#ifdef USE_SEGMENTATION
 
 void segmentation::init(void) {
     debug::push_function("seg::init");
@@ -131,3 +133,16 @@ void segmentation::set_to_data_segment(const char *segment_name) {
     segment_t segment = SegmentsManager::get_self()->search_segment(segment_name);
     segmentation::hardware::set_to_data_segment(segment);
 }
+
+#else
+
+void segmentation::init(void) {}
+bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) { WARNING_NOT_USING_SEGMENTATION return false; }
+bool segmentation::get_segment_info(segment_t segment_value , segmentation::segment_info_t &segment_info) { WARNING_NOT_USING_SEGMENTATION return false; }
+segment_t segmentation::get_segment_value(const char *segment_name) { WARNING_NOT_USING_SEGMENTATION return 0x00; }
+bool segmentation::register_segment(const char *segment_name , max_t start_address , max_t length , word segment_type , max_t task_id) { WARNING_NOT_USING_SEGMENTATION return false; }
+bool segmentation::discard_segment(const char *segment_name) { WARNING_NOT_USING_SEGMENTATION return false; }
+void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) { WARNING_NOT_USING_SEGMENTATION }
+void segmentation::set_to_data_segment(const char *segment_name) { WARNING_NOT_USING_SEGMENTATION }
+
+#endif

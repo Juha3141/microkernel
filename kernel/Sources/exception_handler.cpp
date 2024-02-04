@@ -6,6 +6,8 @@
 #include <hardware/interrupt_hardware.hpp>
 #include <hardware/interrupt_controller.hpp>
 
+#ifdef USE_HARDWARE_INTERRUPT
+
 #define EXCEPTION_HANDLER_FUNCTION(handler_num) \
 __attribute__ ((naked)) void exception::handlers::handler##handler_num(void) {\
     exception::global_exception_handler(handler_num); \
@@ -76,3 +78,5 @@ EXCEPTION_HANDLER_FUNCTION(60)
 EXCEPTION_HANDLER_FUNCTION(61)
 EXCEPTION_HANDLER_FUNCTION(62)
 EXCEPTION_HANDLER_FUNCTION(63)
+
+#endif

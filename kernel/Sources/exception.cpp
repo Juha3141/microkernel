@@ -14,15 +14,6 @@
 
 #include <debug.hpp>
 
-/*
-```
-int k = 69420;
-int j = k-69420;
-int r = (k/j)+k;
-```
-- what the fuck
-*/
-
 max_t exception::ExceptionManager::register_general_int(const char *exception_name , int general_interrupt_info) {
     max_t id = register_space();
 
@@ -48,6 +39,8 @@ max_t exception::ExceptionManager::register_etc(const char *exception_name) {
     strcpy(get_data(id).name , exception_name);
     return id;
 }
+
+#ifdef USE_HARDWARE_INTERRUPT
 
 void exception::init(void) {
     ExceptionManager::get_self()->init(EXCEPTIONS_MAXCOUNT);
@@ -101,3 +94,13 @@ ptr_t exception::register_exception_etc(const char *exception_name) {
     }
     return handlers[internal_id];
 }
+
+#else
+
+void exception::init(void) { return; }
+void exception::register_exception_general_int(const char *exception_name , int general_interrupt_number) { WARNING_NOT_USING_HARDWARE_INTERRUPT }
+void exception::register_exception_hardware_specified(const char *exception_name , const char *interrupt_name) { WARNING_NOT_USING_HARDWARE_INTERRUPT }
+ptr_t exception::register_exception_etc(const char *exception_name) { WARNING_NOT_USING_HARDWARE_INTERRUPT return 0x00; }
+void exception::global_exception_handler(int handler_id) { WARNING_NOT_USING_HARDWARE_INTERRUPT }
+
+#endif

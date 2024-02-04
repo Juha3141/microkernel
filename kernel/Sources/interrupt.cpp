@@ -2,7 +2,7 @@
 #include <string.hpp>
 #include <io_port.hpp>
 
-#include <hardware/interrupt_hardware_specified.hpp>
+#include <interrupt_hardware_specified.hpp>
 
 #include <debug.hpp>
 
@@ -24,6 +24,8 @@ interrupt_handler_t interrupt::GeneralInterruptManager::discard_interrupt(int nu
     interrupt_list[number].option = 0x00;
     return handler;
 }
+
+#ifdef USE_HARDWARE_INTERRUPT
 
 void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) {
     INTERRUPT_HARDWARE_SPECIFIED_ARRAY
@@ -174,3 +176,18 @@ bool interrupt::hardware_specified::register_interrupt(const char *name , interr
 bool interrupt::hardware_specified::discard_interrupt(const char *name) {
     return HardwareSpecifiedInterruptManager::get_self()->discard_interrupt_name(name);
 }
+
+#else 
+
+void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) { WARNING_NOT_USING_HARDWARE_INTERRUPT }
+interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) { WARNING_NOT_USING_HARDWARE_INTERRUPT return 0x00; }
+void interrupt::init(void) { interrupt::hardware::disable(); }
+bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
+bool interrupt::general::discard_interrupt(int number) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
+void interrupt::general::set_interrupt_mask(int number , bool masked) { WARNING_NOT_USING_HARDWARE_INTERRUPT }
+bool interrupt::register_interrupt_by_info(const interrupt::interrupt_info_t int_info , interrupt_handler_t handler , word interrupt_option) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
+bool interrupt::discard_interrupt_by_info(const interrupt::interrupt_info_t int_info) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
+interrupt_handler_t interrupt::hardware_specified::allocate_handler(const char *name) { WARNING_NOT_USING_HARDWARE_INTERRUPT return 0x00; }
+bool interrupt::hardware_specified::discard_interrupt(const char *name) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
+
+#endif

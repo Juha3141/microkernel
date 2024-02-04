@@ -8,6 +8,7 @@
 #include <io_port.hpp>
 
 #include <drivers/storage_device_driver.hpp>
+#include <drivers/block_device_driver.hpp>
 #include <drivers/partition_driver.hpp>
 
 #include <integrated/integrated_drivers.hpp>
@@ -28,15 +29,16 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
 
     memory::pmem_init(kargument->memmap_count , (struct MemoryMap *)((max_t)kargument->memmap_ptr) , kargument);
     set_initial_kernel_info();
-    
+
     segmentation::init();
     interrupt::init();
     exception::init();
 
     storagedev::init();
-
+    blockdev::init();
     integrated::register_drivers();
 
+    debug::out::printf("memory usage : %dB" , memory::pmem_usage());
     //interrupt::hardware::enable();
 
     while(1) {

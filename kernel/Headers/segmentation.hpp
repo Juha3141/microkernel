@@ -5,12 +5,12 @@
 #include <kmem_manager.hpp>
 #include <object_manager.hpp>
 
-#define SEGMENT_MAXCOUNT          64
-
 #define SEGMENT_TYPE_KERNEL_PRIVILEGE  0x01
 #define SEGMENT_TYPE_USER_PRIVILEGE    0x02
+
 #define SEGMENT_TYPE_CODE_SEGMENT      0x04
 #define SEGMENT_TYPE_DATA_SEGMENT      0x08
+
 #define SEGMENT_TYPE_SYSTEM_SEGMENT    0x10
 #define SEGMENT_TYPE_TASK_SEGMENT      0x20
 
@@ -26,8 +26,7 @@ typedef word segment_t;
 
 namespace segmentation {
     struct segment_info_t {
-
-        char name[32];
+        char name[16];
         segment_t value;
         word segment_type;
 

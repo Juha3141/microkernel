@@ -4,10 +4,12 @@
 #include <interface_type.hpp>
 #include <exception.hpp>
 
-#define EXCEPTION_HANDLER_MAXCOUNT EXCEPTIONS_MAXCOUNT
+#define EXCEPTION_HANDLER_MAXCOUNT 64
 
 #define EXCEPTION_HANDLER_PTR(handler_num) exception::handlers::handler##handler_num
 #define EXCEPTION_HANDLER_FUNCTION(handler_num) __attribute__ ((naked)) void handler##handler_num(void);
+
+#ifdef USE_HARDWARE_INTERRUPT
 
 #define EXCEPTION_HANDLER_ARRAY \
 ptr_t handlers[EXCEPTION_HANDLER_MAXCOUNT] = {\
@@ -97,5 +99,7 @@ namespace exception {
         EXCEPTION_HANDLER_FUNCTION(63);
     }
 }
+
+#endif
 
 #endif

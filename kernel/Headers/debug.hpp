@@ -4,7 +4,7 @@
 #include <interface_type.hpp>
 #include <string.hpp>
 
-#define DEBUG_FUNCTION_NAME_LEN  80
+#define DEBUG_FUNCTION_NAME_LEN  40
 #define DEBUG_FUNCTION_STACK_MAX 20
 
 #define DEBUG_NONE      0b0000001
@@ -29,7 +29,7 @@ namespace debug {
         void vprintf(debug_m mode , const char *fmt , va_list ap);
 
         void printf(debug_m mode , const char *fmt , ...);
-        void printf(debug_m mode , const char *function , const char *fmt , ...);
+        void printf_function(debug_m mode , const char *function , const char *fmt , ...);
         void printf(const char *fmt , ...);
         void print_str(const char *str);
 
@@ -61,7 +61,7 @@ namespace debug {
     void enable(void);
     void disable(void);
 
-    void panic(const char *source , int line , const char *fmt , ...);
+    void panic_line(const char *source , int line , const char *fmt , ...);
     void panic(const char *fmt , ...);
     void panic(void);
 }

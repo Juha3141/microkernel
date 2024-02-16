@@ -28,11 +28,6 @@ namespace blockdev {
     struct block_device_driver;
     class BlockDeviceContainer;
 
-    struct block_device_driver_info {
-        char driver_name[24];
-        max_t block_size;
-        max_t driver_id;
-    };
 
     typedef struct partition_info_s {
         max_t physical_sector_start;
@@ -44,6 +39,16 @@ namespace blockdev {
     typedef enum storage_type_s {
         physical=0 , logical=1
     }storage_type_t;
+
+    struct device_geometry {
+        max_t lba_total_block_count;
+        max_t block_size;
+
+        bool is_chs;
+        max_t cylinder;
+        max_t head;
+        max_t sector;
+    };
 
     struct storage_info_t {
         max_t partition_driver_id;
@@ -62,7 +67,10 @@ namespace blockdev {
         max_t id;
         block_device_driver *device_driver;
         device_resources resource;
-        
+
+        // Geometry information
+        device_geometry geometry;
+        // Storage information
         storage_info_t storage_info;
 
         max_t mount_id;
@@ -72,11 +80,13 @@ namespace blockdev {
         virtual bool prepare(void) = 0;
         virtual max_t read(block_device *device , max_t block_address , max_t count , void *buffer) = 0;
         virtual max_t write(block_device *device , max_t block_address , max_t count , void *buffer) = 0;
+        virtual bool get_geometry(block_device *device , device_geometry &geometry) = 0;
         virtual bool io_read(block_device *device , max_t command , max_t argument) = 0;
         virtual bool io_write(block_device *device , max_t command , max_t argument) = 0;
 
         class BlockDeviceContainer *device_container;
-        block_device_driver_info driver_info;
+        char driver_name[24];
+        max_t driver_id;
     };
     
     class BlockDeviceContainer : public ObjectManager<block_device> {};
@@ -85,11 +95,11 @@ namespace blockdev {
             SINGLETON_PATTERN_PMEM(BlockDeviceDriverContainer);
 
             max_t register_driver(block_device_driver *driver) {
-                driver->driver_info.driver_id = ObjectManager<block_device_driver>::register_object(driver);
-                return driver->driver_info.driver_id;
+                driver->driver_id = ObjectManager<block_device_driver>::register_object(driver);
+                return driver->driver_id;
             }
             block_device_driver *search_by_name(const char *driver_name) {
-                max_t id = search<const char *>([](block_device_driver *driver , const char *name) { return (bool)(strcmp(driver->driver_info.driver_name , name) == 0); } , driver_name); 
+                max_t id = search<const char *>([](block_device_driver *driver , const char *name) { return (bool)(strcmp(driver->driver_name , name) == 0); } , driver_name); 
                 return get_object(id);
             }
     };
@@ -111,7 +121,7 @@ namespace blockdev {
 
     bool discard_device(block_device *device);
 
-    block_device *create_empty_device(block_device_driver *driver);
+    block_device *create_empty_device(void);
     void designate_resources_count(block_device *device , int io_port_count , int interrupt_count , int flags_count , int etc_res_count);
 };
 

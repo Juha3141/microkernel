@@ -28,7 +28,7 @@ static bool checkfunc(segmentation::segment_info_t &data , const char *name) {
 segment_t segmentation::SegmentsManager::discard_segment(const char *segment_name) {
     segment_t value;
     max_t id = search<const char *>([](segment_info_t &data , const char *name){ return (bool)(strcmp(data.name , name) == 0);} , segment_name);
-    value = get_data(id).value;
+    value = get_data(id)->value;
     if(discard_space(id) == false) return 0x00;
 
     return value;
@@ -37,7 +37,7 @@ segment_t segmentation::SegmentsManager::discard_segment(const char *segment_nam
 segment_t segmentation::SegmentsManager::search_segment(const char *segment_name) {
     max_t id = search<const char *>(checkfunc , segment_name);
     if(id == INVALID) return SEGMENT_VALUE_INVALID;
-    return get_data(id).value;
+    return get_data(id)->value;
 }
 
 #ifdef USE_SEGMENTATION
@@ -81,7 +81,7 @@ bool segmentation::get_segment_info(const char *segment_name , segmentation::seg
     SegmentsManager *segment_mgr = SegmentsManager::get_self();
     max_t id = segment_mgr->search<const char *>([](segment_info_t &data , const char *name){ return (bool)(strcmp(data.name , name) == 0);} , segment_name);
     if(id == INVALID) return false;
-    memcpy(&segment_info , &segment_mgr->get_data(id) , sizeof(segment_info_t));
+    memcpy(&segment_info , segment_mgr->get_data(id) , sizeof(segment_info_t));
     return true;
 }
     
@@ -89,7 +89,7 @@ bool segmentation::get_segment_info(segment_t segment_value , segmentation::segm
     SegmentsManager *segment_mgr = SegmentsManager::get_self();
     max_t id = segment_mgr->search<segment_t>([](segment_info_t &data , segment_t value){ return (bool)(data.value == value);} , segment_value);
     if(id == INVALID) return false;
-    memcpy(&segment_info , &segment_mgr->get_data(id) , sizeof(segment_info_t));
+    memcpy(&segment_info , segment_mgr->get_data(id) , sizeof(segment_info_t));
     return true;
 }
 
@@ -97,7 +97,7 @@ segment_t segmentation::get_segment_value(const char *segment_name) {
     SegmentsManager *segment_mgr = SegmentsManager::get_self();
     max_t id = segment_mgr->search<const char *>([](segment_info_t &data , const char *name){ return (bool)(strcmp(data.name , name) == 0); } , segment_name);
     if(id == INVALID) return SEGMENT_VALUE_INVALID;
-    return segment_mgr->get_data(id).value;
+    return segment_mgr->get_data(id)->value;
 }
 
 bool segmentation::register_segment(const char *segment_name , max_t start_address , max_t length , word segment_type , max_t task_id) {

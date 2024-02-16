@@ -29,7 +29,7 @@ namespace exception {
     }
     typedef struct exception_info_s {
         word type; // interrupt? hardware_specified interrupt? or etc?
-        char name[24];
+        char name[40];
         ptr_t linked_handler;
         
         interrupt::interrupt_info_t interrupt_info;

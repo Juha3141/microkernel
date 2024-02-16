@@ -17,26 +17,26 @@
 max_t exception::ExceptionManager::register_general_int(const char *exception_name , int general_interrupt_info) {
     max_t id = register_space();
 
-    get_data(id).type = EXCEPTION_TYPE_GENERAL;
-    get_data(id).interrupt_info = general_interrupt_info;
-    strcpy(get_data(id).name , exception_name);
+    get_data(id)->type = EXCEPTION_TYPE_GENERAL;
+    get_data(id)->interrupt_info = general_interrupt_info;
+    strcpy(get_data(id)->name , exception_name);
     return id;
 }
 
 max_t exception::ExceptionManager::register_hardware_specified(const char *exception_name , const char *interrupt_name) {
     max_t id = register_space();
 
-    get_data(id).type = EXCEPTION_TYPE_HARDWARE_SPECIFIC;
-    get_data(id).interrupt_info = interrupt_name;
-    strcpy(get_data(id).name , exception_name);
+    get_data(id)->type = EXCEPTION_TYPE_HARDWARE_SPECIFIC;
+    get_data(id)->interrupt_info = interrupt_name;
+    strcpy(get_data(id)->name , exception_name);
     return id;
 }
 
 max_t exception::ExceptionManager::register_etc(const char *exception_name) {
     max_t id = register_space();
 
-    get_data(id).type = EXCEPTION_TYPE_ETC;
-    strcpy(get_data(id).name , exception_name);
+    get_data(id)->type = EXCEPTION_TYPE_ETC;
+    strcpy(get_data(id)->name , exception_name);
     return id;
 }
 
@@ -49,7 +49,7 @@ void exception::init(void) {
 
 void exception::global_exception_handler(int handler_id) {
     ExceptionManager *exception_mgr = ExceptionManager::get_self();
-    debug::out::printf(DEBUG_ERROR , "Exception, handler_id : %d, name : %s\n" , handler_id , exception_mgr->get_data(handler_id).name);
+    debug::out::printf(DEBUG_ERROR , "Exception, handler_id : %d, name : %s\n" , handler_id , exception_mgr->get_data(handler_id)->name);
     interrupt::hardware::disable();
     while(1) {
         ;

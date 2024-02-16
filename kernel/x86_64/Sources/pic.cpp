@@ -1,6 +1,8 @@
 #include <pic.hpp>
 #include <io_port.hpp>
 
+#include <debug.hpp>
+
 void x86_64::pic::init(void) {
     // remap PIC
 

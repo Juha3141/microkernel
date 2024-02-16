@@ -14,12 +14,14 @@ void interrupt::controller::init(void) {
 }
 
 void interrupt::controller::set_interrupt_mask(int number , bool masked) {
-    if(masked == true) {
-        x86_64::pic::irq_mask(number-32);
-    }
-    else {
-        x86_64::pic::irq_unmask(number-32);
-    }
+    if(number < 32) return;
+
+    if(masked == true) x86_64::pic::irq_mask(number-32);
+    else x86_64::pic::irq_unmask(number-32);
+}
+
+void interrupt::controller::disable_all_interrupt(void) {
+    x86_64::pic::disable();
 }
 
 void interrupt::controller::interrupt_received(void) {

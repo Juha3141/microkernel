@@ -33,13 +33,24 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
     segmentation::init();
     interrupt::init();
     exception::init();
+    interrupt::hardware::enable();
 
     blockdev::init();
+    storage_system::init();
     integrated::register_drivers();
 
-    debug::out::printf("memory usage : %dB" , memory::pmem_usage());
-    //interrupt::hardware::enable();
-
+    blockdev::block_device *device = blockdev::search_device("idehd" , 0);
+    blockdev::block_device_driver *driver = blockdev::BlockDeviceDriverContainer::get_self()->search_by_name("idehd");
+    debug::out::printf("driver : %s(0x%X)\n" , driver->driver_name , driver);
+    debug::out::printf("device : %s%d(0x%X\n) , " , device->device_driver->driver_name , device->id , device);
+    debug::out::printf("block_size   : %d\n" , device->geometry.block_size);
+    debug::out::printf("total_count  : %d(=%dB)\n" , device->geometry.lba_total_block_count , device->geometry.lba_total_block_count*device->geometry.block_size);
+    storage_system::detect_partitions(device);
+    debug::out::printf("device : %s%d\n" , device->device_driver->driver_name , device->id);
+    for(int i = 0; i < device->storage_info.logical_block_devs->count; i++) {
+        blockdev::block_device *partition_dev = device->storage_info.logical_block_devs->get_object(i);
+        debug::out::printf("  partition %d : %ld - %ld\n" , partition_dev->storage_info.partition_id , partition_dev->storage_info.partition_info.physical_sector_start , partition_dev->storage_info.partition_info.physical_sector_end);
+    }
     while(1) {
         ;
     }

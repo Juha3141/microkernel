@@ -87,7 +87,7 @@ void debug::out::print_str(const char *str) {
                             scrinfo.vmem[j] = 0x00;
                             scrinfo.vmem[j+1] = (scrinfo.color_background << 4)+scrinfo.color_foreground;
                         }
-                        scrinfo.y = 24;
+                        scrinfo.y = 25;
                     }
                     off = (scrinfo.y*scrinfo.width*2)+scrinfo.x*2;
                 }

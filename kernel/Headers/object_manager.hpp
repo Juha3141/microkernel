@@ -3,6 +3,9 @@
 
 #include <interface_type.hpp>
 #include <string.hpp>
+#include <kmem_manager.hpp>
+
+#include <debug.hpp>
 
 template <typename T> class DataManager {
     public:
@@ -10,7 +13,7 @@ template <typename T> class DataManager {
             int i;
             count = 0;
             max_count = max_data_count;
-            data_container = (struct DataManager::data_container_s *)(sizeof(struct DataManager::data_container_s)*max_count);
+            data_container = (struct DataManager::data_container_s *)memory::pmem_alloc(max_count*sizeof(struct DataManager::data_container_s));
             for(i = 0; i < max_count; i++) {
                 data_container[i].occupied = false;
                 memset(&data_container[i].data , 0 , sizeof(T));
@@ -51,7 +54,7 @@ template <typename T> class DataManager {
         }
         
         // some inline function
-        inline T &get_data(max_t id) { return data_container[id].data; }
+        inline T *get_data(max_t id) { return &data_container[id].data; }
 
         max_t max_count = 0;
         max_t count = 0;
@@ -70,7 +73,7 @@ template <typename T> class ObjectManager {
             int i;
             count = 0;
             max_count = max_obj_count;
-            object_container = (struct ObjectManager::object_container_s *)(sizeof(struct ObjectManager::object_container_s)*max_count);
+            object_container = (struct ObjectManager::object_container_s *)memory::pmem_alloc(sizeof(struct ObjectManager::object_container_s)*max_count);
             for(i = 0; i < max_count; i++) {
                 object_container[i].occupied = false;
                 object_container[i].object = 0x00;

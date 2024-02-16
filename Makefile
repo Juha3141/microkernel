@@ -2,7 +2,7 @@ include global_variables.mk
 
 BASH = bash
 QEMU = qemu-system-x86_64
-QEMU_OPTION = -m 8192 -rtc base=localtime -M pc -boot c
+QEMU_OPTION = -m 8192 -rtc base=localtime -M pc -boot d -hda proper.img
 TARGET = OS.iso
 
 all: BuildLibrary BuildKernel BuildLoader

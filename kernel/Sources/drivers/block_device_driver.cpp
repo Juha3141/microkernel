@@ -20,15 +20,16 @@ max_t blockdev::register_driver(blockdev::block_device_driver *driver , const ch
     BlockDeviceDriverContainer *driver_container = BlockDeviceDriverContainer::get_self();
     max_t id = driver_container->register_driver(driver); // register driver to global container
     if(id == INVALID) { debug::pop_function(); return INVALID; }
-    
+    driver->device_container = new BlockDeviceContainer;
+    driver->device_container->init(256);
     // assign new local device container
     // Driver contains its devices
-    strcpy(driver->driver_info.driver_name , driver_name);
+    strcpy(driver->driver_name , driver_name);
     driver->prepare();
     
-    debug::out::printf("Registered device driver, id : %d name : \"%s\"\n" , driver->driver_info.driver_id , driver->driver_info.driver_name);
+    debug::out::printf("Registered device driver, id : %d name : \"%s\"\n" , driver->driver_id , driver->driver_name);
     debug::pop_function();
-    return driver->driver_info.driver_id;
+    return driver->driver_id;
 }
 
 ///@brief some bridge-like functions(just basic stuff)
@@ -44,13 +45,15 @@ max_t blockdev::discard_driver(max_t driver_id) { return BlockDeviceDriverContai
 /// @param device Device to be registered
 /// @return Return the id of the device
 max_t blockdev::register_device(blockdev::block_device_driver *driver , blockdev::block_device *device) {
-    debug::push_function("blockdev::reg_dev");
     BlockDeviceDriverContainer *driver_container = BlockDeviceDriverContainer::get_self();
-    
+
     device->id = driver->device_container->register_object(device);
-    if(device->id == INVALID) {
-        return false;
-    }
+    if(device->id == INVALID) { debug::out::printf(DEBUG_ERROR , "invalid id!\n"); return INVALID; }
+    if(driver->get_geometry(device , device->geometry) == false) return INVALID;
+    debug::out::printf("device : %s%d(0x%X)\n" , driver->driver_name , device->id , device);
+    debug::out::printf("bs : %d\n" , device->geometry.block_size);
+    debug::out::printf("c  : %d\n" , device->geometry.lba_total_block_count);
+    
     device->device_driver = driver;
     return device->id;
 }
@@ -61,7 +64,7 @@ max_t blockdev::register_device(const char *driver_name , blockdev::block_device
 max_t blockdev::register_device(max_t driver_id , blockdev::block_device *device) { return blockdev::register_device(BlockDeviceDriverContainer::get_self()->get_object(driver_id) , device); }
 
 blockdev::block_device *blockdev::search_device(max_t driver_id , max_t device_id) { return search_driver(driver_id)->device_container->get_object(device_id); }
-blockdev::block_device *blockdev::search_device(blockdev::block_device_driver *driver , max_t device_id) {  return search_device(driver->driver_info.driver_id , device_id); }
+blockdev::block_device *blockdev::search_device(blockdev::block_device_driver *driver , max_t device_id) {  return driver->device_container->get_object(device_id); }
 blockdev::block_device *blockdev::search_device(const char *driver_name , max_t device_id) { return blockdev::search_device(BlockDeviceDriverContainer::get_self()->search_by_name(driver_name) , device_id); }
 
 bool blockdev::discard_device(blockdev::block_device *device) { return device->device_driver->device_container->discard_object(device); }
@@ -70,9 +73,9 @@ bool blockdev::discard_device(blockdev::block_device *device) { return device->d
 /// @param driver driver for device
 /// @param storage_type type of storage
 /// @return new empty device
-blockdev::block_device *blockdev::create_empty_device(blockdev::block_device_driver *driver) {
+blockdev::block_device *blockdev::create_empty_device(void) {
     block_device *device = (block_device *)memory::pmem_alloc(sizeof(block_device));
-    device->device_driver = driver;
+    memset(device , 0 , sizeof(block_device));
     return device;
 }
 

@@ -3,17 +3,16 @@
 #include <debug.hpp>
 
 bool GPTPartitionDriver::identify(blockdev::block_device *device) {
-    unsigned char buffer[512];
-
+    byte buffer[512];
     if((device->device_driver == 0x00)
-    ||(device->device_driver->driver_info.block_size != 512)) return false;
-
+    ||(device->geometry.block_size != 512)) return false;
+    
     gpt_header *header = (gpt_header *)buffer;
-    if(device->device_driver->read(device , 1 , 1 , buffer) != 1) return 0;
+    if(device->device_driver->read(device , 1 , 1 , buffer) != 512) return false;
     if(memcmp(header->signature , "EFI PART" , 8) != 0) {
         return false;
     }
-    debug::out::printf(DEBUG_INFO , "gptdrv::identify" , "device %s%d : GPT detected" , device->device_driver->driver_info.driver_name , device->id);
+    debug::out::printf(DEBUG_INFO , "gptdrv::identify" , "device %s%d : GPT detected" , device->device_driver->driver_name , device->id);
     return true;
 }
 

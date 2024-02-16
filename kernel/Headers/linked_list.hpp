@@ -115,16 +115,20 @@ template <typename T> class DataLinkedList {
         void init(void) {
             count = 0;
             id_index = 0;
-            start_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
-            start_node->id = 0;
-            start_node->object = 0x00;
-            start_node->next = 0x00;
-            start_node->previous = 0x00;
+            start_node = 0x00;
             
             last_node = start_node;
         }
         node_s *register_data_front(void) { // id
             node_s *new_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
+            if(start_node == 0x00) {
+                start_node = new_node;
+                new_node->previous = 0x00;
+                new_node->next = 0x00;
+                last_node = new_node;
+
+                return new_node;
+            }
             new_node->previous = 0x00;
             connect_node(new_node , start_node);
             new_node->id = allocate_id();
@@ -134,6 +138,14 @@ template <typename T> class DataLinkedList {
         }
         node_s *register_data_rear(void) {
             node_s *new_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
+            if(start_node == 0x00) {
+                start_node = new_node;
+                new_node->previous = 0x00;
+                new_node->next = 0x00;
+                last_node = new_node;
+
+                return new_node;
+            }
             new_node->next = 0x00;
             connect_node(last_node , new_node);
             last_node = new_node;

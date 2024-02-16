@@ -28,6 +28,7 @@ namespace storage_system {
     max_t register_partition_driver(PartitionDriver *partition_driver);
     max_t identify_partition_driver(blockdev::block_device *device);
     PartitionDriver *get_partition_identifier(blockdev::block_device *device);
+    PartitionDriver *get_partition_identifier(max_t identifier_id);
 }
 
 #endif

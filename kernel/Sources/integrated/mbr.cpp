@@ -4,7 +4,7 @@ bool MBRPartitionDriver::identify(blockdev::block_device *device) {
     int i;
 	mbr_partition_table partition_table;
     if((device->device_driver == 0x00)
-    ||(device->device_driver->driver_info.block_size != 512)) return false;
+    ||(device->geometry.block_size != 512)) return false;
 
     if(device->device_driver->read(device , 0 , 1 , &partition_table) != 512) return false;
     if(partition_table.signature != 0xAA55) return false;
@@ -31,7 +31,7 @@ int MBRPartitionDriver::get_partitions_count(blockdev::block_device *device) {
 			partition_count++;
         }
     }
-    debug::out::printf(DEBUG_INFO ,"mbrdrv::get_part_cnt" , "device %s%d : %d partitions\n" , device->device_driver->driver_info.driver_name , device->id , partition_count);
+    debug::out::printf_function(DEBUG_INFO ,"mbrdrv::get_part_cnt" , "device %s%d : %d partitions\n" , device->device_driver->driver_name , device->id , partition_count);
     return partition_count;
 }
 
@@ -43,14 +43,14 @@ int MBRPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
     for(int i = 0; i < 4; i++) {
         if(partition_table.entries[i].partition_type != 0x00) {
 			DataLinkedList<blockdev::partition_info_t>::node_s *node = partition_info_list.register_data_rear();
-
             node->data.physical_sector_start = partition_table.entries[i].starting_lba;
             node->data.physical_sector_end = partition_table.entries[i].starting_lba+partition_table.entries[i].size_lba;
+            debug::out::printf_function(DEBUG_INFO ,"mbrdrv::get_part_cnt" , "partition %d : %ld - %ld\n" , i , node->data.physical_sector_start , node->data.physical_sector_end);
             node->data.bootable = (partition_table.entries[i].bootable_flag == 0x00);
             partition_count++;
         }
     }
-    debug::out::printf(DEBUG_INFO ,"mbrdrv::get_part_cnt" , "device %s%d : %d partitions\n" , device->device_driver->driver_info.driver_name , device->id , partition_count);
+    debug::out::printf_function(DEBUG_INFO ,"mbrdrv::get_part_cnt" , "device %s%d : %d partitions\n" , device->device_driver->driver_name , device->id , partition_count);
     return partition_count;
 }
 

@@ -99,10 +99,12 @@ void interrupt::init(void) {
     interrupt::hardware::init();
     GeneralInterruptManager::get_self()->init();
     HardwareSpecifiedInterruptManager::get_self()->init(INTERRUPT_HARDWARE_SPECIFIED_MAXCOUNT);
-    
+
     interrupt::controller::init();
+    interrupt::controller::disable_all_interrupt();
     interrupt::controller::register_hardware_specified_interrupts();
     interrupt::controller::register_kernel_requested_interrupts();
+    
 }
 
 /////////////////////////////////////////////////////////
@@ -111,11 +113,13 @@ void interrupt::init(void) {
 
 bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option) {
     if(interrupt::hardware::register_interrupt(number , (ptr_t)handler , interrupt_option) == false) return false;
+    interrupt::controller::set_interrupt_mask(number , false);
     return GeneralInterruptManager::get_self()->register_interrupt(number , handler , interrupt_option);
 }
 
 bool interrupt::general::discard_interrupt(int number) {
     if(interrupt::hardware::discard_interrupt(number) == false) return false;
+    interrupt::controller::set_interrupt_mask(number , true);
     return GeneralInterruptManager::get_self()->discard_interrupt(number);
 }
 

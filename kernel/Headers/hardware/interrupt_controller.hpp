@@ -10,6 +10,8 @@ namespace interrupt {
         void register_kernel_requested_interrupts(void);
 
         void set_interrupt_mask(int number , bool masked);
+        void set_hardware_specified_interrupt_mask();
+        void disable_all_interrupt(void);
 
         void interrupt_received(void);        // EOI
         void interrupt_received(int number);

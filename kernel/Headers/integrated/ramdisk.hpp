@@ -11,7 +11,8 @@ struct ramdisk_driver : public blockdev::block_device_driver {
     bool prepare(void) override;
     max_t read(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) override;
     max_t write(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) override;
-    
+    bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;
+
     bool io_read(blockdev::block_device *device , max_t command , max_t arguments) override;
     bool io_write(blockdev::block_device *device , max_t command , max_t arguments) override;
 };

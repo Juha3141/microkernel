@@ -9,8 +9,9 @@ void ramdisk_driver::init_driver(void) {
 
 struct blockdev::block_device *ramdisk_driver::create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr) {
     // Write some basic informations
-    blockdev::block_device *new_device = blockdev::create_empty_device(blockdev::search_driver(ramdisk_driver_id));
+    blockdev::block_device *new_device = blockdev::create_empty_device();
     blockdev::designate_resources_count(new_device , 0 , 0 , 0 , 1);
+    new_device->device_driver = blockdev::search_driver(ramdisk_driver_id);
     ramdisk_info_s *disk_info = (ramdisk_info_s *)memory::pmem_alloc(sizeof(ramdisk_info_s));
 
     // Write resource informations
@@ -50,6 +51,15 @@ max_t ramdisk_driver::write(blockdev::block_device *device , max_t sector_addres
         offset += sizeof(max_t);
     }
     return (mem_addr-start_addr);
+}
+
+bool ramdisk_driver::get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) {
+    ramdisk_info_s *info = (ramdisk_info_s *)device->resource.etc_resources[0];
+    geometry.is_chs = false;
+
+    geometry.block_size = info->bytes_per_sector;
+    geometry.lba_total_block_count = info->total_sector_count;
+    return true;
 }
 
 bool ramdisk_driver::io_read(blockdev::block_device *device , max_t command , max_t arguments) { return false; }

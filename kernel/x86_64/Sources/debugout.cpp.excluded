@@ -5,21 +5,21 @@ static struct TextScreenInformation {
     unsigned char *vmem;
     int width;
     int height;
-    unsigned char color_background;
-    unsigned char color_foreground;
+    debug_color_t color_background;
+    debug_color_t color_foreground;
     int x;
     int y;
 }scrinfo;
 
-void debug::out::init(void) {
-    scrinfo.vmem = (unsigned char *)0xB8000;
-    scrinfo.width = 80;
-    scrinfo.height = 25;
+void debug::out::init(KernelArgument *kernel_argument) {
+    scrinfo.vmem = (unsigned char *)kernel_argument->framebuffer_addr;
+    scrinfo.width = kernel_argument->framebuffer_width;
+    scrinfo.height = kernel_argument->framebuffer_height;
     scrinfo.color_background = 0x00;
     scrinfo.color_foreground = 0x07;
 }
 
-void debug::out::clear_screen(unsigned char color) {
+void debug::out::clear_screen(debug_color_t color) {
     unsigned char *vmem = (unsigned char *)scrinfo.vmem;
     for(int i = 0; i < scrinfo.width*scrinfo.height*2; i += 2) {
         vmem[i] = ' ';
@@ -28,7 +28,7 @@ void debug::out::clear_screen(unsigned char color) {
     set_position(0 , 0);
 }
 
-unsigned char debug::out::debugcolor(debug_m mode) {
+debug_color_t debug::out::debugcolor(debug_m mode) {
     switch(mode) {
         case DEBUG_NONE:    return 0x07;
         case DEBUG_TEXT:    return 0x07;
@@ -36,9 +36,21 @@ unsigned char debug::out::debugcolor(debug_m mode) {
         case DEBUG_SPECIAL: return 0x02;
         case DEBUG_ERROR:   return 0x04;
         case DEBUG_PANIC:   return 0x04;
-        case DEBUG_WARNING: return 0x08;
+        case DEBUG_WARNING: return 0x06;
     }
     return 0x07;
+}
+
+static void process_newline(void) {
+    if(scrinfo.y > 24) { // fix scrolling problem
+        memcpy(scrinfo.vmem , scrinfo.vmem+(scrinfo.width*2) , scrinfo.width*(scrinfo.height-1)*2);
+        for(j = scrinfo.width*(scrinfo.height-1)*2; j < scrinfo.width*scrinfo.height*2; j += 2) {
+            scrinfo.vmem[j] = 0x00;
+            scrinfo.vmem[j+1] = (scrinfo.color_background << 4)+scrinfo.color_foreground;
+        }
+        scrinfo.y = 25;
+    }
+    off = (scrinfo.y*scrinfo.width*2)+scrinfo.x*2;
 }
 
 void debug::out::print_str(const char *str) {
@@ -51,15 +63,7 @@ void debug::out::print_str(const char *str) {
             case '\n':
                 scrinfo.x = 0;
                 scrinfo.y++;
-                if(scrinfo.y > 24) {
-                    memcpy(scrinfo.vmem , scrinfo.vmem+(scrinfo.width*2) , scrinfo.width*(scrinfo.height-1)*2);
-                    for(j = scrinfo.width*(scrinfo.height-1)*2; j < scrinfo.width*scrinfo.height*2; j += 2) {
-                        scrinfo.vmem[j] = 0x00;
-                        scrinfo.vmem[j+1] = (scrinfo.color_background << 4)+scrinfo.color_foreground;
-                    }
-                    scrinfo.y = 24;
-                }
-                off = (scrinfo.y*scrinfo.width*2)+scrinfo.x*2;
+                process_newline();
                 break;
             case '\b':
                 scrinfo.x -= 1;
@@ -81,16 +85,8 @@ void debug::out::print_str(const char *str) {
                 if(scrinfo.x > 79) {
                     scrinfo.x = 0;
                     scrinfo.y++;
-                    if(scrinfo.y > 24) { // fix scrolling problem
-                        memcpy(scrinfo.vmem , scrinfo.vmem+(scrinfo.width*2) , scrinfo.width*(scrinfo.height-1)*2);
-                        for(j = scrinfo.width*(scrinfo.height-1)*2; j < scrinfo.width*scrinfo.height*2; j += 2) {
-                            scrinfo.vmem[j] = 0x00;
-                            scrinfo.vmem[j+1] = (scrinfo.color_background << 4)+scrinfo.color_foreground;
-                        }
-                        scrinfo.y = 25;
-                    }
-                    off = (scrinfo.y*scrinfo.width*2)+scrinfo.x*2;
                 }
+                process_newline();
                 break;
         }
     }
@@ -119,17 +115,17 @@ void debug::out::move_position(int x , int y) {
     }
 }
 
-void debug::out::get_scr_info(int &x , int &y , unsigned char &background_color , unsigned char &foreground_color) {
+void debug::out::get_scr_info(int &x , int &y , debug_color_t &background_color , debug_color_t &foreground_color) {
     x = scrinfo.x;
     x = scrinfo.y;
     background_color = scrinfo.color_background;
     foreground_color = scrinfo.color_foreground;
 }
 
-void debug::out::set_background_color(unsigned char background_color) {
+void debug::out::set_background_color(debug_color_t background_color) {
     scrinfo.color_background = background_color;
 }
 
-void debug::out::set_foreground_color(unsigned char foreground_color) {
+void debug::out::set_foreground_color(debug_color_t foreground_color) {
     scrinfo.color_foreground = foreground_color;
 }

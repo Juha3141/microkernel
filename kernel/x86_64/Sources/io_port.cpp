@@ -17,14 +17,14 @@ byte io_read_byte(io_port port) {
 
 
 void io_write_word(io_port port , word data) {
-    IA ("mov dx , %0":"=r"(port));
-    IA ("mov ax , %0":"=r"(data));
+    IA ("mov dx , %0"::"r"(port));
+    IA ("mov ax , %0"::"r"(data));
     IA ("out dx , ax");
 }
 
 word io_read_word(io_port port) {
     word data;
-    IA ("mov dx , %0":"=r"(port));
+    IA ("mov dx , %0"::"r"(port));
     IA ("in ax , dx");
     IA ("mov %0 , ax":"=r"(data));
     return data;
@@ -32,14 +32,14 @@ word io_read_word(io_port port) {
 
 
 void io_write_dword(io_port port , dword data) {
-    IA ("mov dx , %0":"=r"(port));
-    IA ("mov eax , %0":"=r"(data));
+    IA ("mov dx , %0"::"r"(port));
+    IA ("mov eax , %0"::"r"(data));
     IA ("out dx , eax");
 }
 
 dword io_read_dword(io_port port) {
     dword data;
-    IA ("mov dx , %0":"=r"(port));
+    IA ("mov dx , %0"::"r"(port));
     IA ("in eax , dx");
     IA ("mov %0 , eax":"=r"(data));
     return data;

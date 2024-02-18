@@ -268,20 +268,23 @@ bool ide_cd_driver::get_geometry(blockdev::block_device *device , blockdev::devi
     }
     memcpy(&(cd_geometry) , data , 256);
     if((cd_geometry.config & 0x1F00) != 0x500) return false;
-/*
-    for(int i = 0 , j = 0; i < 20; i++) {
-        geometry->Model[j++] = Data[27+i] >> 8;
-        Geometry->Model[j++] = Data[27+i] & 0xFF;
+    /*
+    char model[41];
+    int i , j;
+    for(i = 0 , j = 0; i < 20; i++) {
+        model[j++] = data[27+i] >> 8;
+        model[j++] = data[27+i] & 0xFF;
     }
-    Geometry->Model[j++] = 0x00;
-*/
+    model[j++] = 0x00;
+    debug::out::printf("model : %s\n" , model);
+    */
     return get_cdrom_size(device , geometry);
 }
 
 bool ide_cd_driver::get_cdrom_size(blockdev::block_device *device , blockdev::device_geometry &geometry) {
     byte command[12] = {0x25 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00};
     io_port base_port = device->resource.io_ports[0];
-    byte received_data[8];
+    byte received_data[8] = {0 , };
     
     if(device->resource.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
     else io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xF0); // Slave : 0xB0

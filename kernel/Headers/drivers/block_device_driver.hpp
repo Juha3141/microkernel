@@ -87,6 +87,8 @@ namespace blockdev {
         class BlockDeviceContainer *device_container;
         char driver_name[24];
         max_t driver_id;
+
+        bool use_auto_partition_detector;
     };
     
     class BlockDeviceContainer : public ObjectManager<block_device> {};

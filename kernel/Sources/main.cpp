@@ -16,15 +16,17 @@
 #include <kernel_argument.hpp>
 
 void pmem_alloc_test(int rand_seed);
+void dump_block_devices(void);
 
-extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
-    struct KernelArgument *kargument = (struct KernelArgument *)kernel_info_struct_addr;
+long map(long x, long in_min, long in_max, long out_min, long out_max);
+
+extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
+    struct KernelArgument *kargument = (struct KernelArgument *)kernel_argument_struct_addr;
     if(kargument->signature != KERNELINFO_STRUCTURE_SIGNATURE) {
         debug::panic("kernel structure not found");
     }
-
-    debug::init();
-    debug::out::clear_screen(0x07);
+    debug::init(kargument);
+    debug::out::clear_screen(0x181c24);
     debug::push_function("kmain");
 
     memory::pmem_init(kargument->memmap_count , (struct MemoryMap *)((max_t)kargument->memmap_ptr) , kargument);
@@ -38,22 +40,57 @@ extern "C" void kernel_main(unsigned long kernel_info_struct_addr) {
     blockdev::init();
     storage_system::init();
     integrated::register_drivers();
+    
+    dump_block_devices();
 
-    blockdev::block_device *device = blockdev::search_device("idehd" , 0);
-    blockdev::block_device_driver *driver = blockdev::BlockDeviceDriverContainer::get_self()->search_by_name("idehd");
-    debug::out::printf("driver : %s(0x%X)\n" , driver->driver_name , driver);
-    debug::out::printf("device : %s%d(0x%X\n) , " , device->device_driver->driver_name , device->id , device);
-    debug::out::printf("block_size   : %d\n" , device->geometry.block_size);
-    debug::out::printf("total_count  : %d(=%dB)\n" , device->geometry.lba_total_block_count , device->geometry.lba_total_block_count*device->geometry.block_size);
-    storage_system::detect_partitions(device);
-    debug::out::printf("device : %s%d\n" , device->device_driver->driver_name , device->id);
-    for(int i = 0; i < device->storage_info.logical_block_devs->count; i++) {
-        blockdev::block_device *partition_dev = device->storage_info.logical_block_devs->get_object(i);
-        debug::out::printf("  partition %d : %ld - %ld\n" , partition_dev->storage_info.partition_id , partition_dev->storage_info.partition_info.physical_sector_start , partition_dev->storage_info.partition_info.physical_sector_end);
-    }
     while(1) {
         ;
     }
+}
+
+
+long map(long x, long in_min, long in_max, long out_min, long out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void dump_block_devices(void) {
+    debug::push_function("dump_bd");
+    for(int a=0;a<79;a++) debug::out::raw_printf("-");
+    debug::out::raw_printf("\n");
+    blockdev::BlockDeviceDriverContainer *blockdev_container = blockdev::BlockDeviceDriverContainer::get_self();
+    debug::out::printf(DEBUG_SPECIAL , "Dumping the block device tree...\n");
+    for(int i = 0; i < blockdev_container->max_count; i++) {
+        blockdev::block_device_driver *driver = blockdev_container->get_object(i);
+        if(driver == 0x00) continue;
+        debug::out::printf(DEBUG_INFO , "%02d. Registered driver %s ----- \n" , i , driver->driver_name);
+        if(driver->device_container->count == 0) {
+            debug::out::printf("    no device found.\n");
+            continue;
+        }
+        for(int j = 0; j < driver->device_container->max_count; j++) {
+            blockdev::block_device *device = driver->device_container->get_object(j);
+            if(device == 0x00) continue;
+
+            debug::out::printf(DEBUG_INFO , "      device %d (%s%d), capacity : %d sectors( = %dMB)\n" , device->id , driver->driver_name , device->id , device->geometry.lba_total_block_count , device->geometry.block_size*device->geometry.lba_total_block_count/1000/1000);
+            if(device->storage_info.logical_block_devs == 0x00) {
+                debug::out::printf("      partition count : 0\n");
+                continue;   
+            };
+            debug::out::printf("      partition count : %d\n" , device->storage_info.logical_block_devs->count);
+            if(device->storage_info.logical_block_devs->count == 0) continue; 
+            blockdev::BlockDeviceContainer *logical_devs = device->storage_info.logical_block_devs;
+
+            for(int k = 0; k < logical_devs->max_count; k++) {
+                blockdev::block_device *device = logical_devs->get_object(k);
+                if(device == 0x00) continue;
+                debug::out::printf("         partition #%d : %ld - %ld\n" , device->storage_info.partition_id , device->storage_info.partition_info.physical_sector_start , device->storage_info.partition_info.physical_sector_end);
+            }
+        }
+    }
+    debug::out::printf(DEBUG_SPECIAL , "Done probing the block device tree!\n");
+    for(int a=0;a<79;a++) debug::out::raw_printf("-");
+    debug::out::raw_printf("\n");
+    debug::pop_function();
 }
 
 void pmem_alloc_test(int rand_seed) {

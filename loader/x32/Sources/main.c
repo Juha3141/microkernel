@@ -129,6 +129,20 @@ void Main(struct multiboot_info *multiboot_info) {
 	// RelocatePage(kargument->kernel_address , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)) , kargument->kernel_address , kargument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
 
 	kargument->total_kernel_area_end = pml4_entry_end;
+
+	// graphic system!
+	kargument->video_mode = KERNELARG_VIDEOMODE_TEXTMODE;
+	kargument->framebuffer_addr = 0xB8000;
+	kargument->framebuffer_width = 80;
+	kargument->framebuffer_height = 25;
+	kargument->framebuffer_depth = 0x00;
+	if((multiboot_info->flags & (1 << 12)) == (1 << 12)) {
+		kargument->video_mode = KERNELARG_VIDEOMODE_GRAPHIC;
+		kargument->framebuffer_addr = multiboot_info->framebuffer_addr;
+		kargument->framebuffer_width = multiboot_info->framebuffer_width;
+		kargument->framebuffer_height = multiboot_info->framebuffer_height;
+		kargument->framebuffer_depth = multiboot_info->framebuffer_bpp;
+	}
 	JumpToKernel64((unsigned int)kargument);
 
 	while(1) {

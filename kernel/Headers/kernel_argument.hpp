@@ -11,6 +11,9 @@
 #define MEMORYMAP_ACPI_NVS     	4
 #define MEMORYMAP_BAD_MEMORY   	5
 
+#define KERNELARG_VIDEOMODE_TEXTMODE 0x00
+#define KERNELARG_VIDEOMODE_GRAPHIC  0x01
+
 struct MemoryMap {
 	unsigned int addr_low , addr_high;
 	unsigned int length_low , length_high;
@@ -33,6 +36,15 @@ struct KernelArgument {
 	unsigned int total_kernel_area_end;   // 40
 
 	unsigned int kernel_linear_address;   // 44
+
+	// graphics related
+	unsigned char video_mode;
+
+	unsigned int framebuffer_addr;
+	unsigned int framebuffer_width;
+	unsigned int framebuffer_height;
+
+	unsigned int framebuffer_depth;
 };
 
 #endif

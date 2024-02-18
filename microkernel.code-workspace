@@ -38,7 +38,10 @@
 			"iosfwd": "cpp",
 			"limits": "cpp",
 			"stop_token": "cpp",
-			"streambuf": "cpp"
+			"streambuf": "cpp",
+			"*.excluded": "cpp",
+			"iostream": "cpp",
+			"valarray": "cpp"
 		}
 	}
 }

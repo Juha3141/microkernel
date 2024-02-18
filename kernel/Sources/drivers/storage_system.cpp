@@ -11,11 +11,9 @@ bool storage_system::detect_partitions(blockdev::block_device *device) {
     PartitionDriver *partition_driver = get_partition_identifier(partitiondrv_id);
     int partition_count = 0;
     DataLinkedList<blockdev::partition_info_t>partition_info_list;
-
-    debug::out::printf("partitiondrv_id : %d\n" , partitiondrv_id);
     
     if(partition_driver == 0x00) return false; // no partition!
-    debug::out::printf("Detecting partition...\n");
+    debug::out::printf_function(DEBUG_TEXT , "detect_part" , "Detecting partition...\n");
     partition_info_list.init();
     partition_count = partition_driver->get_partitions_list(device , partition_info_list);
     

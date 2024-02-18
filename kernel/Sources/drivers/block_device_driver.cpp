@@ -1,5 +1,6 @@
 #include <drivers/block_device_driver.hpp>
 #include <linked_list.hpp>
+#include <drivers/storage_system.hpp>
 
 #include <kmem_manager.hpp>
 
@@ -47,14 +48,12 @@ max_t blockdev::discard_driver(max_t driver_id) { return BlockDeviceDriverContai
 max_t blockdev::register_device(blockdev::block_device_driver *driver , blockdev::block_device *device) {
     BlockDeviceDriverContainer *driver_container = BlockDeviceDriverContainer::get_self();
 
+    if(driver->get_geometry(device , device->geometry) == false) return INVALID;
     device->id = driver->device_container->register_object(device);
     if(device->id == INVALID) { debug::out::printf(DEBUG_ERROR , "invalid id!\n"); return INVALID; }
-    if(driver->get_geometry(device , device->geometry) == false) return INVALID;
-    debug::out::printf("device : %s%d(0x%X)\n" , driver->driver_name , device->id , device);
-    debug::out::printf("bs : %d\n" , device->geometry.block_size);
-    debug::out::printf("c  : %d\n" , device->geometry.lba_total_block_count);
     
     device->device_driver = driver;
+    storage_system::detect_partitions(device);
     return device->id;
 }
 

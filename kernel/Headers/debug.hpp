@@ -21,11 +21,13 @@
 
 typedef word debug_m;
 
+typedef dword debug_color_t;
+
 namespace debug {
     namespace out {
-        void init(void);
+        void init(KernelArgument *kernel_argument);
 
-        void clear_screen(unsigned char color);
+        void clear_screen(debug_color_t color);
         void vprintf(debug_m mode , const char *fmt , va_list ap);
 
         void printf(debug_m mode , const char *fmt , ...);
@@ -37,16 +39,16 @@ namespace debug {
     
         void set_position(int x , int y);
         void move_position(int relative_x , int relative_y);
-        void get_scr_info(int &x , int &y , unsigned char &background_color , unsigned char &foreground_color);
+        void get_scr_info(int &x , int &y , debug_color_t &background_color , debug_color_t &foreground_color);
         unsigned char get_char(int y , int x);
         
-        void set_background_color(unsigned char background_color);
-        void set_foreground_color(unsigned char foreground_color);
+        void set_background_color(debug_color_t background_color);
+        void set_foreground_color(debug_color_t foreground_color);
 
-        unsigned char debugcolor(debug_m mode);
+        debug_color_t debugcolor(debug_m mode);
         const char *debugstr(debug_m mode);
     }
-    void init(void);
+    void init(KernelArgument *kernel_argument);
 
     void dump_memory(max_t address , max_t length);
 

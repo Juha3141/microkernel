@@ -31,7 +31,6 @@ int MBRPartitionDriver::get_partitions_count(blockdev::block_device *device) {
 			partition_count++;
         }
     }
-    debug::out::printf_function(DEBUG_INFO ,"mbrdrv::get_part_cnt" , "device %s%d : %d partitions\n" , device->device_driver->driver_name , device->id , partition_count);
     return partition_count;
 }
 
@@ -45,12 +44,10 @@ int MBRPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
 			DataLinkedList<blockdev::partition_info_t>::node_s *node = partition_info_list.register_data_rear();
             node->data.physical_sector_start = partition_table.entries[i].starting_lba;
             node->data.physical_sector_end = partition_table.entries[i].starting_lba+partition_table.entries[i].size_lba;
-            debug::out::printf_function(DEBUG_INFO ,"mbrdrv::get_part_cnt" , "partition %d : %ld - %ld\n" , i , node->data.physical_sector_start , node->data.physical_sector_end);
             node->data.bootable = (partition_table.entries[i].bootable_flag == 0x00);
             partition_count++;
         }
     }
-    debug::out::printf_function(DEBUG_INFO ,"mbrdrv::get_part_cnt" , "device %s%d : %d partitions\n" , device->device_driver->driver_name , device->id , partition_count);
     return partition_count;
 }
 

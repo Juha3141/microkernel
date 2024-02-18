@@ -14,12 +14,15 @@ struct {
     word option_flags;
 }debug_info;
 
-void debug::init(void) {
+void debug::init(KernelArgument *kernel_argument) {
     debug_info.function_stack_index = 0;
     memset(debug_info.function_stack , 0 , sizeof(debug_info.function_stack));
     set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_FIRST_INFO|DEBUG_DISPLAY_INDENTATION , true);
     debug_info.option_flags = 0b11111111;
-    debug::out::init();
+
+    debug::out::init(kernel_argument);
+    
+    debug::enable();
 }
 
 void debug::dump_memory(max_t address , max_t length) {
@@ -123,7 +126,8 @@ void debug::display_set(word option) { debug_info.option_flags |= option; }
 void debug::display_mask(word option) { debug_info.option_flags &= ~option; }
 
 void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
-    unsigned char color = debugcolor(mode);
+    if(debug_info.enable_debug == false) return;
+    debug_color_t color = debugcolor(mode);
     if((debug_info.option_flags & mode) == 0x00) return; // the mode is set as not to be displayed
     set_foreground_color(color);
     if(debug_info.info_display) {
@@ -148,6 +152,7 @@ void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
 }
 
 void debug::out::printf(debug_m mode , const char *fmt , ...) {
+    if(debug_info.enable_debug == false) return;
     va_list ap;
     va_start(ap , fmt);
     debug::out::vprintf(mode , fmt , ap);
@@ -155,6 +160,7 @@ void debug::out::printf(debug_m mode , const char *fmt , ...) {
 }
 
 void debug::out::printf_function(debug_m mode , const char *function , const char *fmt , ...) {
+    if(debug_info.enable_debug == false) return;
     va_list ap;
     debug::push_function(function);
     va_start(ap , fmt);
@@ -164,6 +170,7 @@ void debug::out::printf_function(debug_m mode , const char *function , const cha
 }
 
 void debug::out::printf(const char *fmt , ...) {
+    if(debug_info.enable_debug == false) return;
     va_list ap;
     va_start(ap , fmt);
     debug::out::vprintf(DEBUG_TEXT , fmt , ap);
@@ -171,6 +178,7 @@ void debug::out::printf(const char *fmt , ...) {
 }
 
 void debug::out::raw_printf(const char *fmt , ...) {
+    if(debug_info.enable_debug == false) return;
     va_list ap;
     va_start(ap , fmt);
 

@@ -43,7 +43,7 @@ max_t exception::ExceptionManager::register_etc(const char *exception_name) {
 #ifdef USE_HARDWARE_INTERRUPT
 
 void exception::init(void) {
-    ExceptionManager::get_self()->init(EXCEPTIONS_MAXCOUNT);
+    GLOBAL_OBJECT(ExceptionManager)->init(EXCEPTIONS_MAXCOUNT);
     exception::hardware::register_hardware_exceptions();
 }
 

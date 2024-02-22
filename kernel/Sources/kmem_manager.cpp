@@ -211,4 +211,4 @@ bool memory::pmem_protect(struct Boundary boundary) {
 	return false;
 }
 
-max_t memory::pmem_usage(void) { return SegmentsManager::get_self()->get_currently_using_mem(); }
+max_t memory::pmem_usage(void) { return GLOBAL_OBJECT(SegmentsManager)->get_currently_using_mem(); }

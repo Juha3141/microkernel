@@ -3,7 +3,7 @@
 #include <drivers/partition_driver.hpp>
 
 void storage_system::init(void) {
-    PartitionDriverContainer::get_self()->init(64);
+    GLOBAL_OBJECT(PartitionDriverContainer)->init(64);
 }
 
 bool storage_system::detect_partitions(blockdev::block_device *device) {
@@ -35,7 +35,7 @@ void storage_system::add_logical_device(blockdev::block_device_driver *driver , 
     new_logical_device->device_driver = logical_driver;
     new_logical_device = blockdev::create_empty_device();
     new_logical_device->id = device->id;
-    memcpy(&new_logical_device->resource , &device->resource , sizeof(device_resources));
+    memcpy(&new_logical_device->resources , &device->resources , sizeof(device_resources));
     memcpy(&new_logical_device->storage_info.partition_info , &partition_info , sizeof(blockdev::partition_info_t));
     
     new_logical_device->storage_info.partition_id = device->storage_info.logical_block_devs->register_object(new_logical_device);

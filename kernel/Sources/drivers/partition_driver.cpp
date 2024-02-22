@@ -23,10 +23,10 @@ max_t storage_system::identify_partition_driver(blockdev::block_device *device) 
 }
 
 storage_system::PartitionDriver *storage_system::get_partition_identifier(blockdev::block_device *device) {
-    return PartitionDriverContainer::get_self()->get_object(device->storage_info.partition_driver_id);
+    return GLOBAL_OBJECT(PartitionDriverContainer)->get_object(device->storage_info.partition_driver_id);
 }
 
 storage_system::PartitionDriver *storage_system::get_partition_identifier(max_t identifier_id) {
     if(identifier_id == INVALID) return 0x00;
-    return PartitionDriverContainer::get_self()->get_object(identifier_id);
+    return GLOBAL_OBJECT(PartitionDriverContainer)->get_object(identifier_id);
 }

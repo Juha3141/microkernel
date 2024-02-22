@@ -20,7 +20,7 @@ interrupt_handler_t interrupt::handler::get_hardware_specified(int index) {
 __attribute__ ((naked)) void interrupt::handler::hardware_specified##handler_num(void) {\
     interrupt_handler_t handler;\
     if((handler = interrupt::handler::get_hardware_specified(handler_num)) == 0x00) {\
-        char *name = interrupt::HardwareSpecifiedInterruptManager::get_self()->interrupt_list[handler_num].name;\
+        char *name = GLOBAL_OBJECT(interrupt::HardwareSpecifiedInterruptManager)->interrupt_list[handler_num].name;\
         debug::panic("Unhandled special interrupt %d(\"%s\")\n" , handler_num , name);\
     }\
     handler();\

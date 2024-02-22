@@ -111,11 +111,11 @@ bool segmentation::register_segment(const char *segment_name , max_t start_addre
     if(segment == SEGMENT_VALUE_INVALID) {
         return false;
     }
-    return SegmentsManager::get_self()->register_segment(segment_name , segment , segment_type , task_id);
+    return GLOBAL_OBJECT(SegmentsManager)->register_segment(segment_name , segment , segment_type , task_id);
 }
 
 bool segmentation::discard_segment(const char *segment_name) {
-    segment_t segment = SegmentsManager::get_self()->discard_segment(segment_name);
+    segment_t segment = GLOBAL_OBJECT(SegmentsManager)->discard_segment(segment_name);
     if(segment == SEGMENT_VALUE_INVALID) {
         return false;
     }
@@ -124,13 +124,13 @@ bool segmentation::discard_segment(const char *segment_name) {
 }
 
 void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) {
-    segment_t segment = SegmentsManager::get_self()->search_segment(segment_name);
+    segment_t segment = GLOBAL_OBJECT(SegmentsManager)->search_segment(segment_name);
     if(new_point == ARCHITECTURE_LIMIT) segmentation::hardware::set_to_code_segment(segment);
     else segmentation::hardware::set_to_code_segment(segment , new_point);
 }
 
 void segmentation::set_to_data_segment(const char *segment_name) {
-    segment_t segment = SegmentsManager::get_self()->search_segment(segment_name);
+    segment_t segment = GLOBAL_OBJECT(SegmentsManager)->search_segment(segment_name);
     segmentation::hardware::set_to_data_segment(segment);
 }
 

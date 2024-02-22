@@ -14,19 +14,23 @@
 #include <kernel_argument.hpp>
 #include <architecture_limits.hpp>
 
+#define SINGLETON_FUNCTION get_self
+
 #define SINGLETON_PATTERN_KSTRUCT(type) \
-static type *get_self(void) {\
+static type *SINGLETON_FUNCTION(void) {\
     static type *p = 0x00;\
     if(!p) p = (type *)memory::kstruct_alloc(sizeof(type));\
     return p;\
 }
 
 #define SINGLETON_PATTERN_PMEM(type) \
-static type *get_self(void) {\
+static type *SINGLETON_FUNCTION(void) {\
     static type *p = 0x00;\
     if(!p) p = (type *)memory::pmem_alloc(sizeof(type));\
     return p;\
 }
+
+#define GLOBAL_OBJECT(type) type::SINGLETON_FUNCTION() 
 
 // Maximum calculatable data size, corresponds to architecture(16-bit,32-bit, ...)
 typedef unsigned long max_t;

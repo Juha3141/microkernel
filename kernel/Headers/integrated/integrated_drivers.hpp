@@ -3,8 +3,6 @@
 
 #include <interface_type.hpp>
 
-namespace integrated {
-    void register_drivers(void);
-};
+namespace integrated { void register_drivers(void); };
 
 #endif

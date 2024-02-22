@@ -47,9 +47,9 @@ bool ide_driver::prepare(void) {
         devices[i] = blockdev::create_empty_device();
         blockdev::designate_resources_count(devices[i] , 2 , 0 , 1 , 0);
 
-        devices[i]->resource.io_ports[0] = io_port_info[i][0];
-        devices[i]->resource.io_ports[1] = io_port_info[i][1];
-        devices[i]->resource.flags[0] = is_master_info[i];
+        devices[i]->resources.io_ports[0] = io_port_info[i][0];
+        devices[i]->resources.io_ports[1] = io_port_info[i][1];
+        devices[i]->resources.flags[0] = is_master_info[i];
 
         if(blockdev::register_device(this , devices[i]) == INVALID) {
             debug::out::printf_function(DEBUG_WARNING , "ide_driver::prepare" , "Device not found in idehd%d\n" , i);
@@ -77,10 +77,10 @@ bool ide_driver::get_geometry(blockdev::block_device *device , blockdev::device_
     // Seperate to one getting CDROM, one getting HDD
     word status;
     word data[256];
-    io_port base_port = device->resource.io_ports[0];
+    io_port base_port = device->resources.io_ports[0];
     ide::geometry_t ide_geometry;
-    if(device->resource.io_port_count != 2) { return false; }
-    if(device->resource.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
+    if(device->resources.io_port_count != 2) { return false; }
+    if(device->resources.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
     else io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xF0); // Slave : 0xB0
     
     // Ports[0] : Base port
@@ -112,11 +112,11 @@ bool ide_driver::get_geometry(blockdev::block_device *device , blockdev::device_
 
 max_t ide_driver::read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) {
     bool use_28bit_pio = true;
-    io_port base_port = device->resource.io_ports[0];
+    io_port base_port = device->resources.io_ports[0];
     word status;
     max_t address;
     // true : master
-    if(device->resource.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
+    if(device->resources.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
     else io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xF0); // Slave : 0xB0
     
     // not using 28bit PIO for large block address
@@ -150,10 +150,10 @@ max_t ide_driver::read(blockdev::block_device *device , max_t block_address , ma
 
 max_t ide_driver::write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) {
     bool use_28bit_pio = true;
-    io_port base_port = device->resource.io_ports[0];
+    io_port base_port = device->resources.io_ports[0];
     word status;
     max_t address;
-    if(device->resource.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
+    if(device->resources.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
     else io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xF0); // Slave : 0xB0
     
     // not using 28bit PIO for large block address
@@ -184,7 +184,7 @@ max_t ide_driver::write(blockdev::block_device *device , max_t block_address , m
     return count*512;
 }
 
-bool ide_driver::io_read(blockdev::block_device *device , max_t command , max_t argument) {
+bool ide_driver::io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) {
     return false;
 }
 
@@ -223,9 +223,9 @@ bool ide_cd_driver::prepare(void) {
         devices[i] = blockdev::create_empty_device();
         blockdev::designate_resources_count(devices[i] , 2 , 0 , 1 , 0);
 
-        devices[i]->resource.io_ports[0] = io_port_info[i][0];
-        devices[i]->resource.io_ports[1] = io_port_info[i][1];
-        devices[i]->resource.flags[0] = is_master_info[i];
+        devices[i]->resources.io_ports[0] = io_port_info[i][0];
+        devices[i]->resources.io_ports[1] = io_port_info[i][1];
+        devices[i]->resources.flags[0] = is_master_info[i];
 
         if(blockdev::register_device(this , devices[i]) == INVALID) {
             debug::out::printf_function(DEBUG_WARNING , "ide_cd_driver::prepare" , "Device not found in idecd%d\n" , i);
@@ -252,12 +252,12 @@ bool ide_cd_driver::get_geometry(blockdev::block_device *device , blockdev::devi
     // Seperate to one getting CDROM, one getting HDD
     word status;
     word data[256];
-    io_port base_port = device->resource.io_ports[0];
-    io_port device_control_port = device->resource.io_ports[1];
+    io_port base_port = device->resources.io_ports[0];
+    io_port device_control_port = device->resources.io_ports[1];
     ide::cd_geometry_t cd_geometry;
 
-    if(device->resource.io_port_count != 2) return false;
-    if(device->resource.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
+    if(device->resources.io_port_count != 2) return false;
+    if(device->resources.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
     else io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xF0); // Slave : 0xB0
     
     io_write_byte(base_port+IDE_PORT_COMMAND_IO , 0xA1); // IDENTIFY
@@ -283,10 +283,10 @@ bool ide_cd_driver::get_geometry(blockdev::block_device *device , blockdev::devi
 
 bool ide_cd_driver::get_cdrom_size(blockdev::block_device *device , blockdev::device_geometry &geometry) {
     byte command[12] = {0x25 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00};
-    io_port base_port = device->resource.io_ports[0];
+    io_port base_port = device->resources.io_ports[0];
     byte received_data[8] = {0 , };
     
-    if(device->resource.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
+    if(device->resources.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
     else io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xF0); // Slave : 0xB0
     
     io_write_byte(base_port+IDE_PORT_FEATURES , 0);
@@ -319,8 +319,8 @@ max_t ide_cd_driver::read(blockdev::block_device *device , max_t block_address ,
                                       , (count >> 16) & 0xFF
                                       , (count >> 8) & 0xFF
                                       , count & 0xFF , 0x00 , 0x00};
-    io_port base_port = device->resource.io_ports[0];
-    if(device->resource.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
+    io_port base_port = device->resources.io_ports[0];
+    if(device->resources.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
     else io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xF0); // Slave : 0xB0
     
     if(ide_driver::wait(base_port) == false) return 0x00;
@@ -345,7 +345,7 @@ max_t ide_cd_driver::write(blockdev::block_device *device , max_t block_address 
     return 0;
 }
 
-bool ide_cd_driver::io_read(blockdev::block_device *device , max_t command , max_t argument) {
+bool ide_cd_driver::io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) {
     return false;
 }
 

@@ -43,10 +43,10 @@ namespace storage_system {
             if(!check(physical_super_device , device)) return 0x00;
             return physical_super_device->device_driver->get_geometry(device , geometry);
         }
-        bool io_read(blockdev::block_device *device , max_t command , max_t argument) override {
+        bool io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) override {
             blockdev::block_device *physical_super_device = get_physical_super_device(device);
             if(!check(physical_super_device , device)) return 0x00;
-            return physical_super_device->device_driver->io_read(device , command , argument);
+            return physical_super_device->device_driver->io_read(device , command , argument , data_out);
         }
         bool io_write(blockdev::block_device *device , max_t command , max_t argument) override {
             blockdev::block_device *physical_super_device = get_physical_super_device(device);

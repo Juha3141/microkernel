@@ -60,7 +60,7 @@ struct ide_driver : blockdev::block_device_driver {
     max_t read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
     max_t write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
     bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;
-    bool io_read(blockdev::block_device *device , max_t command , max_t argument) override;
+    bool io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) override;
     bool io_write(blockdev::block_device *device , max_t command , max_t argument) override;
 
     static bool wait(io_port base_port);
@@ -75,7 +75,7 @@ struct ide_cd_driver : blockdev::block_device_driver { // inherit from IDEDriver
     max_t read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
     max_t write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
     bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;
-    bool io_read(blockdev::block_device *device , max_t command , max_t argument) override;
+    bool io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) override;
     bool io_write(blockdev::block_device *device , max_t command , max_t argument) override;
 
     static bool send_command(io_port base_port , byte *command);

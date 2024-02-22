@@ -1,33 +1,13 @@
 #ifndef _BLOCK_DEVICE_DRIVER_HPP_
 #define _BLOCK_DEVICE_DRIVER_HPP_
 
-#include <interface_type.hpp>
-#include <object_manager.hpp>
-#include <linked_list.hpp>
-#include <interrupt.hpp>
-
-typedef max_t resource_flag_t;
-typedef max_t etc_resource_t;
-
-struct device_resources {
-    int io_port_count;
-    io_port *io_ports;
-
-    int interrupt_count;
-    interrupt::interrupt_info_t *interrupts;
-    
-    int flags_count;
-    resource_flag_t *flags;
-
-    int etc_resources_count;
-    etc_resource_t *etc_resources;
-};
+#include <drivers/device_driver.hpp>
+#include <drivers/block_device_scheduler.hpp>
 
 namespace blockdev {
-    // pre-define
+    // pre
     struct block_device_driver;
     class BlockDeviceContainer;
-
 
     typedef struct partition_info_s {
         max_t physical_sector_start;
@@ -63,10 +43,7 @@ namespace blockdev {
         /* Common */
         blockdev::BlockDeviceContainer *logical_block_devs;
     };
-    struct block_device {
-        max_t id;
-        block_device_driver *device_driver;
-        device_resources resource;
+    struct block_device : general_device<block_device_driver> {
 
         // Geometry information
         device_geometry geometry;
@@ -76,34 +53,23 @@ namespace blockdev {
         max_t mount_id;
         // FileSystemDriver *fs_driver;
     };
-    struct block_device_driver {
+    struct block_device_driver : general_device_driver<BlockDeviceContainer> {
         virtual bool prepare(void) = 0;
         virtual max_t read(block_device *device , max_t block_address , max_t count , void *buffer) = 0;
         virtual max_t write(block_device *device , max_t block_address , max_t count , void *buffer) = 0;
         virtual bool get_geometry(block_device *device , device_geometry &geometry) = 0;
-        virtual bool io_read(block_device *device , max_t command , max_t argument) = 0;
+        virtual bool io_read(block_device *device , max_t command , max_t argument , max_t &data_out) = 0;
         virtual bool io_write(block_device *device , max_t command , max_t argument) = 0;
 
-        class BlockDeviceContainer *device_container;
-        char driver_name[24];
-        max_t driver_id;
-
         bool use_auto_partition_detector;
+
+        bdevsched::block_io_scheduler *scheduler;
+        bdevsched::block_io_queue *io_queue;
     };
     
     class BlockDeviceContainer : public ObjectManager<block_device> {};
-    class BlockDeviceDriverContainer : public ObjectManager<block_device_driver> {
-        public:
-            SINGLETON_PATTERN_PMEM(BlockDeviceDriverContainer);
-
-            max_t register_driver(block_device_driver *driver) {
-                driver->driver_id = ObjectManager<block_device_driver>::register_object(driver);
-                return driver->driver_id;
-            }
-            block_device_driver *search_by_name(const char *driver_name) {
-                max_t id = search<const char *>([](block_device_driver *driver , const char *name) { return (bool)(strcmp(driver->driver_name , name) == 0); } , driver_name); 
-                return get_object(id);
-            }
+    struct BlockDeviceDriverContainer : public ObjectManager<block_device_driver> {
+        SINGLETON_PATTERN_PMEM(BlockDeviceDriverContainer);
     };
     void init(void);
 

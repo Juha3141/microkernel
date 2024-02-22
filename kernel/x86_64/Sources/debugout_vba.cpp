@@ -65,14 +65,14 @@ static debug_color_t get_pixel(int x , int y) {
 
 static int draw_character(int x , int y , debug_color_t background_color , debug_color_t color , unsigned short character) {
     int padding = 0;
-    for(int i = 0; i < consolas_20px_bmp_font_length; i++) {
-        if(consolas_20px_bmp_font[i].unicode_id != character) continue;
-        int width = consolas_20px_bmp_font[i].width;
-        int height = consolas_20px_bmp_font[i].height;
+    for(int i = 0; i < consolas_15px_bmp_font_length; i++) {
+        if(consolas_15px_bmp_font[i].unicode_id != character) continue;
+        int width = consolas_15px_bmp_font[i].width;
+        int height = consolas_15px_bmp_font[i].height;
         x += padding;
         for(int h = 0; h < height; h++) {
             for(int w = 0; w < width; w++) {
-                int value = consolas_20px_bmp_font[i].bmp_array[h][w];
+                int value = consolas_15px_bmp_font[i].bmp_array[h][w];
                 if(value == 0) {
                     draw_pixel(x+w , y+h , background_color);
                     continue;
@@ -90,7 +90,7 @@ static int draw_character(int x , int y , debug_color_t background_color , debug
                 draw_pixel(x+w , y+h , ((unsigned char)r << 16)|((unsigned char)g << 8)|((unsigned char)b));
             }
         }
-        return x+consolas_20px_bmp_font_avg_width+padding;
+        return x+consolas_15px_bmp_font_avg_width+padding;
     }
     return x+10;
 }
@@ -101,8 +101,8 @@ void debug::out::init(KernelArgument *kernel_argument) {
     scrinfo.height = kernel_argument->framebuffer_height;
     scrinfo.depth = kernel_argument->framebuffer_depth;
 
-    scrinfo.font_avg_width = consolas_20px_bmp_font_avg_width;
-    scrinfo.font_avg_height = consolas_20px_bmp_font_avg_height;
+    scrinfo.font_avg_width = consolas_15px_bmp_font_avg_width;
+    scrinfo.font_avg_height = consolas_15px_bmp_font_avg_height;
 }
 
 void debug::out::clear_screen(debug_color_t color) {

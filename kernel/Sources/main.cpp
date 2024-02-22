@@ -9,6 +9,7 @@
 
 #include <drivers/storage_system.hpp>
 #include <drivers/block_device_driver.hpp>
+#include <drivers/char_device_driver.hpp>
 #include <drivers/partition_driver.hpp>
 
 #include <integrated/integrated_drivers.hpp>
@@ -17,8 +18,6 @@
 
 void pmem_alloc_test(int rand_seed);
 void dump_block_devices(void);
-
-long map(long x, long in_min, long in_max, long out_min, long out_max);
 
 extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     struct KernelArgument *kargument = (struct KernelArgument *)kernel_argument_struct_addr;
@@ -38,6 +37,7 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     interrupt::hardware::enable();
 
     blockdev::init();
+    chardev::init();
     storage_system::init();
     integrated::register_drivers();
     
@@ -46,11 +46,6 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     while(1) {
         ;
     }
-}
-
-
-long map(long x, long in_min, long in_max, long out_min, long out_max) {
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 void dump_block_devices(void) {

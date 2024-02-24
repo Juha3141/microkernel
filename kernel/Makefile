@@ -1,34 +1,30 @@
-include ../global_variables.mk
-include common.mk
+ROOTDIR = ..
 
-BINARYFOLDER = ../$(ROOTBINARYFOLDER)
+include $(ROOTDIR)/global_variables.mk
+include $(ROOTDIR)/common_compilers.mk
+
+BINARYFOLDER = $(ROOTDIR)/$(ROOTBINARYFOLDER)
 MAINBINARYFOLDER = $(BINARYFOLDER)/$(KERNELFOLDER)
 
-MAINTARGETS = $(subst .cpp,.obj,$(wildcard $(SOURCESFOLDER)/*.cpp) $(wildcard $(SOURCESFOLDER)/*/*.cpp))
-ASMTARGETS = $(subst .cpp,.aobj,$(wildcard $(SOURCESFOLDER)/*.asm))
+MAINTARGETS = $(subst .cpp,.obj,$(wildcard $(COMMON_SRCFOLDER)/*.cpp) $(wildcard $(COMMON_SRCFOLDER)/*/*.cpp))
+ASMTARGETS = $(subst .cpp,.aobj,$(wildcard $(COMMON_SRCFOLDER)/*.asm))
+SUBDIRECTORIES = $(subst $(COMMON_SRCFOLDER),$(MAINBINARYFOLDER),$(sort $(dir $(wildcard $(COMMON_SRCFOLDER)/*/))))
 
-LINKERSCRIPT = Linker.ld
+all: prepare $(ASMSOURCES) $(MAINTARGETS)
 
-ELF = Kernel.elf
-
-LIBRARIES = $(patsubst %.a,%,$(subst lib,-l,$(notdir $(wildcard $(BINARYFOLDER)/$(KRNLIBRARYFOLDER)/*.a))))
-FIRSTPRIORITYOBJ = $(MAINBINARYFOLDER)/main.obj
-OBJECTS = $(filter-out $(FIRSTPRIORITYOBJ),$(wildcard $(MAINBINARYFOLDER)/*.obj)) $(wildcard $(MAINBINARYFOLDER)/$(HARDWAREFOLDER)/*.obj)  $(wildcard $(MAINBINARYFOLDER)/integrated/*.obj) \
-$(wildcard $(MAINBINARYFOLDER)/drivers/*.obj)
-
-all: $(ASMSOURCES) $(MAINTARGETS)
-	echo $(MAINSOURCES)
-	$(LD) -nostdlib -T $(LINKERSCRIPT) -o $(ELF) $(FIRSTPRIORITYOBJ) $(OBJECTS) -L $(BINARYFOLDER)/$(KRNLIBRARYFOLDER) $(LIBRARIES)
-	$(OBJCOPY) -O binary $(ELF) $(KERNELTARGET)
-
+prepare:
+	mkdir $(MAINBINARYFOLDER)
+ifneq "$(SUBDIRECTORIES)" ""
+	mkdir $(SUBDIRECTORIES)
+endif
+	
 clean:
-	rm -rf $(MAINBINARYFOLDER)/*.*
-	rm -rf $(MAINBINARYFOLDER)/*/*.*
+	rm -rf $(MAINBINARYFOLDER)
 
 %.obj: %.cpp
-	$(CC) -m64 -c $< -o $(subst $(SOURCESFOLDER),$(KERNELFOLDER),$(BINARYFOLDER)/$@) $(CCOPTIONS) -I $(HARDWAREFOLDER)/Headers/ -I $(HEADERSFOLDER)/
+	$(CC) -m64 -c $< -o $(subst $(COMMON_SRCFOLDER),$(MAINBINARYFOLDER),$@) $(CCOPTIONS) -I $(ROOTDIR)/$(ARCHFOLDER)/$(ARCH)/$(COMMON_HEADERFOLDER) -I $(COMMON_HEADERFOLDER)
 
 %.aobj: %.asm
-	$(ASM) $(SOURCESFOLDER)/$@ -f elf64 -o $(MAINBINARYFOLDER)/$(subst .asm,.obj,$@)
+	$(ASM) $(COMMON_SRCFOLDER)/$@ -f elf64 -o $(MAINBINARYFOLDER)/$(subst .asm,.obj,$@)
 
 .PHONY: clean all 

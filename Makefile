@@ -1,30 +1,51 @@
 include global_variables.mk
+include common_compilers.mk
 
 BASH = bash
 QEMU = qemu-system-x86_64
 QEMU_OPTION = -m 8192 -rtc base=localtime -M pc -boot d -hda proper.img
 TARGET = OS.iso
 
-all: BuildLibrary BuildKernel BuildLoader
+FIRSTPRIORITY_OBJECT = $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/main.obj
+KERNEL_OBJECTS = $(filter-out $(FIRSTPRIORITY_OBJECT),$(wildcard $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/*.obj)) $(wildcard $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/*/*.obj)
+ARCH_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(ARCHFOLDER)/*.obj) $(wildcard $(ROOTBINARYFOLDER)/$(ARCHFOLDER)/*/*.obj)
+DRIVER_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(DRIVERSFOLDER)/*/*.obj)
+
+LIBRARIES = $(patsubst %.a,%,$(subst lib,-l,$(notdir $(wildcard $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER)/*.a))))
+
+LINKERSCRIPT = kernel_linker.ld
+
+all: BuildLibrary BuildKernel BuildArchitecture BuildDrivers BuildFinalKernel BuildLoader
 
 BuildLibrary:
 	make -C $(KRNLIBRARYFOLDER) all
 
 BuildKernel:
-	make -C $(KERNELFOLDER)/$(HARDWAREFOLDER) all
 	make -C $(KERNELFOLDER) all
 
-	cp $(KERNELFOLDER)/$(KERNELTARGET) $(LOADERFOLDER)/iso/$(KERNELTARGET)
+BuildArchitecture:
+	make -C $(ARCHFOLDER) all
+
+BuildDrivers:
+	make -C $(DRIVERSFOLDER) all
 
 BuildLoader:
 	make -C $(LOADERFOLDER) all
 
+BuildFinalKernel:
+	$(LD) -nostdlib -T $(LINKERSCRIPT) -o $(KERNEL_ELF) $(FIRSTPRIORITY_OBJECT) $(KERNEL_OBJECTS) $(ARCH_OBJECTS) $(DRIVER_OBJECTS) -L $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER) $(LIBRARIES)
+	$(OBJCOPY) -O binary $(KERNEL_ELF) $(KERNEL_FINAL)
+
 clean:
 	make -C $(KRNLIBRARYFOLDER) clean
-	make -C $(KERNELFOLDER)/$(HARDWAREFOLDER) clean
+	
 	make -C $(KERNELFOLDER) clean
+	make -C $(ARCHFOLDER) clean
+	make -C $(DRIVERSFOLDER) clean
 	make -C $(LOADERFOLDER) clean
-
+	
+	rm -rf $(KERNEL_ELF)
+	rm -rf $(KERNEL_FINAL)
 	rm -rf $(TARGET)
 
 run: virtualbox

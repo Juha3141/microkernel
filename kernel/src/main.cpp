@@ -39,9 +39,8 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     blockdev::init();
     chardev::init();
     storage_system::init();
-    // integrated::register_drivers();
     
-    dump_block_devices();
+    // dump_block_devices();
 
     while(1) {
         ;

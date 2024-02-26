@@ -10,3 +10,8 @@ dummyfiles
 dummyfiles/*
 stub
 bmp_format
+
+bin
+OS.iso
+Kernel.krn
+Kernel.elf

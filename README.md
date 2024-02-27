@@ -22,7 +22,7 @@ Here's some current progress and future plans (decoratively displayed as To-do l
 - [X] Segmentation system
 - [X] Interrupt system (+ Exception system)
 - [ ] Kernel Scheduler
-- [ ] Device Driver & Storage Driver Manager
+- [X] Device Driver & Storage Driver Manager
 - [ ] File System Manager
 - [ ] File System Driver(FAT, NTFS, ext..)
 - [ ] Networking

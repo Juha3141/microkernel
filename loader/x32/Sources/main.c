@@ -41,7 +41,7 @@ unsigned int align(unsigned int address , unsigned int alignment) {
 
 char kernel_command[] = "This is a kernel by the way";
 
-void JumpToKernel64(unsigned int address);
+void JumpToKernel64(unsigned int address , unsigned int pml4t_entry_location);
 
 void Main(struct multiboot_info *multiboot_info) {
 	multiboot_module_t *kernel_module;
@@ -75,6 +75,9 @@ void Main(struct multiboot_info *multiboot_info) {
 	unsigned int kernel_size = kernel_module->mod_end-kernel_module->mod_start;
 
 	unsigned int temporary_addr = kernel_addr+kernel_size;
+
+	unsigned int pml4t_entry_location;
+	unsigned int pml4t_entry_size;
 	// Relocate kernel to new aligned memory address
 	// (Align address to 2MB for Higher-half kernel)
 	memcpy((void *)temporary_addr , (void *)kernel_module->mod_start , kernel_size); // temporary area for relocation
@@ -116,19 +119,19 @@ void Main(struct multiboot_info *multiboot_info) {
 	
 	PrintString(0x07 , "kernel stack address : 0x%X\n" , kargument->kernel_stack_location);
 	kernel_struct_addr = align(kernel_struct_addr , 4096);
-	kargument->pml4t_entry_location = kernel_struct_addr;
+	pml4t_entry_location = kernel_struct_addr;
 	PrintString(0x07 , "PML4 table location  : 0x%X\n" , kernel_struct_addr);
-	unsigned int pml4_entry_end = SetupPML4_custom(kernel_struct_addr , memmap);
-	kargument->pml4_entry_size = pml4_entry_end-kargument->pml4t_entry_location;
+	unsigned int pml4t_entry_end = SetupPML4_custom(kernel_struct_addr , memmap);
+	pml4t_entry_size = pml4t_entry_end-pml4t_entry_location;
 
 	// address should be aligned to 2MB
 	kargument->kernel_linear_address = KERNEL_NEW_HIGHER_HALF;
 	PrintString(0x07 , "kernel_page_size : %d\n" , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)));
-	RelocatePage(kargument->kernel_address , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)) , kargument->kernel_linear_address , kargument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
+	RelocatePage(kargument->kernel_address , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)) , kargument->kernel_linear_address , pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
 	// Make original kernel not present
 	// RelocatePage(kargument->kernel_address , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)) , kargument->kernel_address , kargument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
 
-	kargument->total_kernel_area_end = pml4_entry_end;
+	kargument->total_kernel_area_end = pml4t_entry_end;
 
 	// graphic system!
 	kargument->video_mode = KERNELARG_VIDEOMODE_TEXTMODE;
@@ -143,7 +146,7 @@ void Main(struct multiboot_info *multiboot_info) {
 		kargument->framebuffer_height = multiboot_info->framebuffer_height;
 		kargument->framebuffer_depth = multiboot_info->framebuffer_bpp;
 	}
-	JumpToKernel64((unsigned int)kargument);
+	JumpToKernel64((unsigned int)kargument , pml4t_entry_location);
 
 	while(1) {
 		;

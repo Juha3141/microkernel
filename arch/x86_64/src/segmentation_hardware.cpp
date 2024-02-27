@@ -9,15 +9,16 @@
  * 
  */
 
-#include <segmentation.hpp>
+#include <kernel/segmentation.hpp>
+#include <kernel/interrupt.hpp>
+#include <kernel/debug.hpp>
 #include <hardware/segmentation_hardware.hpp>
-#include <interrupt.hpp>
-#include <gdt.hpp>
+
 #include <arch_inline_asm.hpp>
-#include <kernel_info.hpp>
+
+#include <x86_64/gdt.hpp>
 
 #include <string.hpp>
-#include <debug.hpp>
 
 /// @brief Hardware-level segmentation initialization, based on kseginfo and ksegvalues
 /// @param kseginfo Information for Default kernel segment 
@@ -41,24 +42,6 @@ void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segment
 
     IA ("lgdt [%0]"::"r"(gdtr_ptr));
     debug::pop_function();
-}
-
-void segmentation::hardware::init_ist(KernelInfo::ist_info_t &ist_info) {
-    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
-    struct x86_64::TSS *tss = (struct x86_64::TSS *)memory::kstruct_alloc(sizeof(struct x86_64::TSS));
-    int index = x86_64::gdt::register_ldt((qword)tss , sizeof(struct x86_64::TSS)-1 , GDT_TYPE_32BIT_TSS_AVAILABLE , GDT_FLAGS_P|GDT_FLAGS_DPL0|GDT_FLAGS_G);
-    gdt_container->tss_segment = (index << 3)|0; // RPL : 0
-    // initialize TSS
-    memset(tss , 0 , sizeof(struct x86_64::TSS));
-
-    // Temporary Interrupt Stack Table
-    tss->ist[0] = (qword)memory::pmem_alloc(512*1024 , 4096)+(512*1024);
-    debug::out::printf(DEBUG_INFO , "tss->ist[0] : 0x%X\n" , tss->ist[0]);
-    tss->iopb_offset = 0xFFFF;
-    // Set Segment
-    IA ("ltr %0"::"r"((word)gdt_container->tss_segment));
-    
-    debug::out::printf("TSS segment : 0x%X\n" , gdt_container->tss_segment);
 }
 
 segment_t segmentation::hardware::register_system_segment(max_t start_address , max_t length , word segment_type) {

@@ -1,4 +1,4 @@
-#include <debug.hpp>
+#include <kernel/debug.hpp>
 
 #define DEBUG_PRINTF_STR_STACK 1024
 

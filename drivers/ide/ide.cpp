@@ -1,11 +1,10 @@
 #include "ide.hpp"
 
-#include <block_device_driver.hpp>
-#include <interrupt.hpp>
-#include <io_port.hpp>
+#include <kernel/block_device_driver.hpp>
+#include <kernel/interrupt.hpp>
+#include <kernel/io_port.hpp>
+#include <kernel/debug.hpp>
 #include <arch_inline_asm.hpp>
-
-#include <debug.hpp>
 
 static bool primary_interrupt_flag = false;
 static bool secondary_interrupt_flag = false;

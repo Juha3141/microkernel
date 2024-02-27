@@ -1,8 +1,9 @@
 #ifndef _SEGMENTATION_HPP_
 #define _SEGMENTATION_HPP_
 
-#include <interface_type.hpp>
-#include <kmem_manager.hpp>
+#include <kernel/interface_type.hpp>
+#include <kernel/kmem_manager.hpp>
+
 #include <object_manager.hpp>
 
 #define SEGMENT_TYPE_KERNEL_PRIVILEGE  0x01
@@ -65,6 +66,8 @@ namespace segmentation {
     // renew the segment (if necessary)
     void set_to_code_segment(const char *segment_name , ptr_t new_point=INVALID);
     void set_to_data_segment(const char *segment_name);
+
+    max_t get_ist_location(void);
 }
 
 #endif

@@ -10,9 +10,9 @@
 #ifndef _EXCEPTIONS_HPP_
 #define _EXCEPTIONS_HPP_
 
-#include <interface_type.hpp>
-#include <interrupt.hpp>
-#include <kmem_manager.hpp>
+#include <kernel/interface_type.hpp>
+#include <kernel/interrupt.hpp>
+#include <kernel/kmem_manager.hpp>
 
 #include <object_manager.hpp>
 

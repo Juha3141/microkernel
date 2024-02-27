@@ -1,4 +1,5 @@
-#include <debug.hpp>
+#include <kernel/debug.hpp>
+
 #include <string.hpp>
 
 static struct TextScreenInformation {
@@ -61,7 +62,7 @@ static debug_color_t get_pixel(int x , int y) {
     return 0x00;
 }
 
-#include <debugout_vba_font.hpp>
+#include <x86_64/debugout_vba_font.hpp>
 
 static int draw_character(int x , int y , debug_color_t background_color , debug_color_t color , unsigned short character) {
     int padding = 0;

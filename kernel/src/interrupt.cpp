@@ -1,10 +1,10 @@
-#include <interrupt.hpp>
+#include <kernel/interrupt.hpp>
+#include <kernel/io_port.hpp>
+#include <kernel/interrupt_hardware_specified.hpp>
+
 #include <string.hpp>
-#include <io_port.hpp>
 
-#include <interrupt_hardware_specified.hpp>
-
-#include <debug.hpp>
+#include <kernel/debug.hpp>
 
 void interrupt::GeneralInterruptManager::init(void) {
     memset(mask_flag , false , sizeof(mask_flag));
@@ -105,6 +105,11 @@ void interrupt::init(void) {
     interrupt::controller::register_hardware_specified_interrupts();
     interrupt::controller::register_kernel_requested_interrupts();
     
+    if(USE_IST) {
+        GLOBAL_OBJECT(InterruptStackTableManager)->ist_location = 0x00;
+        GLOBAL_OBJECT(InterruptStackTableManager)->ist_size = IST_SIZE;
+        interrupt::hardware::init_ist();
+    }
 }
 
 /////////////////////////////////////////////////////////

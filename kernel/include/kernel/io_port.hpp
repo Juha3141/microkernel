@@ -1,7 +1,7 @@
 #ifndef _IO_PORT_HPP_
 #define _IO_PORT_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
 
 void io_write_byte(io_port port , byte data);
 byte io_read_byte(io_port port);

@@ -6,10 +6,12 @@
  * contact : ianisnumber2027@gmail.com
  */
 
-#include <kmem_manager.hpp>
-#include <nodes_manager.hpp>
+#include <kernel/kmem_manager.hpp>
+#include <kernel/nodes_manager.hpp>
+
 #include <string.hpp>
-#include <debug.hpp>
+
+#include <kernel/debug.hpp>
 
 // for C++ standard
 

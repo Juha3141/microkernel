@@ -1,7 +1,9 @@
-#include <interrupt_hardware_specified.hpp>
-#include <interrupt.hpp>
-#include <debug.hpp>
+#include <kernel/interrupt_hardware_specified.hpp>
+#include <kernel/interrupt.hpp>
+
 #include <arch_inline_asm.hpp>
+
+#include <kernel/debug.hpp>
 
 #include <hardware/interrupt_hardware.hpp>
 #include <hardware/interrupt_controller.hpp>

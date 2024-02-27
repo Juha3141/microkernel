@@ -1,11 +1,23 @@
+/**
+ * @file partition_driver.hpp
+ * @author your name (you@domain.com)
+ * @brief 
+ * @version 0.1
+ * @date 2024-02-27
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef _PARTITION_DRIVER_HPP_
 #define _PARTITION_DRIVER_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
+#include <kernel/block_device_driver.hpp>
+#include <kernel/storage_system.hpp>
+
 #include <object_manager.hpp>
 #include <linked_list.hpp>
-#include <block_device_driver.hpp>
-#include <storage_system.hpp>
 
 namespace storage_system {
     struct PartitionDriver {

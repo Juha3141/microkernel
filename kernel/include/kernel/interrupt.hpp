@@ -11,13 +11,12 @@
 #ifndef _INTERRUPT_HPP_
 #define _INTERRUPT_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
 #include <hardware/interrupt_hardware.hpp>
 #include <hardware/interrupt_controller.hpp>
-#include <kmem_manager.hpp>
+#include <kernel/kmem_manager.hpp>
 
-#include <interrupt_hardware_specified.hpp>
-#include <interrupt_specification.hpp>
+#include <kernel/interrupt_hardware_specified.hpp>
 
 #include <string.hpp>
 
@@ -119,6 +118,13 @@ namespace interrupt {
         int interrupt_maxcount;
         SpecialInterrupt *interrupt_list;
     };
+
+    struct InterruptStackTableManager {
+        SINGLETON_PATTERN_KSTRUCT(InterruptStackTableManager);
+        max_t ist_location;
+        max_t ist_size;
+    };
+    
     // interrupt_handler_common : 
     void init(void);
     

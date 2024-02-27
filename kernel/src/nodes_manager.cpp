@@ -1,6 +1,8 @@
-#include <nodes_manager.hpp>
+#include <kernel/nodes_manager.hpp>
+
 #include <string.hpp>
-#include <debug.hpp>
+
+#include <kernel/debug.hpp>
 
 /// @brief Initializes the variables of class
 /// @param start_address start address of memory

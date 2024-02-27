@@ -1,7 +1,7 @@
 #ifndef _PAGING_H_
 #define _PAGING_H_
 
-#include <../../../kernel/include/kernel_argument.hpp>
+#include <../../../kernel/include/kernel/kernel_argument.hpp>
 
 #define PAGE_SIZE                0x200000
 

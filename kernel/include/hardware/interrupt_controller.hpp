@@ -1,7 +1,7 @@
 #ifndef _INTERRUPT_CONTROLLER_HPP_
 #define _INTERRUPT_CONTROLLER_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
 
 namespace interrupt {
     namespace controller {

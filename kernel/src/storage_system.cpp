@@ -1,6 +1,6 @@
-#include <storage_system.hpp>
-#include <block_device_driver.hpp>
-#include <partition_driver.hpp>
+#include <kernel/storage_system.hpp>
+#include <kernel/block_device_driver.hpp>
+#include <kernel/partition_driver.hpp>
 
 void storage_system::init(void) {
     GLOBAL_OBJECT(PartitionDriverContainer)->init(64);

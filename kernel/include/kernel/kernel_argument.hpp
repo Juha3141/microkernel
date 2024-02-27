@@ -29,13 +29,11 @@ struct KernelArgument {
 	unsigned int memmap_ptr;              // 16
 	unsigned int kernel_stack_location;   // 20
 	unsigned int kernel_stack_size;       // 24
-	unsigned int pml4t_entry_location;    // 28
-	unsigned int pml4_entry_size; 		  // 32
 
-	unsigned int total_kernel_area_start; // 36
-	unsigned int total_kernel_area_end;   // 40
+	unsigned int total_kernel_area_start; // 28
+	unsigned int total_kernel_area_end;   // 32
 
-	unsigned int kernel_linear_address;   // 44
+	unsigned int kernel_linear_address;   // 36
 
 	// graphics related
 	unsigned char video_mode;
@@ -45,6 +43,10 @@ struct KernelArgument {
 	unsigned int framebuffer_height;
 
 	unsigned int framebuffer_depth;
+
+	// ramdisk related
+	unsigned int ramdisk_address;
+	unsigned int ramdisk_size;
 };
 
 #endif

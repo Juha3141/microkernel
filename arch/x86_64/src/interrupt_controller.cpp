@@ -1,11 +1,9 @@
 #include <hardware/interrupt_controller.hpp>
 #include <hardware/interrupt_hardware.hpp>
-#include <pic.hpp>
-#include <interrupt.hpp>
+#include <kernel/interrupt.hpp>
+#include <kernel/debug.hpp>
 
-#include <kernel_info.hpp>
-
-#include <debug.hpp>
+#include <x86_64/pic.hpp>
 
 // use PIC for interrupt controller
 
@@ -40,5 +38,5 @@ void interrupt::controller::register_hardware_specified_interrupts(void) {
 }
 
 void interrupt::controller::register_kernel_requested_interrupts(void) {
-    GLOBAL_KERNELINFO->kernel_interrupts.timer = 32;
+    // !!!
 }

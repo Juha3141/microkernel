@@ -1,10 +1,9 @@
-#include <segmentation.hpp>
+#include <kernel/segmentation.hpp>
+#include <kernel/kmem_manager.hpp>
+#include <kernel/debug.hpp>
 #include <hardware/segmentation_hardware.hpp>
-#include <kmem_manager.hpp>
-#include <kernel_info.hpp>
 
 #include <string.hpp>
-#include <debug.hpp>
 
 bool segmentation::SegmentsManager::register_segment(const char *segment_name , segment_t segment_value , word segment_type , max_t task_id) {
     max_t index = register_space();
@@ -64,14 +63,10 @@ void segmentation::init(void) {
     segmentation::hardware::init(kseginfo , ksegvalue);
     segment_mgr->register_segment(SEGMENT_NAME_CODE , ksegvalue.kernel_code , kseginfo.kernel_code.segment_type);
     segment_mgr->register_segment(SEGMENT_NAME_DATA , ksegvalue.kernel_data , kseginfo.kernel_data.segment_type);
-    if(GLOBAL_KERNELINFO->conditions.use_ist == true) {
-        segmentation::hardware::init_ist(GLOBAL_KERNELINFO->ist_info);
-    }
 
-    if(GLOBAL_KERNELINFO->conditions.task_segmentation_mode == KINFO_TASKSEG_LINEAR_CORRESPONDENCE) {
-        segmentation::register_segment(SEGMENT_NAME_1TO1_USER_CODE , 0x00 , ARCHITECTURE_LIMIT , SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_CODE_SEGMENT|SEGMENT_TYPE_USER_PRIVILEGE);
-        segmentation::register_segment(SEGMENT_NAME_1TO1_USER_DATA , 0x00 , ARCHITECTURE_LIMIT , SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_DATA_SEGMENT|SEGMENT_TYPE_USER_PRIVILEGE);
-    }
+    segmentation::register_segment(SEGMENT_NAME_1TO1_USER_CODE , 0x00 , ARCHITECTURE_LIMIT , SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_CODE_SEGMENT|SEGMENT_TYPE_USER_PRIVILEGE);
+    segmentation::register_segment(SEGMENT_NAME_1TO1_USER_DATA , 0x00 , ARCHITECTURE_LIMIT , SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_DATA_SEGMENT|SEGMENT_TYPE_USER_PRIVILEGE);
+
     set_to_code_segment(SEGMENT_NAME_CODE);
     set_to_data_segment(SEGMENT_NAME_DATA);
     debug::pop_function();

@@ -1,7 +1,7 @@
 #ifndef _BLOCK_DEVICE_SCHEDULER_HPP_
 #define _BLOCK_DEVICE_SCHEDULER_HPP_
 
-#include <block_device_driver.hpp>
+#include <kernel/block_device_driver.hpp>
 
 #define BLOCK_IO_REQUEST_READ  1
 #define BLOCK_IO_REQUEST_WRITE 2 

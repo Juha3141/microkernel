@@ -1,7 +1,7 @@
 #ifndef _MBR_HPP_
 #define _MBR_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
 #include <partition_driver.hpp>
 
 #define MBR_ENTRY_OFFSET 446

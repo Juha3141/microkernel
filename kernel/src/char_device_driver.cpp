@@ -1,8 +1,9 @@
-#include <char_device_driver.hpp>
-#include <linked_list.hpp>
-#include <kmem_manager.hpp>
+#include <kernel/char_device_driver.hpp>
+#include <kernel/kmem_manager.hpp>
 
-#include <debug.hpp>
+#include <linked_list.hpp>
+
+#include <kernel/debug.hpp>
 
 void chardev::init(void) {
     // CharDeviceDriverContainer : global container for kernel

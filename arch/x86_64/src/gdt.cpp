@@ -1,4 +1,4 @@
-#include <gdt.hpp>
+#include <x86_64/gdt.hpp>
 
 void x86_64::gdt::convert_type_flags(word segment_type , byte &type , byte &flags , byte &rpl) {
     // determine real "gdt" type

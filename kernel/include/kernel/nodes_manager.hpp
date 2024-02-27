@@ -9,7 +9,7 @@
 #ifndef _NODES_MANAGER_HPP_
 #define _NODES_MANAGER_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
 
 #define MEMMANAGER_SIGNATURE 0x3141
 

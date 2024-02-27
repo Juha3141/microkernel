@@ -7,12 +7,12 @@
  * @copyright Copyright (c) 2024 Ian Juha Cho
  * 
  */
-#include <exception.hpp>
-#include <interrupt.hpp>
-#include <kmem_manager.hpp>
-#include <exception_handler.hpp>
+#include <kernel/exception.hpp>
+#include <kernel/interrupt.hpp>
+#include <kernel/kmem_manager.hpp>
+#include <kernel/exception_handler.hpp>
 
-#include <debug.hpp>
+#include <kernel/debug.hpp>
 
 max_t exception::ExceptionManager::register_general_int(const char *exception_name , int general_interrupt_info) {
     max_t id = register_space();

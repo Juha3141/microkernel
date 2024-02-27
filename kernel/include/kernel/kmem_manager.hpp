@@ -8,10 +8,10 @@
 #ifndef _KERNEL_MEMORY_MANAGER_H_
 #define _KERNEL_MEMORY_MANAGER_H_
 
-#include <interface_type.hpp>
-#include <nodes_manager.hpp>
+#include <kernel/interface_type.hpp>
+#include <kernel/nodes_manager.hpp>
 
-#include <kernel_argument.hpp>
+#include <kernel/kernel_argument.hpp>
 
 #define KERNEL_MEMORY_SEGMENT_THRESHOLD 512*1024  // 512KB
 

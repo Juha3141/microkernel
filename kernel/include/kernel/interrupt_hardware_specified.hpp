@@ -1,7 +1,7 @@
 #ifndef _INTERRUPT_HARDWARE_SPECIFIED_HPP_
 #define _INTERRUPT_HARDWARE_SPECIFIED_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
 
 #ifdef USE_HARDWARE_INTERRUPT
 

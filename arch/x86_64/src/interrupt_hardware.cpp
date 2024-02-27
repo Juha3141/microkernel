@@ -8,15 +8,16 @@
  * 
  */
 
-#include <interrupt.hpp>
+#include <kernel/interrupt.hpp>
+#include <kernel/debug.hpp>
 #include <hardware/interrupt_hardware.hpp>
-#include <interrupt_specification.hpp>
-#include <idt.hpp>
+
+#include <x86_64/idt.hpp>
+#include <x86_64/gdt.hpp>
+
 #include <arch_inline_asm.hpp>
-#include <kernel_info.hpp>
 
 #include <string.hpp>
-#include <debug.hpp>
 
 void interrupt::hardware::enable(void) {
     __asm__ ("sti");
@@ -62,12 +63,29 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     idt_container->entries[number].reserved = 0x00;
     idt_container->entries[number].IST = 0;
     
-    if(GLOBAL_KERNELINFO->conditions.use_ist == true) {
+    if(USE_IST) {
         idt_container->entries[number].IST = 1;
     }
     return true;
 }
 
+void interrupt::hardware::init_ist(void) {
+    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
+    struct x86_64::TSS *tss = (struct x86_64::TSS *)memory::kstruct_alloc(sizeof(struct x86_64::TSS));
+    int index = x86_64::gdt::register_ldt((qword)tss , sizeof(struct x86_64::TSS)-1 , GDT_TYPE_32BIT_TSS_AVAILABLE , GDT_FLAGS_P|GDT_FLAGS_DPL0|GDT_FLAGS_G);
+    gdt_container->tss_segment = (index << 3)|0; // RPL : 0
+    // initialize TSS
+    memset(tss , 0 , sizeof(struct x86_64::TSS));
+
+    // Temporary Interrupt Stack Table
+    tss->ist[0] = (qword)memory::pmem_alloc(512*1024 , 4096)+(512*1024);
+    debug::out::printf(DEBUG_INFO , "tss->ist[0] : 0x%X\n" , tss->ist[0]);
+    tss->iopb_offset = 0xFFFF;
+    // Set Segment
+    IA ("ltr %0"::"r"((word)gdt_container->tss_segment));
+    
+    debug::out::printf_function(DEBUG_TEXT , "init_ist" , "TSS segment : 0x%X\n" , gdt_container->tss_segment);
+}
 bool interrupt::hardware::discard_interrupt(int number) {
     x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
     if(number >= GENERAL_INTERRUPT_MAXCOUNT) return false;

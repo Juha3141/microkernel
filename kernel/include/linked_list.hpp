@@ -1,8 +1,8 @@
 #ifndef _OBJECT_LIST_HPP_
 #define _OBJECT_LIST_HPP_
 
-#include <interface_type.hpp>
-#include <kmem_manager.hpp>
+#include <kernel/interface_type.hpp>
+#include <kernel/kmem_manager.hpp>
 
 template <typename T> class ObjectLinkedList {
     public:

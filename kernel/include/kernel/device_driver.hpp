@@ -1,10 +1,10 @@
 #ifndef _GENERAL_DEVICE_DRIVER_HPP_
 #define _GENERAL_DEVICE_DRIVER_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
 #include <object_manager.hpp>
 #include <linked_list.hpp>
-#include <interrupt.hpp>
+#include <kernel/interrupt.hpp>
 
 typedef max_t resource_flag_t;
 typedef max_t etc_resource_t;

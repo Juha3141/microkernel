@@ -1,6 +1,8 @@
-#include <exception.hpp>
-#include <exception_handler.hpp>
-#include <debug.hpp>
+#include <kernel/exception.hpp>
+#include <kernel/exception_handler.hpp>
+
+#include <kernel/debug.hpp>
+
 #include <arch_inline_asm.hpp>
 
 #include <hardware/interrupt_hardware.hpp>

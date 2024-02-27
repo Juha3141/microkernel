@@ -1,7 +1,7 @@
 #ifndef _DEBUG_HPP_
 #define _DEBUG_HPP_
 
-#include <interface_type.hpp>
+#include <kernel/interface_type.hpp>
 #include <string.hpp>
 
 #define DEBUG_FUNCTION_NAME_LEN  40

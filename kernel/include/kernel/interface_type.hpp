@@ -11,8 +11,8 @@
 #ifndef _INTERFACE_TYPE_HPP_
 #define _INTERFACE_TYPE_HPP_
 
-#include <kernel_argument.hpp>
-#include <architecture_limits.hpp>
+#include <kernel/kernel_argument.hpp>
+#include <architecture_specification.hpp>
 
 #define SINGLETON_FUNCTION get_self
 

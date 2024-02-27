@@ -1,4 +1,4 @@
-#include <exception.hpp>
+#include <kernel/exception.hpp>
 
 void exception::hardware::register_hardware_exceptions(void) {
     exception::register_exception_general_int("Divided by zero" , 0);

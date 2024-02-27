@@ -1,20 +1,18 @@
-#include <kmem_manager.hpp>
-#include <debug.hpp>
+#include <kernel/kmem_manager.hpp>
+#include <kernel/debug.hpp>
+#include <kernel/interrupt.hpp>
+#include <kernel/exception.hpp>
+#include <kernel/segmentation.hpp>
+#include <kernel/io_port.hpp>
 #include <random.hpp>
-#include <interrupt.hpp>
-#include <exception.hpp>
-#include <segmentation.hpp>
-#include <kernel_info.hpp>
-#include <io_port.hpp>
 
-#include <storage_system.hpp>
-#include <block_device_driver.hpp>
-#include <char_device_driver.hpp>
-#include <partition_driver.hpp>
 
-// #include <integrated/integrated_drivers.hpp>
+#include <kernel/storage_system.hpp>
+#include <kernel/block_device_driver.hpp>
+#include <kernel/char_device_driver.hpp>
+#include <kernel/partition_driver.hpp>
 
-#include <kernel_argument.hpp>
+#include <kernel/kernel_argument.hpp>
 
 void pmem_alloc_test(int rand_seed);
 void dump_block_devices(void);
@@ -29,18 +27,15 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     debug::push_function("kmain");
 
     memory::pmem_init(kargument->memmap_count , (struct MemoryMap *)((max_t)kargument->memmap_ptr) , kargument);
-    set_initial_kernel_info();
 
-    segmentation::init();
+    segmentation::init( );
     interrupt::init();
     exception::init();
     interrupt::hardware::enable();
 
     blockdev::init();
-    chardev::init();
     storage_system::init();
-    
-    // dump_block_devices();
+    chardev::init();
 
     while(1) {
         ;

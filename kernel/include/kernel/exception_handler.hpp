@@ -1,8 +1,8 @@
 #ifndef _EXCEPTION_HANDLER_ALLOCATOR_HPP_
 #define _EXCEPTION_HANDLER_ALLOCATOR_HPP_
 
-#include <interface_type.hpp>
-#include <exception.hpp>
+#include <kernel/interface_type.hpp>
+#include <kernel/exception.hpp>
 
 #define EXCEPTION_HANDLER_MAXCOUNT 64
 

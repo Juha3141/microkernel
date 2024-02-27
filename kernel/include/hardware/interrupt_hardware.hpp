@@ -1,13 +1,14 @@
 #ifndef _INTERRUPT_HARDWARE_HPP_
 #define _INTERRUPT_HARDWARE_HPP_
 
-#include <interface_type.hpp>
-#include <interrupt_specification.hpp>
+#include <kernel/interface_type.hpp>
 
 namespace interrupt {
     namespace hardware {
         void init(void);   // Initialize interrupt in hardware
-        
+
+        void init_ist(void);
+
         void enable(void);
         void disable(void);
         

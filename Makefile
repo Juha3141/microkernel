@@ -3,7 +3,7 @@ include common_compilers.mk
 
 BASH = bash
 QEMU = qemu-system-x86_64
-QEMU_OPTION = -m 8192 -rtc base=localtime -M pc -boot d -hda proper.img
+QEMU_OPTION = -m 8192 -rtc base=localtime -M pc -boot d
 TARGET = OS.iso
 
 FIRSTPRIORITY_OBJECT = $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/main.obj

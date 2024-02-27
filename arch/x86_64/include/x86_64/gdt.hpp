@@ -1,8 +1,8 @@
 #ifndef _x86_64_GDT_HPP_
 #define _x86_64_GDT_HPP_
 
-#include <x86_64_descriptor_table.hpp>
-#include <debug.hpp>
+#include <x86_64/descriptor_table.hpp>
+#include <kernel/debug.hpp>
 
 #define GDT_ENTRYCOUNT (SEGMENT_MAXCOUNT+1)
 #define GDT_TYPE_RW                  0b00000010

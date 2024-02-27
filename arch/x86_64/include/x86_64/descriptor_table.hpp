@@ -1,9 +1,10 @@
 #ifndef _x86_64_DESCRIPTOR_TABLE_HPP_
 #define _x86_64_DESCRIPTOR_TABLE_HPP_
 
-#include <interface_type.hpp>
-#include <segmentation.hpp>
-#include <kmem_manager.hpp>
+#include <kernel/interface_type.hpp>
+#include <kernel/segmentation.hpp>
+#include <kernel/kmem_manager.hpp>
+
 #include <string.hpp>
 
 namespace x86_64 {

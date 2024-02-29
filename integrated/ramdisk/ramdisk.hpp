@@ -2,10 +2,10 @@
 #define _RAMDISK_DRIVER_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <block_device_driver.hpp>
+#include <kernel/block_device_driver.hpp>
 
 struct ramdisk_driver : public blockdev::block_device_driver {
-    static void init_driver(void);
+    static void register_driver(void);
 
     static struct blockdev::block_device *create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr = 0x00);
     bool prepare(void) override;

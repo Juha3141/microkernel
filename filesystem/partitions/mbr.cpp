@@ -1,5 +1,7 @@
 #include "mbr.hpp"
 
+void MBRPartitionDriver::register_driver(void) { storage_system::register_partition_driver(new MBRPartitionDriver); }
+
 bool MBRPartitionDriver::identify(blockdev::block_device *device) {
     int i;
 	mbr_partition_table partition_table;

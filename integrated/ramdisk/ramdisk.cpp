@@ -1,9 +1,9 @@
 #include "ramdisk.hpp"
-#include <kmem_manager.hpp>
+#include <kernel/kmem_manager.hpp>
 
 static max_t ramdisk_driver_id = 0x00;
 
-void ramdisk_driver::init_driver(void) {
+void ramdisk_driver::register_driver(void) {
     ramdisk_driver_id = blockdev::register_driver(new ramdisk_driver , "rd");
 }
 

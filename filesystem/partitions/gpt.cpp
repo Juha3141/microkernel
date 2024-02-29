@@ -1,6 +1,8 @@
 #include "gpt.hpp"
 
-#include <debug.hpp>
+#include <kernel/debug.hpp>
+
+void GPTPartitionDriver::register_driver(void) { storage_system::register_partition_driver(new GPTPartitionDriver); }
 
 bool GPTPartitionDriver::identify(blockdev::block_device *device) {
     byte buffer[512];

@@ -2,7 +2,7 @@
 #define _MBR_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <partition_driver.hpp>
+#include <kernel/partition_driver.hpp>
 
 #define MBR_ENTRY_OFFSET 446
 
@@ -22,6 +22,8 @@ struct mbr_partition_table {
 };
 
 struct MBRPartitionDriver : storage_system::PartitionDriver {
+	static void register_driver(void);
+
     bool identify(blockdev::block_device *device) override;
 	int get_partitions_count(blockdev::block_device *device) override;
     int get_partitions_list(blockdev::block_device *device , DataLinkedList<blockdev::partition_info_t> &partition_info_list) override;

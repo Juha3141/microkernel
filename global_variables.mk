@@ -1,6 +1,8 @@
 LOADERFOLDER  = loader
 KERNELFOLDER  = kernel
 ARCHFOLDER    = arch
+INTEGRATEDFOLDER = integrated
+FILESYSTEMFOLDER = filesystem
 DRIVERSFOLDER = drivers
 
 KRNLIBRARYFOLDER = library

@@ -11,8 +11,12 @@
 #include <kernel/block_device_driver.hpp>
 #include <kernel/char_device_driver.hpp>
 #include <kernel/partition_driver.hpp>
+#include <kernel/integrated.hpp>
 
 #include <kernel/kernel_argument.hpp>
+
+#include <integrated_drivers.hpp>
+#include <file_systems.hpp>
 
 void pmem_alloc_test(int rand_seed);
 void dump_block_devices(void);
@@ -36,6 +40,8 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     blockdev::init();
     storage_system::init();
     chardev::init();
+
+    register_basic_kernel_drivers();
 
     while(1) {
         ;

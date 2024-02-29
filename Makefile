@@ -9,13 +9,14 @@ TARGET = OS.iso
 FIRSTPRIORITY_OBJECT = $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/main.obj
 KERNEL_OBJECTS = $(filter-out $(FIRSTPRIORITY_OBJECT),$(wildcard $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/*.obj)) $(wildcard $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/*/*.obj)
 ARCH_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(ARCHFOLDER)/*.obj) $(wildcard $(ROOTBINARYFOLDER)/$(ARCHFOLDER)/*/*.obj)
-DRIVER_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(DRIVERSFOLDER)/*/*.obj)
+INTEGRATED_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(INTEGRATEDFOLDER)/*/*.obj)
+FILESYSTEM_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(FILESYSTEMFOLDER)/*/*.obj)
 
 LIBRARIES = $(patsubst %.a,%,$(subst lib,-l,$(notdir $(wildcard $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER)/*.a))))
 
 LINKERSCRIPT = kernel_linker.ld
 
-all: BuildLibrary BuildKernel BuildArchitecture BuildDrivers BuildFinalKernel BuildLoader
+all: BuildLibrary BuildKernel BuildArchitecture BuildIntegrated BuildFileSystems BuildDrivers BuildFinalKernel BuildLoader
 
 BuildLibrary:
 	make -C $(KRNLIBRARYFOLDER) all
@@ -26,6 +27,12 @@ BuildKernel:
 BuildArchitecture:
 	make -C $(ARCHFOLDER) all
 
+BuildIntegrated:
+	make -C $(INTEGRATEDFOLDER) all
+
+BuildFileSystems:
+	make -C $(FILESYSTEMFOLDER) all
+
 BuildDrivers:
 	make -C $(DRIVERSFOLDER) all
 
@@ -33,7 +40,7 @@ BuildLoader:
 	make -C $(LOADERFOLDER) all
 
 BuildFinalKernel:
-	$(LD) -nostdlib -T $(LINKERSCRIPT) -o $(KERNEL_ELF) $(FIRSTPRIORITY_OBJECT) $(KERNEL_OBJECTS) $(ARCH_OBJECTS) $(DRIVER_OBJECTS) -L $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER) $(LIBRARIES)
+	$(LD) -nostdlib -T $(LINKERSCRIPT) -o $(KERNEL_ELF) $(FIRSTPRIORITY_OBJECT) $(KERNEL_OBJECTS) $(ARCH_OBJECTS) $(INTEGRATED_OBJECTS) $(FILESYSTEM_OBJECTS) -L $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER) $(LIBRARIES)
 	$(OBJCOPY) -O binary $(KERNEL_ELF) $(KERNEL_FINAL)
 
 clean:
@@ -41,6 +48,8 @@ clean:
 	
 	make -C $(KERNELFOLDER) clean
 	make -C $(ARCHFOLDER) clean
+	make -C $(FILESYSTEMFOLDER) clean
+	make -C $(INTEGRATEDFOLDER) clean
 	make -C $(DRIVERSFOLDER) clean
 	make -C $(LOADERFOLDER) clean
 	

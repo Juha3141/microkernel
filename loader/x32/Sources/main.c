@@ -39,12 +39,25 @@ unsigned int align(unsigned int address , unsigned int alignment) {
 	return (((unsigned int)(address/alignment))+1)*alignment;
 }
 
+multiboot_module_t *search_module(struct multiboot_info *multiboot_info , const char *cmdline) {
+	multiboot_module_t *mod;
+	for(int i = 0; i < multiboot_info->mods_count; i++) {
+		mod = (multiboot_module_t *)(multiboot_info->mods_addr+(i*sizeof(multiboot_module_t)));
+		if(strcmp(cmdline , mod->cmdline) == 0) {
+			return mod;
+		}
+	}
+	return 0x00;
+}
+
 char kernel_command[] = "This is a kernel by the way";
+char ramdisk_command[] = "This is a ramdisk by the way";
 
 void JumpToKernel64(unsigned int address , unsigned int pml4t_entry_location);
 
 void Main(struct multiboot_info *multiboot_info) {
 	multiboot_module_t *kernel_module;
+	multiboot_module_t *ramdisk_module;
 	if((multiboot_info->mods_count == 0)) {
 		PrintString(0x04 , "No Modules found!\n");
 		while(1) {
@@ -52,19 +65,16 @@ void Main(struct multiboot_info *multiboot_info) {
 		}
 	}
 	PrintString(0x07 , "Modules count   : %d\n" , multiboot_info->mods_count);
-	// Search module, compare the command line
-	char found = 0;
-	for(int i = 0; i < multiboot_info->mods_count; i++) {
-		kernel_module = (multiboot_module_t *)(multiboot_info->mods_addr+(i*sizeof(multiboot_module_t)));
-		PrintString(0x07 , "Module %d : \"%s\"\n" , i , kernel_module->cmdline);
-		if(strcmp(kernel_command , kernel_module->cmdline) == 0) {
-			found = 1;
-			break;
+	kernel_module = search_module(multiboot_info , kernel_command);
+	ramdisk_module = search_module(multiboot_info , ramdisk_command);
+	if(kernel_module == 0x00||ramdisk_module == 0x00) {
+		PrintString(0x04 , "No Modules found!\n");
+		while(1) {
+			;
 		}
 	}
-	if(found == 0) {
-		PrintString(0x04 , "Kernel not found!\n");
-	}
+	// Search module, compare the command line
+	
 	// https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html
 	// https://wiki.osdev.org/Creating_a_64-bit_kernel_using_a_separate_loader
 	
@@ -73,6 +83,9 @@ void Main(struct multiboot_info *multiboot_info) {
 	PrintString(0x07 , "Kernel Image : 0x%X~0x%X\n" , kernel_module->mod_start , kernel_module->mod_end);
 	unsigned int kernel_addr = align(kernel_module->mod_start , PAGE_SIZE);
 	unsigned int kernel_size = kernel_module->mod_end-kernel_module->mod_start;
+
+	unsigned int ramdisk_addr = ramdisk_module->mod_start;
+	unsigned int ramdisk_size = ramdisk_module->mod_end-ramdisk_module->mod_start;
 
 	unsigned int temporary_addr = kernel_addr+kernel_size;
 
@@ -85,6 +98,8 @@ void Main(struct multiboot_info *multiboot_info) {
 	memset((void *)temporary_addr , 0 , kernel_size); // clean temporary area
 
 	PrintString(0x07 , "New aligned image : 0x%X~0x%X\n" , kernel_addr , kernel_addr+kernel_size);
+	PrintString(0x07 , "RAMDisk location  : 0x%X~0x%X\n" , ramdisk_addr , ramdisk_addr+ramdisk_size);
+	
 	// align kernel end address
 	unsigned int kernel_struct_addr = align(kernel_addr+kernel_size , PAGE_SIZE);
 	
@@ -99,6 +114,9 @@ void Main(struct multiboot_info *multiboot_info) {
 	
 	kargument->kernel_address = kernel_addr;
 	kargument->kernel_size = kernel_size;
+
+	kargument->ramdisk_address = ramdisk_addr;
+	kargument->ramdisk_size = ramdisk_size;
 
 	kernel_struct_addr += sizeof(struct KernelArgument);
 	
@@ -146,6 +164,7 @@ void Main(struct multiboot_info *multiboot_info) {
 		kargument->framebuffer_height = multiboot_info->framebuffer_height;
 		kargument->framebuffer_depth = multiboot_info->framebuffer_bpp;
 	}
+
 	JumpToKernel64((unsigned int)kargument , pml4t_entry_location);
 
 	while(1) {

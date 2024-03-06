@@ -86,7 +86,7 @@ int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *n
 			
 			new_msegment_list[seg_index].start_address = new_addr;
 			new_msegment_list[seg_index].end_address = new_addr+new_length;
-			debug::out::printf("seg%d. 0x%lX~0x%lX\n" , seg_index , new_addr , new_addr+new_length);
+			debug::out::printf("(1) seg%d. 0x%lX~0x%lX\n" , seg_index , new_addr , new_addr+new_length);
 			seg_index++;
 
 		}
@@ -96,11 +96,11 @@ int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *n
 
 			new_msegment_list[seg_index].start_address = new_addr;
 			new_msegment_list[seg_index].end_address = new_addr+new_length;
-			debug::out::printf("seg%d. 0x%lX~0x%lX\n" , seg_index , new_addr , new_addr+new_length);
+			debug::out::printf("(2) seg%d. 0x%lX~0x%lX\n" , seg_index , new_addr , new_addr+new_length);
 			seg_index++;
 		}
 		else if(protect.start_address <= address+length) {
-			debug::out::printf("seg%d. 0x%lX~0x%lX\n" , seg_index , address , address+length);
+			debug::out::printf("(3) seg%d. 0x%lX~0x%lX\n" , seg_index , address , address+length);
 			
 			new_msegment_list[seg_index].start_address = address;
 			new_msegment_list[seg_index].end_address = address+length;
@@ -131,7 +131,7 @@ void memory::SegmentsManager::init(int segment_count , struct Boundary *usable_s
 	// allocate space for all managers
 	node_managers = (NodesManager *)kstruct_alloc(managers_count*sizeof(NodesManager));
 	for(int i = 0; i < managers_count; i++) {
-		node_managers[i].init(usable_segments[i].start_address , usable_segments[i].end_address-usable_segments[i].start_address);
+		node_managers[i].init(usable_segments[i].start_address , usable_segments[i].end_address);
 		total_memory += (usable_segments[i].end_address-usable_segments[i].start_address);
 	}
 }
@@ -157,6 +157,7 @@ void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct Ke
 	// determine kernel struct address
 	determine_kstruct_boundary(kstruct_boundary , kargument);
 	// determine physical memory address
+	memset(pmem_boundary , 0 , sizeof(pmem_boundary));
 	if((pmem_entry_count = determine_pmem_boundary({kargument->total_kernel_area_start , kstruct_boundary.end_address} , pmem_boundary , kargument)) == 0) {
 		debug::panic("kmem_manager.cpp" , 55 , "pmem_init() : zero detected usable memory\n");
 	}
@@ -199,12 +200,13 @@ void memory::pmem_free(vptr_t *ptr) {
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	int index;
 	if((index = segments_mgr->get_segment_index((max_t)ptr)) == -1) {
-		debug::out::printf("Warning : Memory release request out of range(0x%lX)\n" , (max_t)ptr);
+		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request out of range(ptr=0x%lX)\n" , (max_t)ptr);
+		// debug here
 		debug::pop_function();
 		return;
 	}
 	if(segments_mgr->node_managers[index].free((max_t)ptr) == false) {
-		debug::out::printf("Warning : Memory release request not allocated(0x%lX)\n" , (max_t)ptr);
+		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request not allocated(ptr=0x%lX)\n" , (max_t)ptr);
 	}
 	debug::pop_function();
 }

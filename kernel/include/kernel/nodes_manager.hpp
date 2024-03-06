@@ -26,7 +26,7 @@ namespace memory {
     // NodeManager : Manager of one big continuous segment
     class NodesManager {
         public:
-            void init(max_t start_address , max_t total_usable_mem);
+            void init(max_t start_address , max_t end_address);
 
             max_t allocate(max_t size , max_t alignment);
             bool free(max_t ptr);

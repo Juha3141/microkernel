@@ -16,11 +16,7 @@ template <typename T> class ObjectLinkedList {
         void init(void) {
             count = 0;
             id_index = 0;
-            start_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
-            start_node->id = 0;
-            start_node->object = 0x00;
-            start_node->next = 0x00;
-            start_node->previous = 0x00;
+            start_node = 0x00;
             
             last_node = start_node;
         }
@@ -28,18 +24,31 @@ template <typename T> class ObjectLinkedList {
             node_s *new_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
             new_node->object = object;
             new_node->previous = 0x00;
-            connect_node(new_node , start_node);
-            new_node->id = allocate_id();
-            
-            start_node = new_node;
+            if(start_node == 0x00) {
+                start_node = new_node;
+                last_node = start_node;
+            }
+            else {
+                connect_node(new_node , start_node);
+                new_node->id = allocate_id();
+                
+                start_node = new_node;
+            }
             return new_node->id;
         }
         max_t add_object_rear(T *object) {
             node_s *new_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
             new_node->object = object;
             new_node->next = 0x00;
-            connect_node(last_node , new_node);
-            last_node = new_node;
+            if(start_node == 0x00) {
+                start_node = new_node;
+                start_node->previous = 0x00;
+                last_node = start_node;
+            }
+            else {
+                connect_node(last_node , new_node);
+                last_node = new_node;
+            }
 
             return new_node->id;
         }

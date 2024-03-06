@@ -17,40 +17,33 @@
 #define LSEEK_END 3
 
 namespace fsdev {
-    // 
+    // I don't know why, but for some whatever reason weird error about vtable occurs
+    // .. when declared class as abstract class..
     struct file_system_driver {
-        virtual bool check(blockdev::block_device *device);
+        bool (*check)(blockdev::block_device *device);
+        bool (*get_root_directory)(physical_file_location &file_loc);
 
-        virtual bool create(file_info *new_file , file_info *directory);
+        bool (*create)(const general_file_name file_name , file_info *directory);
 
-        // fill out the structure
-        virtual bool open(file_info *file , int option);
-        virtual bool close(file_info *file);
-        virtual bool remove(file_info *file);
+        file_info *(*get_file_handle)(const general_file_name file_name);
 
-        virtual bool rename(file_info *new_file);
-        virtual bool move(file_info *new_file , file_info *new_directory);
+        bool (*remove)(const general_file_name file_name);
 
-        virtual int read(file_info *file , size_t size , void *buffer);
-        virtual int write(file_info *file , size_t size , const void *buffer);
+        bool (*rename)(const general_file_name file_name);
+        bool (*move)(const general_file_name file_name , file_info *new_directory);
 
-        virtual int lseek(file_info *file , max_t cursor , int option);
+        int (*read)(file_info *file , size_t size , void *buffer);
+        int (*write)(file_info *file , size_t size , const void *buffer);
 
-        virtual int read_directory(file_info *file , max_t cursor);
+        int (*lseek)(file_info *file , max_t cursor , int option);
+
+        int (*read_directory)(file_info *file , max_t cursor);
 
         char fs_string[32];
     };
 
-    class FileSystemDriverManager : public ObjectManager<file_system_driver> {
-        SINGLETON_PATTERN_PMEM(FileSystemDriverManager);
-        
-        bool check(max_t id , blockdev::block_device *device) {
-            if(!object_container[id].occupied) return false;
-            if(id >= max_count) return false;
-            return object_container[id].object->check(device);
-        }
-
-        blockdev::block_device *head_device; // The root device 
+    struct FileSystemDriverContainer : public ObjectManager<file_system_driver> {
+        SINGLETON_PATTERN_PMEM(FileSystemDriverContainer);
     };
     void init(void);
 
@@ -58,10 +51,12 @@ namespace fsdev {
     file_system_driver *search_driver(const char *fs_name);
     file_system_driver *search_driver(max_t driver_id);
 
+    file_system_driver *detect_fs(blockdev::block_device *device);
+
     max_t discard_driver(const char *fs_name);
     max_t discard_driver(max_t driver_id);
 
-    void set_head_device(blockdev::block_device *head_dev);
+    physical_file_location *get_physical_loc_info(file_info *file);
 };
 
 typedef struct fsdev::file_system_driver file_device_driver;

@@ -19,6 +19,9 @@
 #define DEBUG_DISPLAY_FUNCTION    0b0000010
 #define DEBUG_DISPLAY_INDENTATION 0b0000100
 
+
+#define DEBUG_STOP while(1) {}
+
 typedef word debug_m;
 
 typedef dword debug_color_t;

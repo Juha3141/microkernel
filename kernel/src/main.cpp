@@ -4,22 +4,29 @@
 #include <kernel/exception.hpp>
 #include <kernel/segmentation.hpp>
 #include <kernel/io_port.hpp>
-#include <random.hpp>
-
 
 #include <kernel/storage_system.hpp>
 #include <kernel/block_device_driver.hpp>
 #include <kernel/char_device_driver.hpp>
 #include <kernel/partition_driver.hpp>
-#include <kernel/integrated.hpp>
+#include <kernel/virtual_file_system.hpp>
 
 #include <kernel/kernel_argument.hpp>
+
+#include <kernel/integrated.hpp>
 
 #include <integrated_drivers.hpp>
 #include <file_systems.hpp>
 
+// For testing
+
+#include <random.hpp>
+
+#include <hash_table.hpp>
+
 void pmem_alloc_test(int rand_seed);
 void dump_block_devices(void);
+void test_hash(void);
 
 extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     struct KernelArgument *kargument = (struct KernelArgument *)kernel_argument_struct_addr;
@@ -37,15 +44,58 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     exception::init();
     interrupt::hardware::enable();
 
+    debug::out::printf(DEBUG_INFO , "----- Initializing block device driver..\n");
     blockdev::init();
     storage_system::init();
+    debug::out::printf(DEBUG_INFO , "----- Initializing file system driver..\n");
+    fsdev::init();
+    debug::out::printf(DEBUG_INFO , "----- Initializing character device driver..\n");
     chardev::init();
 
     register_basic_kernel_drivers();
+    debug::out::printf(DEBUG_INFO , "----- Initializing vfs..\n");
+    debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , kargument->ramdisk_address , kargument->ramdisk_address+kargument->ramdisk_size);
+    // find the ramdisk driver
+    if(kargument->ramdisk_address == 0x00) {
+        debug::panic("No ramdisk found!\n"); // frick! I forgot to add the ramdisk!
+    }
+    blockdev::block_device *device = ramdisk_driver::create(kargument->ramdisk_size/512 , 512 , kargument->ramdisk_address);
+    fsdev::FileSystemDriverContainer *container = fsdev::FileSystemDriverContainer::get_self();
+    
+    vfs::init(device);
+    file_info *file_1 = vfs::open({"@/Hello.txt" , 0x00} , FILE_OPEN_RW);
+    file_info *file_2 = vfs::open({"@/Testing/Hello.txt" , 0x00} , FILE_OPEN_RW);
+    // test_hash();
 
     while(1) {
         ;
     }
+}
+
+struct my_hash_obj_s {
+    int a;
+    int b;
+};
+
+void test_hash(void) {
+    HashTable<struct my_hash_obj_s , char*> test_hash;
+    struct my_hash_obj_s obj = {12 , 34};
+    test_hash.init(512 , 
+    [](char *(&dest) , char *src){ dest = (char*)memory::pmem_alloc(strlen(src)+1); memcpy(dest , src , strlen(src)); dest[strlen(src)] = 0; } , 
+    [](char *dest , char *src) { return (bool)(strcmp(dest , src) == 0); } , hash_function_string);
+    
+    test_hash.add("hello" , &obj);
+    debug::out::printf("hash \"hello\" : %d, obj : 0x%X\n" , test_hash.hash_function("hello") , &obj);
+    test_hash.add("world" , &obj);
+    debug::out::printf("hash \"world\" : %d, obj : 0x%X\n" , test_hash.hash_function("world") , &obj);
+    struct my_hash_obj_s *res = test_hash.search("hello");
+    debug::out::printf("res : 0x%X\n" , res);
+    debug::out::printf("res.a = %d\n" , res->a);
+    debug::out::printf("res.b = %d\n" , res->b);
+    res = test_hash.search("world");
+    debug::out::printf("res : 0x%X\n" , res);
+    debug::out::printf("res.a = %d\n" , res->a);
+    debug::out::printf("res.b = %d\n" , res->b);
 }
 
 void dump_block_devices(void) {

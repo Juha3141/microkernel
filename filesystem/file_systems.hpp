@@ -15,12 +15,14 @@
 #include <partitions/mbr.hpp>
 #include <partitions/gpt.hpp>
 
+#include <fat/fat12.hpp>
 #include <fat/fat16.hpp>
 
 // register_driver function here
 #define FILESYSTEM_DRIVER_LIST { \
     MBRPartitionDriver::register_driver , \
     GPTPartitionDriver::register_driver , \
+    fat12::register_driver , \
     fat16::register_driver , \
 }
 

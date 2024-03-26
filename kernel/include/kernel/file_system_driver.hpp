@@ -17,27 +17,40 @@
 #define LSEEK_END 3
 
 namespace fsdev {
-    // I don't know why, but for some whatever reason weird error about vtable occurs
-    // .. when declared class as abstract class..
     struct file_system_driver {
-        bool (*check)(blockdev::block_device *device);
-        bool (*get_root_directory)(physical_file_location &file_loc);
+        // check whether the device has file system
+        virtual bool check(blockdev::block_device *device) = 0;
+        // Get the physical location of root directory
+        virtual bool get_root_directory(physical_file_location &file_loc) = 0;
 
-        bool (*create)(const general_file_name file_name , file_info *directory);
+        // Create new file
+        virtual bool create(const general_file_name file_name , word file_type) = 0;
 
-        file_info *(*get_file_handle)(const general_file_name file_name);
+        // Get file handle by file name
+        virtual file_info *get_file_handle(const general_file_name file_name) = 0;
 
-        bool (*remove)(const general_file_name file_name);
+        // remove the file by file name
+        virtual bool remove(const general_file_name file_name) = 0;
 
-        bool (*rename)(const general_file_name file_name);
-        bool (*move)(const general_file_name file_name , file_info *new_directory);
+        // Rename the file
+        virtual bool rename(const general_file_name file_name , const char *new_file_name) = 0;
+        // Move the file
+        virtual bool move(const general_file_name file_name , file_info *new_directory) = 0;
 
-        int (*read)(file_info *file , size_t size , void *buffer);
-        int (*write)(file_info *file , size_t size , const void *buffer);
+        // Read a block of the file
+        virtual bool read_block(file_info *file , max_t file_block_addr , void *buffer) = 0;
+        // Write to a block of file
+        virtual bool write_block(file_info *file , max_t file_block_addr , const void *buffer) = 0;
+        // Allocate a new block to file
+        // return : "Sector address"
+        // unit_size : How many "Sector" is one block allocated by fsdev?
+        virtual max_t allocate_new_block(file_info *file , max_t &unit_size) = 0;
 
-        int (*lseek)(file_info *file , max_t cursor , int option);
+        // Get physical block address of the file
+        virtual max_t get_phys_block_address(file_info *file , max_t linear_block_addr) = 0;
 
-        int (*read_directory)(file_info *file , max_t cursor);
+        // Read the directory
+        virtual int read_directory(file_info *file , max_t cursor) = 0;
 
         char fs_string[32];
     };

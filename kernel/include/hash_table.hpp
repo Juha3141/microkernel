@@ -1,3 +1,13 @@
+/**
+ * @file hash_table.hpp
+ * @author Ian Juha Cho (ianisnumber2027@gmail.com)
+ * @brief The general hash table for kernel
+ * @date 2024-03-02
+ * 
+ * @copyright Copyright (c) 2024 Ian Juha Cho. 
+ * 
+ */
+
 #ifndef _HASH_TABLE_HPP_
 #define _HASH_TABLE_HPP_
 
@@ -50,8 +60,9 @@ template <typename T_OBJ , typename T_KEY> struct HashTable {
                 ptr = ptr->next;
                 continue;
             }
+            // If there exists a same object with same key
             if(key_op_compare(ptr->object->key , key)) {
-                return false; // skip!
+                return false;
             }
             ptr = ptr->next;
         }

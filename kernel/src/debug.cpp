@@ -25,21 +25,52 @@ void debug::init(KernelArgument *kernel_argument) {
     debug::enable();
 }
 
-void debug::dump_memory(max_t address , max_t length) {
+void debug::dump_memory(max_t address , max_t length , bool debug_string) {
     byte *ptr = (byte *)address;
-    const int charperline = 25;
+    int margin = 5;
+    int char_per_line = 80;
+    int x = (char_per_line-margin-3)/4; // character 
     debug::out::printf("dumping memory from 0x%X - 0x%X\n" , address , address+length);
+    int line_count = (length/x)+(length%x != 0);
+    debug::out::printf("x = %d\n" , x);
 
     // remove for display
+    max_t max = 0;
+    max_t offset = 0;
     debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , false);
-    for(max_t j = 1; j <= length/charperline; j++) {
+    for(max_t j = 1; j <= line_count; j++) {
         debug::out::printf("");
-        for(max_t i = 1; i <= ((j == (int)(length/charperline)) ? ((length%charperline) ? (length%charperline) : charperline) : charperline); i++) {
-            if(*ptr < 0x10) debug::out::print_str("0");
-            debug::out::raw_printf("%X " , *ptr);
+
+        unsigned char *old_ptr = ptr;
+        max_t count = MIN(x , length-offset);
+        for(max_t i = 1; i <= count; i++) {
+            debug::out::raw_printf("%02X " , *ptr);
             ptr++;
         }
+        max = MAX(max , count);
+        if(count < max) {
+            for(max_t i = 0; i < max-count; i++) {
+                debug::out::raw_printf("   ");
+            }
+        }
+        // debug the string
+        debug::out::raw_printf(" | ");
+        for(max_t i = 1; i <= count; i++) {
+            unsigned char c = *old_ptr;
+            switch(c) {
+                case '\n':
+                case '\t':
+                case '\b':
+                case '\r':
+                case 0:
+                    c = '.';
+                    break ;
+            }
+            debug::out::raw_printf("%c" , c);
+            old_ptr++;
+        }
         debug::out::print_str("\n");
+        offset += x;
     }
 
     debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , true);

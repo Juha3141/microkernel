@@ -13,10 +13,13 @@
 
 // headers here
 #include <ramdisk/ramdisk.hpp>
+#include <ide/ide.hpp>
 
 // register_driver function here
 #define INTEGRATED_DRIVER_LIST { \
     ramdisk_driver::register_driver , \
+    ide_driver::register_driver , \
+    ide_cd_driver::register_driver , \
 }
 
 #endif

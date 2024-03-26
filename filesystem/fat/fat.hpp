@@ -76,11 +76,20 @@ typedef struct lfn_entry_s {
     word file_name_3[2];
 }lfn_entry_t;
 
+#define GINFO_FAT_TYPE_12 1
+#define GINFO_FAT_TYPE_16 2
+#define GINFO_FAT_TYPE_32 3
+
 namespace fat {
     void get_vbr(blockdev::block_device *device , void *vbr , int vbr_sz);
 
-    struct general_fat_info {
-        char cluster_size;
+    typedef struct general_fat_info_s {
+        /* fat12 : 1
+         * fat16 : 2
+         * fat32 : 3
+         */
+        byte fat_type;
+
         dword fat_area_loc;
         dword root_dir_loc;
         dword root_dir_size;
@@ -88,21 +97,22 @@ namespace fat {
         void *vbr;
 
         dword fat_size;
-    };
+        dword invalid_cluster_info;
+    }general_fat_info_t;
 
-    dword cluster_to_sector(dword cluster_num , general_fat_info &ginfo);
-    dword sector_to_cluster(dword sector_num , general_fat_info &ginfo);
+    dword cluster_to_sector(dword cluster_num , general_fat_info_t &ginfo);
+    dword sector_to_cluster(dword sector_num , general_fat_info_t &ginfo);
 
-    dword read_cluster(blockdev::block_device *device , max_t cluster_number , max_t cluster_count , void *data , general_fat_info &ginfo);
-    dword write_cluster(blockdev::block_device *device , max_t cluster_number , max_t cluster_count , void *data , general_fat_info &ginfo);
+    dword read_cluster(blockdev::block_device *device , max_t cluster_number , max_t cluster_count , void *data , general_fat_info_t &ginfo);
+    dword write_cluster(blockdev::block_device *device , max_t cluster_number , max_t cluster_count , void *data , general_fat_info_t &ginfo);
     
-    dword find_next_cluster(blockdev::block_device *device , dword cluster , general_fat_info &ginfo);
-    dword find_first_empty_cluster(blockdev::block_device *device , general_fat_info &ginfo);
-    dword get_file_cluster_count(blockdev::block_device *device , dword cluster , general_fat_info &ginfo);
-    void write_cluster_info(blockdev::block_device *device , dword cluster , max_t cluster_info , general_fat_info &ginfo);
-    void extend_cluster(blockdev::block_device *device , dword end_cluster , dword extend_count , general_fat_info &ginfo);
+    dword find_next_cluster(blockdev::block_device *device , dword cluster , general_fat_info_t &ginfo);
+    dword find_first_empty_cluster(blockdev::block_device *device , general_fat_info_t &ginfo);
+    dword get_file_cluster_count(blockdev::block_device *device , dword cluster , general_fat_info_t &ginfo);
+    void write_cluster_info(blockdev::block_device *device , dword cluster , max_t cluster_info , general_fat_info_t &ginfo);
+    void extend_cluster(blockdev::block_device *device , dword end_cluster , dword extend_count , general_fat_info_t &ginfo);
 
-    dword get_directory_info(blockdev::block_device *device , dword directory_sector_addr , general_fat_info &ginfo);
+    dword get_directory_info(blockdev::block_device *device , dword directory_sector_addr , general_fat_info_t &ginfo);
 
     // string operation
     int get_filename_from_lfn(char *file_name , lfn_entry_t *entries);
@@ -110,11 +120,11 @@ namespace fat {
     void create_volume_label_name(char *sfn_nam , const char *lfn_name);
     byte get_sfn_checksum(const char *sfn_name);
 
-    bool write_sfn_entry(blockdev::block_device *device , dword directory_addr , sfn_entry_t *entry , general_fat_info &ginfo);
-    bool write_lfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , general_fat_info &ginfo);
-    bool rewrite_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *sfn_name , sfn_entry_t *new_sfn_entry , general_fat_info &ginfo);
-    bool mark_entry_removed(blockdev::block_device *device , dword directory_addr , const char *sfn_name , general_fat_info &ginfo);
-    bool get_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info &ginfo);
+    bool write_sfn_entry(blockdev::block_device *device , dword directory_addr , sfn_entry_t *entry , general_fat_info_t &ginfo);
+    bool write_lfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , general_fat_info_t &ginfo);
+    bool rewrite_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *sfn_name , sfn_entry_t *new_sfn_entry , general_fat_info_t &ginfo);
+    bool mark_entry_removed(blockdev::block_device *device , dword directory_addr , const char *sfn_name , general_fat_info_t &ginfo);
+    bool get_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info_t &ginfo);
 
 };
 

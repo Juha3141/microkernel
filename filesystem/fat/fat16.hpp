@@ -31,12 +31,33 @@ namespace fat16 {
         byte volume_label[11];
         byte fs_type[8];
     }fat16_vbr_t;
+    
+    struct fat16_driver : file_device_driver {
+        bool check(blockdev::block_device *device);
+        bool get_root_directory(physical_file_location &file_loc);
+
+        bool create(const general_file_name file_name , word file_type);
+
+        file_info *get_file_handle(const general_file_name file_name);
+
+        bool remove(const general_file_name file_name);
+
+        bool rename(const general_file_name file_name , const char *new_file_name);
+        bool move(const general_file_name file_name , file_info *new_directory);
+
+        bool read_block(file_info *file , max_t file_block_addr , void *buffer);
+        bool write_block(file_info *file , max_t file_block_addr , const void *buffer);
+        max_t allocate_new_block(file_info *file , max_t &unit_size);
+        max_t get_phys_block_address(file_info *file , max_t linear_block_addr);
+
+        int read_directory(file_info *file , max_t cursor);
+    };
 
     void register_driver(void);
 
     void write_vbr(fat16_vbr_t *vbr , blockdev::block_device *device , const char *oem_id , const char *volume_label , const char *fs);
     
-    void get_ginfo(fat::general_fat_info &ginfo , fat16_vbr_t *vbr);
+    void get_ginfo(fat::general_fat_info_t &ginfo , fat16_vbr_t *vbr);
 
     dword get_fat_area_loc(fat16_vbr_t *vbr);
     dword get_root_directory(fat16_vbr_t *vbr);

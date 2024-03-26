@@ -53,7 +53,7 @@ namespace debug {
     }
     void init(KernelArgument *kernel_argument);
 
-    void dump_memory(max_t address , max_t length);
+    void dump_memory(max_t address , max_t length , bool debug_string=false);
 
     void push_function(const char *function);
     void pop_function(void);

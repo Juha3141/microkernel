@@ -31,4 +31,4 @@ Here's some current progress and future plans (decoratively displayed as To-do l
 (Lots of more stuff will be added in distant future)
 
 ### Future Plan
-The ultimate goal is implementing not only x86_64 architecture, but also ARM, atmel, etc.. Although I am not sure whether making an operating system that can fit on any hardware is even a possible thing, I will still try developing it as much as I can. 
+The ultimate goal is implementing not only x86_64 architecture, but also ARM, atmel, etc.. I am not sure whether making an operating system that can fit on any hardware is even a possible thing. I will still try as much as I can though. 

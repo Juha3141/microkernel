@@ -17,6 +17,7 @@
 #include <object_manager.hpp>
 #include <hash_table.hpp>
 #include <linked_list.hpp>
+#include <queue.hpp>
 
 #define FILE_TYPE_FILE        0x01
 #define FILE_TYPE_DIRECTORY   0x02
@@ -24,9 +25,6 @@
 #define FILE_TYPE_SYSTEM      0x08
 #define FILE_TYPE_READONLY    0x10
 #define FILE_TYPE_HIDDEN      0x20
-
-#define FILE_STATUS_NOT_OPEN   0x00
-#define FILE_STATUS_OPEN       0x01
 
 #define FILE_NAME_SIZE 256
 
@@ -38,24 +36,43 @@ struct physical_file_location {
     fsdev::file_system_driver *fs_driver;
 };
 
+typedef struct open_info_s {
+    max_t task_id;
+    max_t open_flag;
+
+    max_t maximum_offset;
+    max_t open_offset;
+}open_info_t;
+
+// block_cache_t : Cache of one block, contains cached block data and some other informations.
+typedef struct block_cache_s {
+    // flushed == true : the contents of the cache is the same as contents in the disk
+    bool flushed = true;
+
+    void *block;
+    max_t block_size;
+}block_cache_t;
+
 typedef struct file_info_s {
     char file_name[FILE_NAME_SIZE]; /* Doesn't contain the path, only contains the name of itself */
     word file_type; /* FILE_TYPE_ */
-    word file_status; /* FILE_STATUS_ */
-
-    // if file is open
     max_t file_size;
-    max_t current_offset; 
 
     /* For tree structure */
     file_info_s *parent_dir;
     // cached
     ObjectLinkedList<file_info_s> *file_lists; /* only for directory */
-
+    
     /* physical information */
     bool is_mounted; 
     physical_file_location file_loc_info;
     physical_file_location mount_loc_info;
+
+    ObjectLinkedList<open_info_t> *who_open_list;
+    
+    // Hash table for file buffer
+    // Key value : Block location
+    HashTable<block_cache_t , max_t> *disk_buffer_hash_table;
 }file_info;
 
 typedef struct general_file_name_s {
@@ -79,84 +96,26 @@ namespace vfs {
     struct DirectoryCacheManager : HashTable<directory_cache_info , char*> {
         SINGLETON_PATTERN_PMEM(DirectoryCacheManager);
     };
-    struct VirtualFileSystemCache { // collections of file_info structures
-        SINGLETON_PATTERN_PMEM(VirtualFileSystemCache);
+    struct VirtualFileSystemManager { // General VFS manager
+        SINGLETON_PATTERN_PMEM(VirtualFileSystemManager);
 
-        void init(file_info *rdir , char dir_ident) {
-            this->fs_root_dir = rdir;
-            fs_root_dir->parent_dir = 0x00;
-            fs_root_dir->file_lists = 0x00;
-            dir_identifier = dir_ident;
-        }
-        
-        void add_object(file_info *file , file_info *directory) {
-            if(directory->file_lists == 0x00) {
-                directory->file_lists = new ObjectLinkedList<file_info_s>;
-                directory->file_lists->init();
-            }
-            directory->file_lists->add_object_rear(file);
-            file->parent_dir = directory;
-        }
-        bool remove_object(file_info *file) {
-            return false;
-        }
+        void init(file_info *rdir , char dir_ident);
+        void add_object(file_info *file , file_info *directory);
+        bool remove_object(file_info *file);
 
-        file_info *search_object_last(int level_count , file_info *search_root , char **file_links , int &last_hit_loc) {
-            file_info *ptr = search_root;
-            int i = 0;
-            if(strcmp(file_links[0] , fs_root_dir->file_name) == 0) {
-                ptr = fs_root_dir;
-                i++;
-            }
-            for(; i < level_count; i++) {
-                last_hit_loc = i;
-                if(ptr->file_lists == 0x00) return ptr;
-                ObjectLinkedList<file_info_s>::node_s *node = ptr->file_lists->search<char*>([](file_info_s *obj , char *str) { return (strcmp(obj->file_name , str) == 0); } , file_links[i]);
-                if(node == 0x00) return ptr;
+        file_info *search_object_last(int level_count , file_info *search_root , char **file_links , int &last_hit_loc);
+        int auto_parse_dir_count(const char *file_name);
+        int auto_parse_name(const char *file_name , char **parsed);
 
-                ptr = node->object;
-            }
-            return ptr;
-        }
-        /// @brief Get how much directory the file is referencing from the file name
-        /// @param file_name file name
-        /// @return number of directories
-        int auto_parse_dir_count(const char *file_name) {
-            int dir_count = 1;
-            for(int i = 0; file_name[i] != 0; i++) {
-                if(file_name[i] == dir_identifier) {
-                    dir_count++;
-                }
-            }
-            return dir_count;
-        }
-        /// @brief Parse the file name into lists of directories
-        /// @param file_name file name
-        /// @param parsed parsed list
-        /// @return number of items in the list
-        int auto_parse_name(const char *file_name , char **parsed) {    // Auto-allocates
-            int i = 0;
-            int j = 0;
-            int prev_index = 0;
-            int dir_count = 0;
-            if((dir_count = auto_parse_dir_count(file_name)) != 0) {
-                for(i = 0; file_name[i] != 0; i++) {
-                    if(file_name[i] == '/') {
-                        parsed[j] = (char *)memory::pmem_alloc(i-prev_index+1);
-                        strncpy(parsed[j] , file_name+prev_index , i-prev_index);
-                        prev_index = i+1;
-                        j++;
-                    }
-                }
-            }
-            parsed[j] = (char *)memory::pmem_alloc(i-prev_index+1);
-            strncpy(parsed[j] , file_name+prev_index , i-prev_index);
-            return dir_count;
-        }
+        // root directory
         file_info *fs_root_dir;
+        // root device
         blockdev::block_device *root_dev;
-        
+        // directory identifier, default '/'
         char dir_identifier;
+
+        // accuracy sake
+        bool is_initialized_properly; 
     };
 
     void init(blockdev::block_device *root_device); 
@@ -173,7 +132,7 @@ namespace vfs {
     bool unmount(file_info *file , blockdev::block_device *device);
 
     // general function for general purpose
-    bool create(const general_file_name file_path);
+    bool create(const general_file_name file_path , word file_type);
     file_info *open(const general_file_name file_path , int option);
     bool close(file_info *file);
     bool remove(const general_file_name file_path);
@@ -181,10 +140,10 @@ namespace vfs {
     bool rename(const general_file_name file_path);
     bool move(const general_file_name file_path , const general_file_name new_directory);
 
-    int read(file_info *file , size_t size , void *buffer);
-    int write(file_info *file , size_t size , const void *buffer);
+    long read(file_info *file , max_t size , void *buffer);
+    long write(file_info *file , max_t size , const void *buffer);
 
-    int lseek(file_info *file , max_t cursor , int option);
+    long lseek(file_info *file , long cursor , int option);
     
     int read_directory(file_info *file , ObjectLinkedList<char*> &file_list);
 }

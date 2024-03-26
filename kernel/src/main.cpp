@@ -34,12 +34,10 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
         debug::panic("kernel structure not found");
     }
     debug::init(kargument);
-    debug::out::clear_screen(0x181c24);
-    debug::push_function("kmain");
-
+    debug::out::clear_screen(0x07);
     memory::pmem_init(kargument->memmap_count , (struct MemoryMap *)((max_t)kargument->memmap_ptr) , kargument);
 
-    segmentation::init( );
+    segmentation::init();
     interrupt::init();
     exception::init();
     interrupt::hardware::enable();
@@ -51,7 +49,6 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     fsdev::init();
     debug::out::printf(DEBUG_INFO , "----- Initializing character device driver..\n");
     chardev::init();
-
     register_basic_kernel_drivers();
     debug::out::printf(DEBUG_INFO , "----- Initializing vfs..\n");
     debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , kargument->ramdisk_address , kargument->ramdisk_address+kargument->ramdisk_size);
@@ -60,13 +57,47 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
         debug::panic("No ramdisk found!\n"); // frick! I forgot to add the ramdisk!
     }
     blockdev::block_device *device = ramdisk_driver::create(kargument->ramdisk_size/512 , 512 , kargument->ramdisk_address);
-    fsdev::FileSystemDriverContainer *container = fsdev::FileSystemDriverContainer::get_self();
+    blockdev::register_device(device->device_driver->driver_id , device);
     
+    // mount to the root device
     vfs::init(device);
-    file_info *file_1 = vfs::open({"@/Hello.txt" , 0x00} , FILE_OPEN_RW);
-    file_info *file_2 = vfs::open({"@/Testing/Hello.txt" , 0x00} , FILE_OPEN_RW);
-    // test_hash();
+    char buffer[128];
+    char buffer2[512];
 
+    file_info *file_hello = vfs::open({"@/Hello.txt" , 0x00} , FILE_OPEN_RW);
+    vfs::create({"@/test_disk" , 0x00} , FILE_TYPE_DIRECTORY);
+    file_info *mount = vfs::open({"@/test_disk" , 0x00} , FILE_OPEN_RW);
+    vfs::mount(mount , device);
+    int rd = vfs::read(file_hello , 128 , buffer);
+    // debug::dump_memory((max_t)buffer , 128 , true);
+    debug::out::printf("rd = %d\n" , rd);
+    rd = vfs::read(file_hello , 128 , buffer);
+    // debug::dump_memory((max_t)buffer , 128 , true);
+    
+    debug::out::printf("rd = %d\n" , rd);
+
+    rd = vfs::read(file_hello , 512 , buffer2);
+    debug::out::printf("rd = %d\n" , rd);
+    // debug::dump_memory((max_t)buffer2 , 512 , true);
+    debug::out::printf("--------- write ---------\n");
+
+    vfs::write(file_hello , 14 , "Hello, world!");
+
+    vfs::lseek(file_hello , -14 , LSEEK_CUR);
+    debug::out::printf("--------- read ---------\n");
+    char buffer3[20] = {0 , };
+    vfs::read(file_hello , 14 , buffer3);
+    debug::out::printf("%s\n" , buffer3);
+
+    debug::out::printf("--------- write ---------\n");
+    vfs::lseek(file_hello , 0 , LSEEK_END);
+    vfs::write(file_hello , 28 , "testing at the rear of file!");
+
+    char buffer4[100] = {0 , };
+    vfs::lseek(file_hello , -100 , LSEEK_CUR);
+    rd = vfs::read(file_hello , 100 , buffer4);
+    debug::dump_memory((max_t)buffer4 , rd , true);
+    
     while(1) {
         ;
     }

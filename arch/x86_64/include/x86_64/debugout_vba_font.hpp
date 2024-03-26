@@ -172,7 +172,7 @@ struct bmp_font_data consolas_20px_bmp_font[154] = {
 
 int consolas_15px_bmp_font_max_width = 9;
 int consolas_15px_bmp_font_max_height = 15;
-int consolas_15px_bmp_font_avg_width = 7;
+int consolas_15px_bmp_font_avg_width = 8;
 int consolas_15px_bmp_font_avg_height = 15;
 
 int consolas_15px_bmp_font_length = 154;

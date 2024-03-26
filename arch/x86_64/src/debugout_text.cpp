@@ -1,4 +1,4 @@
-#include <debug.hpp>
+#include <kernel/debug.hpp>
 #include <string.hpp>
 
 static struct TextScreenInformation {
@@ -43,14 +43,20 @@ debug_color_t debug::out::debugcolor(debug_m mode) {
 
 static void process_newline(void) {
     if(scrinfo.y > 24) { // fix scrolling problem
-        memcpy(scrinfo.vmem , scrinfo.vmem+(scrinfo.width*2) , scrinfo.width*(scrinfo.height-1)*2);
-        for(j = scrinfo.width*(scrinfo.height-1)*2; j < scrinfo.width*scrinfo.height*2; j += 2) {
-            scrinfo.vmem[j] = 0x00;
-            scrinfo.vmem[j+1] = (scrinfo.color_background << 4)+scrinfo.color_foreground;
+        int x = 0 , y = 0;
+        int elev = 1;
+        for(y = 0; y < scrinfo.height-elev; y++) {
+            for(x = 0; x < scrinfo.width; x++) {
+                scrinfo.vmem[(y*scrinfo.width+x)*2] = scrinfo.vmem[((y+elev)*scrinfo.width+x)*2];
+            }
         }
-        scrinfo.y = 25;
+        for(int y = scrinfo.height-elev; y < scrinfo.height; y++) {
+            for(x = 0; x < scrinfo.width; x++) {
+                scrinfo.vmem[(y*scrinfo.width+x)*2] = scrinfo.color_background;
+            }
+        }
+        scrinfo.y = 24;
     }
-    off = (scrinfo.y*scrinfo.width*2)+scrinfo.x*2;
 }
 
 void debug::out::print_str(const char *str) {
@@ -80,7 +86,7 @@ void debug::out::print_str(const char *str) {
                 break;
             default:
                 scrinfo.vmem[off] = str[i];
-                scrinfo.vmem[off+1] = (scrinfo.color_background << 4)+scrinfo.color_foreground;
+                scrinfo.vmem[off+1] = (scrinfo.color_background << 4)|scrinfo.color_foreground;
                 scrinfo.x++;
                 if(scrinfo.x > 79) {
                     scrinfo.x = 0;

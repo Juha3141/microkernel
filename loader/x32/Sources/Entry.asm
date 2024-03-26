@@ -3,7 +3,7 @@
 SECTION .text
 
 magic_value equ 0x1BADB002
-flags_value equ (1 << 2)|(1 << 0) ; flag 0 : align 4kb, flag 2 : GUI
+flags_value equ (0 << 2)|(1 << 0) ; flag 0 : align 4kb, flag 2 : GUI
 
 ; Multiboot Header
 	align 0x04 

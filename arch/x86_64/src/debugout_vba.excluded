@@ -64,13 +64,13 @@ static debug_color_t get_pixel(int x , int y) {
 
 #include <x86_64/debugout_vba_font.hpp>
 
-static int draw_character(int x , int y , debug_color_t background_color , debug_color_t color , unsigned short character) {
+static void draw_character(int x , int y , debug_color_t background_color , debug_color_t color , unsigned short character) {
     int padding = 0;
     for(int i = 0; i < consolas_15px_bmp_font_length; i++) {
         if(consolas_15px_bmp_font[i].unicode_id != character) continue;
         int width = consolas_15px_bmp_font[i].width;
         int height = consolas_15px_bmp_font[i].height;
-        x += padding;
+        x += (consolas_20px_bmp_font_avg_width-width)+padding;
         for(int h = 0; h < height; h++) {
             for(int w = 0; w < width; w++) {
                 int value = consolas_15px_bmp_font[i].bmp_array[h][w];
@@ -91,9 +91,9 @@ static int draw_character(int x , int y , debug_color_t background_color , debug
                 draw_pixel(x+w , y+h , ((unsigned char)r << 16)|((unsigned char)g << 8)|((unsigned char)b));
             }
         }
-        return x+consolas_15px_bmp_font_avg_width+padding;
+        return;
     }
-    return x+10;
+    return;
 }
 
 void debug::out::init(KernelArgument *kernel_argument) {

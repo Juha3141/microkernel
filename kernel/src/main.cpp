@@ -68,65 +68,10 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     vfs::create({"@/test_disk" , 0x00} , FILE_TYPE_DIRECTORY);
     file_info *mount = vfs::open({"@/test_disk" , 0x00} , FILE_OPEN_RW);
     vfs::mount(mount , device);
-    int rd = vfs::read(file_hello , 128 , buffer);
-    // debug::dump_memory((max_t)buffer , 128 , true);
-    debug::out::printf("rd = %d\n" , rd);
-    rd = vfs::read(file_hello , 128 , buffer);
-    // debug::dump_memory((max_t)buffer , 128 , true);
-    
-    debug::out::printf("rd = %d\n" , rd);
-
-    rd = vfs::read(file_hello , 512 , buffer2);
-    debug::out::printf("rd = %d\n" , rd);
-    // debug::dump_memory((max_t)buffer2 , 512 , true);
-    debug::out::printf("--------- write ---------\n");
-
-    vfs::write(file_hello , 14 , "Hello, world!");
-
-    vfs::lseek(file_hello , -14 , LSEEK_CUR);
-    debug::out::printf("--------- read ---------\n");
-    char buffer3[20] = {0 , };
-    vfs::read(file_hello , 14 , buffer3);
-    debug::out::printf("%s\n" , buffer3);
-
-    debug::out::printf("--------- write ---------\n");
-    vfs::lseek(file_hello , 0 , LSEEK_END);
-    vfs::write(file_hello , 28 , "testing at the rear of file!");
-
-    char buffer4[100] = {0 , };
-    vfs::lseek(file_hello , -100 , LSEEK_CUR);
-    rd = vfs::read(file_hello , 100 , buffer4);
-    debug::dump_memory((max_t)buffer4 , rd , true);
     
     while(1) {
         ;
     }
-}
-
-struct my_hash_obj_s {
-    int a;
-    int b;
-};
-
-void test_hash(void) {
-    HashTable<struct my_hash_obj_s , char*> test_hash;
-    struct my_hash_obj_s obj = {12 , 34};
-    test_hash.init(512 , 
-    [](char *(&dest) , char *src){ dest = (char*)memory::pmem_alloc(strlen(src)+1); memcpy(dest , src , strlen(src)); dest[strlen(src)] = 0; } , 
-    [](char *dest , char *src) { return (bool)(strcmp(dest , src) == 0); } , hash_function_string);
-    
-    test_hash.add("hello" , &obj);
-    debug::out::printf("hash \"hello\" : %d, obj : 0x%X\n" , test_hash.hash_function("hello") , &obj);
-    test_hash.add("world" , &obj);
-    debug::out::printf("hash \"world\" : %d, obj : 0x%X\n" , test_hash.hash_function("world") , &obj);
-    struct my_hash_obj_s *res = test_hash.search("hello");
-    debug::out::printf("res : 0x%X\n" , res);
-    debug::out::printf("res.a = %d\n" , res->a);
-    debug::out::printf("res.b = %d\n" , res->b);
-    res = test_hash.search("world");
-    debug::out::printf("res : 0x%X\n" , res);
-    debug::out::printf("res.a = %d\n" , res->a);
-    debug::out::printf("res.b = %d\n" , res->b);
 }
 
 void dump_block_devices(void) {

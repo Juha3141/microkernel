@@ -45,12 +45,13 @@ namespace fat16 {
         bool rename(const general_file_name file_name , const char *new_file_name);
         bool move(const general_file_name file_name , file_info *new_directory);
 
-        bool read_block(file_info *file , max_t file_block_addr , void *buffer);
-        bool write_block(file_info *file , max_t file_block_addr , const void *buffer);
-        max_t allocate_new_block(file_info *file , max_t &unit_size);
-        max_t get_phys_block_address(file_info *file , max_t linear_block_addr);
+        max_t get_cluster_start_address(file_info *file , max_t linear_block_addr);
+        max_t get_cluster_size(file_info *file);
+        max_t allocate_new_cluster_to_file(file_info *file);
 
         int read_directory(file_info *file , max_t cursor);
+
+        bool apply_new_file_info(file_info *file , max_t new_size);
     };
 
     void register_driver(void);

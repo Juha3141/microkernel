@@ -37,20 +37,32 @@ namespace fsdev {
         // Move the file
         virtual bool move(const general_file_name file_name , file_info *new_directory) = 0;
 
-        // Read a block of the file
-        virtual bool read_block(file_info *file , max_t file_block_addr , void *buffer) = 0;
-        // Write to a block of file
-        virtual bool write_block(file_info *file , max_t file_block_addr , const void *buffer) = 0;
-        // Allocate a new block to file
-        // return : "Sector address"
-        // unit_size : How many "Sector" is one block allocated by fsdev?
-        virtual max_t allocate_new_block(file_info *file , max_t &unit_size) = 0;
+        /*
+         * "Cluster" here indicates the group of linear blocks that forms one unit of allocation for new space. 
+         * (It is the identical concept of cluster from the FAT file system.)
+         */
 
-        // Get physical block address of the file
-        virtual max_t get_phys_block_address(file_info *file , max_t linear_block_addr) = 0;
+        /// @brief Translate linear block address into the start address of the corresponding cluster.
+        /// @param file file
+        /// @param linear_block_addr Linear block address of file
+        /// @return Sector address of the cluster
+        virtual max_t get_cluster_start_address(file_info *file , max_t linear_block_addr) = 0;
+
+        /// @brief Get the number of sector that consists one cluster
+        /// @param file file
+        /// @return Number of sector of a cluster
+        virtual max_t get_cluster_size(file_info *file) = 0;
+        
+        /// @brief Allocate a new blocks to file (allocate one cluster to the file)
+        /// @param file file
+        /// @return Start address of the cluster 
+        virtual max_t allocate_new_cluster_to_file(file_info *file) = 0;
 
         // Read the directory
         virtual int read_directory(file_info *file , max_t cursor) = 0;
+
+        // Apply the change of file
+        virtual bool apply_new_file_info(file_info *file , max_t new_size/* , to-do : date*/) = 0;
 
         char fs_string[32];
     };

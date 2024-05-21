@@ -46,7 +46,7 @@ typedef struct common_vbr_s {
 
 typedef struct sfn_entry_s {
     byte file_name[8];
-    byte extention[3];
+    byte extension[3];
     byte attribute;
     word reserved;
     

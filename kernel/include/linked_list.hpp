@@ -34,10 +34,13 @@ template <typename T> class ObjectLinkedList {
                 
                 start_node = new_node;
             }
+
+            count++;
             return new_node->id;
         }
         max_t add_object_rear(T *object) {
             node_s *new_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
+            
             new_node->object = object;
             new_node->next = 0x00;
             if(start_node == 0x00) {
@@ -50,11 +53,26 @@ template <typename T> class ObjectLinkedList {
                 last_node = new_node;
             }
 
+            count++;
             return new_node->id;
         }
         bool remove_object(T *object) { return remove_node(get_node(object)); }
         bool remove_object(max_t id) { return remove_node(get_node(id)); }
 
+        bool remove_node(node_s *target) {
+            if(target == 0x00) return false;
+            if(target->previous == 0x00) {
+                start_node = target->next;
+            }
+            else {
+                target->previous->next = target->next;
+            }
+
+            count--;
+            memory::pmem_free(target);
+            return true;
+        }
+        
         node_s *get_node(T *object) {
             node_s *ptr = start_node;
             while(ptr != 0x00) {
@@ -97,17 +115,6 @@ template <typename T> class ObjectLinkedList {
         void connect_node(node_s *first , node_s *next) {
             first->next = next;
             next->previous = first;
-        }
-        bool remove_node(node_s *target) {
-            if(target == 0x00) return false;
-            if(target->previous == 0x00) {
-                start_node = target->next;
-            }
-            else {
-                target->previous->next = target->next;
-            }
-            memory::pmem_free(target);
-            return true;
         }
         inline max_t allocate_id(void) { return id_index++; }
 };

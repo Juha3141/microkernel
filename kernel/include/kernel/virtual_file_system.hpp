@@ -13,6 +13,7 @@
 
 #include <kernel/interface_type.hpp>
 #include <kernel/block_device_driver.hpp>
+#include <kernel/char_device_driver.hpp>
 
 #include <object_manager.hpp>
 #include <hash_table.hpp>
@@ -36,22 +37,33 @@ struct physical_file_location {
     fsdev::file_system_driver *fs_driver;
 };
 
+// block_cache_t : Cache structure of one block, contains cached block data and some other informations.
+typedef struct block_cache_s {
+    // true  : the contents of the cache is the same as the contents in the disk
+    // false : the contents of the cache is different with the contents in the disk
+    bool flushed;
+
+    void *block;
+    max_t block_size;
+    // for newly created caches
+    max_t linear_block_addr;
+}block_cache_t;
+
 typedef struct open_info_s {
     max_t task_id;
     max_t open_flag;
 
     max_t maximum_offset;
     max_t open_offset;
+
+    // Hash table for file buffer
+    // Key value : Physical block location
+    HashTable<block_cache_t , max_t> *cache_hash_table;
+
+    // List for newly created blocks
+    // Key value : Logical block location
+    ObjectLinkedList<block_cache_t> *new_cache_linked_list;
 }open_info_t;
-
-// block_cache_t : Cache of one block, contains cached block data and some other informations.
-typedef struct block_cache_s {
-    // flushed == true : the contents of the cache is the same as contents in the disk
-    bool flushed = true;
-
-    void *block;
-    max_t block_size;
-}block_cache_t;
 
 typedef struct file_info_s {
     char file_name[FILE_NAME_SIZE]; /* Doesn't contain the path, only contains the name of itself */
@@ -69,10 +81,6 @@ typedef struct file_info_s {
     physical_file_location mount_loc_info;
 
     ObjectLinkedList<open_info_t> *who_open_list;
-    
-    // Hash table for file buffer
-    // Key value : Block location
-    HashTable<block_cache_t , max_t> *disk_buffer_hash_table;
 }file_info;
 
 typedef struct general_file_name_s {
@@ -134,6 +142,7 @@ namespace vfs {
     // general function for general purpose
     bool create(const general_file_name file_path , word file_type);
     file_info *open(const general_file_name file_path , int option);
+    bool flush(file_info *file);
     bool close(file_info *file);
     bool remove(const general_file_name file_path);
 

@@ -125,10 +125,6 @@ file_info *vfs::create_file_info_struct(
     new_file->file_size = file_size;
     new_file->who_open_list = new ObjectLinkedList<open_info_t>;
     new_file->who_open_list->init();
-    new_file->disk_buffer_hash_table = new HashTable<block_cache_t , max_t>;
-    new_file->disk_buffer_hash_table->init(512 , [](max_t&d,max_t s){d=s;} , [](max_t d,max_t s){ return (bool)(d==s); } , 
-    [](max_t key) { return (hash_index_t)(key%512); });
-    
     return new_file;
 }
 
@@ -241,13 +237,127 @@ file_info *vfs::open(const general_file_name file_path , int option) {
     open_info->open_offset = 0;
     open_info->open_flag = option;
     open_info->task_id = current_task_id;
+    open_info->cache_hash_table = new HashTable<block_cache_t , max_t>;
+    open_info->new_cache_linked_list = new ObjectLinkedList<block_cache_t>;
+
+    open_info->new_cache_linked_list->init();
+    open_info->cache_hash_table->init(512 , [](max_t&d,max_t s){d=s;} , [](max_t d,max_t s){ return (bool)(d==s); } , 
+    [](max_t key) { return (hash_index_t)(key%512); });
     debug::out::printf("who_open_list : 0x%lx\n" , file->who_open_list);
     file->who_open_list->add_object_rear(open_info);
     return file;
 }
 
+/// @brief Flush the pre-existing caches
+/// @param preexist_caches Hash table for the caches
+/// @param file file_info structure
+/// @return true if succeed, false if failed
+static bool flush_preexisting_caches(HashTable<block_cache_t , max_t>*preexist_caches , file_info *file) {
+    bool succeed = true;
+    physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
+    debug::out::printf("max_index : %d\n" , preexist_caches->max_index);
+
+    // circulate all the hash table contents
+    for(int i = 0; i < preexist_caches->max_index; i++) {
+        if(preexist_caches->hash_container[i].objects_container == 0x00) continue;
+        ObjectLinkedList<HashTable<block_cache_t , max_t>::list_object>*linked_lst = preexist_caches->hash_container[i].objects_container;
+        ObjectLinkedList<HashTable<block_cache_t , max_t>::list_object>::node_s *node_ptr = linked_lst->get_start_node();
+        while(node_ptr != 0x00) {
+            max_t block_loc = node_ptr->object->key; // key : block_loc
+            if(node_ptr->object->object->flushed == true) {
+                node_ptr = node_ptr->next;
+                continue;
+            }
+            debug::out::printf("flushing preexisting cache : addr %d\n" , block_loc);
+            node_ptr->object->object->flushed = true;
+            if(file_loc->block_device->device_driver->write(file_loc->block_device , block_loc , 1 , node_ptr->object->object->block)
+               != file_loc->block_device->geometry.block_size) node_ptr->object->object->flushed = false;
+
+            node_ptr = node_ptr->next;
+        }
+    }
+    return succeed;
+}
+
+/// @brief Flush the caches that are newly created
+/// @param new_caches Linked list structure of newly created caches
+/// @param file file_info structure
+/// @param preexist_caches Hash table for the caches
+/// @return true if succeed, false if failed
+static bool flush_new_caches(ObjectLinkedList<block_cache_t>*new_caches , file_info *file , open_info_t *who_opened , HashTable<block_cache_t , max_t>*preexist_caches) {
+    bool succeed = true;
+    max_t new_block_count = new_caches->count;
+    max_t flushed_block_count = 0;
+    max_t created_block_count = 0;
+
+    physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
+    ObjectLinkedList<block_cache_t>::node_s *start_node = new_caches->get_start_node();
+    ObjectLinkedList<block_cache_t>::node_s *ptr = start_node;
+
+    max_t blockdev_bs = file_loc->block_device->geometry.block_size;
+
+    debug::out::printf("Total new caches count : %d\n" , new_block_count);
+
+    if(new_block_count == 0) return succeed;
+    while(created_block_count <= flushed_block_count) {
+        max_t cluster_size = file_loc->fs_driver->get_cluster_size(file);
+        max_t physical_loc = file_loc->fs_driver->allocate_new_cluster_to_file(file);
+        debug::out::printf("allocated %d sectors\n" , cluster_size);
+        debug::out::printf("physical location : %d\n" , physical_loc);
+        for(int i = 0; i < cluster_size; i++) {
+            if(ptr == 0x00) {
+                break;
+            }
+            if(file_loc->block_device->device_driver->write(file_loc->block_device , physical_loc+i , 1 , ptr->object->block) 
+                != blockdev_bs) succeed = false;
+            
+            ObjectLinkedList<block_cache_t>::node_s *node_to_remove = ptr;
+            ptr = ptr->next;
+
+            // Add the flushed node to the pre-existing hash table, remove from new cache list. 
+            node_to_remove->object->flushed = true;
+            preexist_caches->add(physical_loc+i , node_to_remove->object);
+            new_caches->remove_node(node_to_remove);
+            debug::out::printf("writing the cache data to %d\n" , physical_loc+i);
+        }
+        if(ptr == 0x00) break;
+        created_block_count += cluster_size;
+    }
+
+    return succeed;
+}
+
+bool vfs::flush(file_info *file) {
+    max_t task_id;
+
+    task_id = 0x00; // not implemented yet!
+    ObjectLinkedList<open_info_t>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj,max_t id) {return obj->task_id==id;} , task_id);
+    if(who_opened == 0x00) return false;
+
+    HashTable<block_cache_t , max_t>*preexist_cache_hash_table = who_opened->object->cache_hash_table;
+    ObjectLinkedList<block_cache_t>*new_cache_linked_list = who_opened->object->new_cache_linked_list;
+    if(flush_preexisting_caches(preexist_cache_hash_table , file) == false) return false;
+    if(flush_new_caches(new_cache_linked_list , file , who_opened->object , preexist_cache_hash_table) == false) return false;
+
+    return true;
+}
+
 bool vfs::close(file_info *file) {
-    return 0x00;
+    max_t current_task_id = 0x00; // not implemented!
+    physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
+    if(vfs::flush(file) == false) return false; // flush the file
+
+    ObjectLinkedList<open_info_t>::node_s *node = file->who_open_list->search<max_t>([](open_info_t *o,max_t id) {return(bool)(o->task_id==id);} , current_task_id);
+    if(node->object->maximum_offset > file->file_size) {
+        debug::out::printf("applying new file info\n");
+        file_loc->fs_driver->apply_new_file_info(file , node->object->maximum_offset);
+
+        file->file_size = node->object->maximum_offset;
+    }
+    
+    // To-do : Free the hash table and linked list
+    file->who_open_list->remove_node(node);
+    return true;
 }
 
 bool vfs::remove(const general_file_name file_path) {
@@ -263,32 +373,59 @@ bool vfs::move(const general_file_name file_path , const general_file_name new_d
     return 0x00;
 }
 
-/// @brief Get the cache object from buffer cache. If the cache in block does not exist 
+/// @brief Get the cache object from the cache storage. New cache object is automatically created when the cache does not exist. 
 /// @param file File handle
 /// @param linear_block_addr Linear block address
+/// @param open_info Information about file open 
 /// @return block cache object
-static block_cache_t *get_buffer_by_cache_and_phys(file_info *file , max_t linear_block_addr) {
+static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr , open_info_t *open_info) {
     block_cache_t *cache;
 
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
     max_t block_size = file_loc->block_device->geometry.block_size;
-    max_t phys_block_loc = file_loc->fs_driver->get_phys_block_address(file , linear_block_addr);
-    if(phys_block_loc == INVALID) { // does not exist, need to create new one
+    max_t cluster_size = file_loc->fs_driver->get_cluster_size(file);
+    max_t cluster_start_phys_location = file_loc->fs_driver->get_cluster_start_address(file , linear_block_addr);
+    if(cluster_start_phys_location == INVALID) {
+        // Out of the bounds, search from new_cache_linked_list
+        ObjectLinkedList<block_cache_t>::node_s *n = open_info->new_cache_linked_list->search<max_t>([](block_cache_t *o,max_t l){return o->linear_block_addr == l;} , linear_block_addr);
+        if(n != 0x00) return n->object;
         return 0x00;
     }
+    
+    // actual physical location of the block
+    max_t block_phys_location = cluster_start_phys_location+(linear_block_addr%cluster_size);
+
+    cache = open_info->cache_hash_table->search(block_phys_location);
+    if(cache != 0x00) return cache;
+
+    ObjectLinkedList<block_cache_t>::node_s *n = open_info->new_cache_linked_list->search<max_t>([](block_cache_t *o,max_t l){return o->linear_block_addr == l;} , linear_block_addr);
+    if(n != 0x00) return n->object;
+    // we actually need to create new cache page now..
 
     // cache does not exist, create new cache
-    debug::out::printf("phys_block_loc : %d\n" , phys_block_loc);
-    if((cache = file->disk_buffer_hash_table->search(phys_block_loc)) == 0x00) {
+    debug::out::printf("cluster location : %d\n" , cluster_start_phys_location);
+    
+    unsigned char *temp_buffer = (unsigned char *)memory::pmem_alloc(cluster_size*block_size);
+    file_loc->block_device->device_driver->read(file_loc->block_device , cluster_start_phys_location , cluster_size , temp_buffer);
+    
+    block_cache_t *caches_ptr[cluster_size];
+    for(max_t i = 0; i < cluster_size; i++) {
         cache = (block_cache_t *)memory::pmem_alloc(sizeof(block_cache_t));
         cache->block = (void *)memory::pmem_alloc(block_size);
+
+        memcpy(cache->block , temp_buffer+(i*block_size) , block_size);
+
         cache->block_size = block_size;
-        file->disk_buffer_hash_table->add(phys_block_loc , cache);
-        
+        cache->flushed = true; // newest version.
+
+        // add to the cache table
+        open_info->cache_hash_table->add(cluster_start_phys_location+i , cache);
         // block device as a unit
-        file_loc->block_device->device_driver->read(file_loc->block_device , phys_block_loc , 1 , cache->block);
+        caches_ptr[i] = cache;
     }
-    return cache;
+
+    memory::pmem_free(temp_buffer);
+    return caches_ptr[linear_block_addr%cluster_size];
 }
 
 long vfs::read(file_info *file , max_t size , void *buffer) {
@@ -334,7 +471,7 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
     max_t buffer_offset = 0; 
     max_t read_size = 0;
     for(max_t b = block_start; b <= block_end; b++) {
-        caches[b-block_start] = get_buffer_by_cache_and_phys(file , b);
+        caches[b-block_start] = get_cache_data(file , b , who_opened->object);
         debug::out::printf("cache : 0x%X\n" , caches[b-block_start]);
         max_t boff = off%block_size;
         max_t bsize = MIN(end_offset-off , block_size-boff);
@@ -355,11 +492,12 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
 
     max_t open_offset = 0;
     max_t block_size;
-    max_t create_size = 0;
 
     max_t block_start;
     max_t block_end;
     max_t block_count;
+    max_t block_file_end;
+    max_t required_block_count;
 
     physical_file_location *file_loc;
     if(file->who_open_list == 0x00) return 0; // error
@@ -373,25 +511,42 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
     // fill out basic informations
     block_size = file_loc->block_device->geometry.block_size;
     open_offset = who_opened->object->open_offset;
-    create_size = (open_offset+size > who_opened->object->maximum_offset) ? open_offset+size-who_opened->object->maximum_offset : 0;
+
+    block_file_end = who_opened->object->maximum_offset/block_size;
+    
+    // block_start, block_end , block_count : region that will be written
     block_start = open_offset/block_size;
     block_end = (open_offset+size)/block_size;
     block_count = block_end-block_start+1;
+    
+    // If the end of the target blocks(writing) exceeds the current maximum file --> create new block
+    required_block_count = (block_end > block_file_end) ? block_end-block_file_end : 0;
 
     debug::out::printf("file_size   = %d\n" , who_opened->object->maximum_offset);
     debug::out::printf("open_offset = %d\n" , open_offset);
     debug::out::printf("size        = %d\n" , size);
-    debug::out::printf("create_size = %d\n" , create_size);
+    debug::out::printf("req_bcount  = %d\n" , required_block_count);
+    // Create new block
+    if(required_block_count != 0) {
+        // Register new blocks to the "who_opened" structure
+        for(max_t i = 1; i <= required_block_count; i++) {
+            max_t linear_block_addr = block_file_end+i;
+            block_cache_t *oldone_exist;
+            oldone_exist = get_cache_data(file , linear_block_addr , who_opened->object);
+            if(oldone_exist != 0x00) continue;
 
-    max_t required_block_count = (create_size/block_size)+(create_size%block_size != 0);
-    if(create_size != 0) {
-        max_t block_created = 0;
-        debug::out::printf("required_bs = %d\n" , required_block_count);
-        while(block_created < required_block_count) {
-            max_t block_loc , unit_size = 1;
-            block_loc = file_loc->fs_driver->allocate_new_block(file , unit_size);
-            block_created += unit_size;
-            debug::out::printf("new_block_location : %d\n" , block_loc);
+            // allocate new cache structure
+            block_cache_t *cache = (block_cache_t *)memory::pmem_alloc(sizeof(block_cache_t));
+            
+            // allocate the memory space for the cache
+            cache->block = (void *)memory::pmem_alloc(block_size);
+            memset(cache->block , 0 , block_size);
+            
+            cache->block_size = block_size;
+            cache->flushed = true; // newest
+            cache->linear_block_addr = linear_block_addr;
+            
+            who_opened->object->new_cache_linked_list->add_object_rear(cache);
         }
     }
     // Calculate & Copy
@@ -403,7 +558,10 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
     debug::out::printf("block_start : %d\n" , block_start);
     debug::out::printf("block_end   : %d\n" , block_end);
     for(max_t b = block_start; b <= block_end; b++) {
-        caches[b-block_start] = get_buffer_by_cache_and_phys(file , b);
+        caches[b-block_start] = get_cache_data(file , b , who_opened->object);
+        
+        caches[b-block_start]->flushed = false;
+
         max_t boff = off%block_size;
         max_t bsize = MIN((open_offset+size)-off , block_size-boff);
         debug::out::printf("cache : 0x%X\n" , caches[b-block_start]);

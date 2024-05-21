@@ -22,7 +22,7 @@ void debug::out::init(KernelArgument *kernel_argument) {
 void debug::out::clear_screen(debug_color_t color) {
     unsigned char *vmem = (unsigned char *)scrinfo.vmem;
     for(int i = 0; i < scrinfo.width*scrinfo.height*2; i += 2) {
-        vmem[i] = ' ';
+        vmem[i] = 0x00;
         vmem[i+1] = color;
     }
     set_position(0 , 0);
@@ -60,10 +60,8 @@ static void process_newline(void) {
 }
 
 void debug::out::print_str(const char *str) {
-    int i;
-    int j;
     int off;
-    for(i = 0; str[i] != 0; i++) {
+    for(int i = 0; str[i] != 0; i++) {
         off = (scrinfo.y*scrinfo.width*2)+scrinfo.x*2;
         switch(str[i]) {
             case '\n':

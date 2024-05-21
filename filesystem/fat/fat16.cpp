@@ -114,6 +114,13 @@ file_info *fat16::fat16_driver::get_file_handle(const general_file_name file_nam
         debug::out::printf("sfn entry not found!\n");
         return 0x00;
     }
+    debug::out::printf("%s\n" , sfn_entry.file_name);
+    max_t cluster = (sfn_entry.starting_cluster_high << 16)|(sfn_entry.starting_cluster_low);
+    debug::out::printf("file start cluster : %dcluster (%dsector)\n" , cluster , fat::cluster_to_sector(cluster , ginfo));
+    while(cluster != ginfo.invalid_cluster_info) {
+        cluster = fat::find_next_cluster(rootdir_file_loc->block_device , cluster , ginfo);
+        debug::out::printf("next : %dcluster (%dsector)\n" , cluster , fat::cluster_to_sector(cluster , ginfo));
+    }
     
     file_info *new_file = write_file_info_by_sfn(rootdir_file_loc , file_name.file_name , sfn_entry , ginfo);
     return new_file;
@@ -131,22 +138,20 @@ bool fat16::fat16_driver::move(const general_file_name file_name , file_info *ne
     return false;
 }
 
-bool fat16::fat16_driver::read_block(file_info *file , max_t file_block_addr , void *buffer) {
-    return 0;
+max_t fat16::fat16_driver::get_cluster_size(file_info *file) {
+    fat16::fat16_vbr_t vbr;
+    physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
+    fat::get_vbr(file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
+
+    return vbr.sectors_per_cluster;
 }
 
-bool fat16::fat16_driver::write_block(file_info *file , max_t file_block_addr , const void *buffer) {
-    return 0;
-}
-
-max_t fat16::fat16_driver::allocate_new_block(file_info *file , max_t &unit_size) {
+max_t fat16::fat16_driver::allocate_new_cluster_to_file(file_info *file) {
     fat::general_fat_info_t ginfo;
     fat16::fat16_vbr_t vbr;
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
     fat::get_vbr(file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
     fat16::get_ginfo(ginfo , &vbr);
-
-    unit_size = vbr.sectors_per_cluster;
     
     word cluster = fat::sector_to_cluster(file_loc->block_location , ginfo);
     while(1) {
@@ -158,11 +163,13 @@ max_t fat16::fat16_driver::allocate_new_block(file_info *file , max_t &unit_size
     word new_cluster = fat::find_first_empty_cluster(file_loc->block_device , ginfo);
     word accuracy = fat::find_next_cluster(file_loc->block_device , new_cluster , ginfo);
 
-    debug::out::printf("final cluster of file : %d(%d)\n" , cluster , fat::cluster_to_sector(cluster , ginfo));
-    debug::out::printf("new cluster           : %d(%d)\n" , new_cluster , fat::cluster_to_sector(new_cluster , ginfo));
-    
     fat::write_cluster_info(file_loc->block_device , new_cluster , ginfo.invalid_cluster_info , ginfo);
     fat::write_cluster_info(file_loc->block_device , file_last_cluster , new_cluster , ginfo);
+
+    max_t sz = vbr.bytes_per_sector*vbr.sectors_per_cluster;
+    char zero_buffer[sz];
+    memset(zero_buffer , 0 , sz);
+    file_loc->block_device->device_driver->write(file_loc->block_device , fat::cluster_to_sector(new_cluster , ginfo) , vbr.sectors_per_cluster , zero_buffer);
     return fat::cluster_to_sector(new_cluster , ginfo);
 }
 
@@ -174,19 +181,18 @@ bool fat16::fat16_driver::get_root_directory(physical_file_location &file_loc) {
     return true;
 }
 
-max_t fat16::fat16_driver::get_phys_block_address(file_info *file , max_t linear_block_addr) {
+max_t fat16::fat16_driver::get_cluster_start_address(file_info *file , max_t linear_block_addr) {
     physical_file_location *file_loc;
     fat::general_fat_info_t ginfo;
     fat16::fat16_vbr_t vbr;
     max_t block_size;
 
-    // Get the basical informations
+    // Get the basic informations
     file_loc = fsdev::get_physical_loc_info(file);
     fat::get_vbr(file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
     get_ginfo(ginfo , &vbr);
 
     block_size = file_loc->block_device->geometry.block_size;
-    if(linear_block_addr > ((max_t)(file->file_size/block_size))*block_size) return INVALID;
 
     // search the cluster
     max_t block_loc = file_loc->block_location;
@@ -199,8 +205,33 @@ max_t fat16::fat16_driver::get_phys_block_address(file_info *file , max_t linear
     }
     max_t sector_loc = fat::cluster_to_sector(cluster_loc , ginfo);
     // calculate the sector location
-    sector_loc += linear_block_addr%vbr.sectors_per_cluster;
     return sector_loc;
+}
+
+bool fat16::fat16_driver::apply_new_file_info(file_info *file , max_t new_size) {
+    physical_file_location *rootdir_file_loc = fsdev::get_physical_loc_info(file->parent_dir);
+    // The juxtaposition of namespaces
+    fat::general_fat_info_t ginfo;
+    fat16::fat16_vbr_t vbr;
+    fat::get_vbr(rootdir_file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
+    fat16::get_ginfo(ginfo , &vbr);
+
+    sfn_entry_t sfn_entry;
+    if(fat::get_sfn_entry(rootdir_file_loc->block_device , rootdir_file_loc->block_location , file->file_name , &sfn_entry , ginfo) == false) {
+        debug::out::printf("sfn entry not found!\n");
+        return 0x00;
+    }
+
+    // change the contents of sfn entry
+    sfn_entry.file_size = new_size;
+
+    // apply
+    char sfn_name[12];
+    strncpy(sfn_name , (const char *)sfn_entry.file_name , 11);
+    if(fat::rewrite_sfn_entry(rootdir_file_loc->block_device , rootdir_file_loc->block_location , sfn_name , &sfn_entry , ginfo) == false) {
+        return false;
+    }
+    return true;
 }
 
 int fat16::fat16_driver::read_directory(file_info *file , max_t cursor) {

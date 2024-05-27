@@ -48,11 +48,13 @@ static void process_newline(void) {
         for(y = 0; y < scrinfo.height-elev; y++) {
             for(x = 0; x < scrinfo.width; x++) {
                 scrinfo.vmem[(y*scrinfo.width+x)*2] = scrinfo.vmem[((y+elev)*scrinfo.width+x)*2];
+                scrinfo.vmem[(y*scrinfo.width+x)*2+1] = scrinfo.vmem[((y+elev)*scrinfo.width+x)*2+1];
             }
         }
         for(int y = scrinfo.height-elev; y < scrinfo.height; y++) {
             for(x = 0; x < scrinfo.width; x++) {
-                scrinfo.vmem[(y*scrinfo.width+x)*2] = scrinfo.color_background;
+                scrinfo.vmem[(y*scrinfo.width+x)*2] = 0x00;
+                scrinfo.vmem[(y*scrinfo.width+x)*2+1] = scrinfo.color_background;
             }
         }
         scrinfo.y = 24;

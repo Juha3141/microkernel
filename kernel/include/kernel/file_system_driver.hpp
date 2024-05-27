@@ -58,10 +58,20 @@ namespace fsdev {
         /// @return Start address of the cluster 
         virtual max_t allocate_new_cluster_to_file(file_info *file) = 0;
 
-        // Read the directory
-        virtual int read_directory(file_info *file , max_t cursor) = 0;
+        /// @brief Read the directory, save the file_info structure to the linked list
+        /// ***Note : This function must create a new file_info structure and store to the linked list. 
+        ///           Allocate the new file_info object (for each file) using pmem allocator and 
+        ///           store it to the linked list. 
+        /// @param file the directory to read
+        /// @param file_list Where the file_info structures are stored
+        /// @return Number of files
+        virtual int read_directory(file_info *file , ObjectLinkedList<file_info> &file_list) = 0;
 
-        // Apply the change of file
+        /// @brief Apply the change of file_info. Note that this function Cannot change the file name. 
+        ///        This function can only change the file size or other things. 
+        /// @param file file
+        /// @param new_size new file size
+        /// @return True if succeed
         virtual bool apply_new_file_info(file_info *file , max_t new_size/* , to-do : date*/) = 0;
 
         char fs_string[32];

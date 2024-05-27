@@ -1,5 +1,46 @@
 #include "fat.hpp"
 
+#include <kernel/virtual_file_system.hpp>
+
+file_info *fat::write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
+    int file_type = 0;
+    switch(sfn_entry.attribute) {
+        case FAT_ATTRIBUTE_READONLY:
+            file_type = FILE_TYPE_READONLY;
+            break;
+        case FAT_ATTRIBUTE_HIDDEN:
+            file_type = FILE_TYPE_HIDDEN;
+            break;
+        case FAT_ATTRIBUTE_SYSTEM:
+            file_type = FILE_TYPE_SYSTEM;
+            break;
+        case FAT_ATTRIBUTE_SYSTEMDIR:
+            file_type = FILE_TYPE_DIRECTORY|FILE_TYPE_SYSTEM;
+            break;
+        case FAT_ATTRIBUTE_NORMAL:
+            file_type = FILE_TYPE_FILE;
+            break;
+        case FAT_ATTRIBUTE_DIRECTORY:
+            file_type = FILE_TYPE_DIRECTORY;
+            break;
+    };
+    dword cluster_location = (sfn_entry.starting_cluster_high << 16)|sfn_entry.starting_cluster_low;
+/*
+    debug::out::printf("debugging the sfn entry...\n");
+    debug::out::printf("sfn_entry.file_name         = \"%s\"\n" , sfn_entry.file_name);
+    debug::out::printf("sfn_entry.attribute         = 0x%02x\n" , sfn_entry.attribute);
+    debug::out::printf("sfn_entry.starting_cluster  = 0x%08x\n" , cluster_location);
+    debug::out::printf("sfn_entry.file_size         = %dB\n" , sfn_entry.file_size);
+*/
+    
+    physical_file_location file_ploc = {
+        .block_location = fat::cluster_to_sector(cluster_location , ginfo) , 
+        .block_device = rootdir_loc->block_device , 
+        .fs_driver = rootdir_loc->fs_driver ,  
+    };
+    return vfs::create_file_info_struct(file_ploc , file_name , file_type , sfn_entry.file_size);
+}
+
 /*********************** Cluster Related ***********************/
 
 void fat::get_vbr(blockdev::block_device *device , void *vbr , int vbr_sz) {
@@ -764,4 +805,56 @@ bool fat::get_sfn_entry(blockdev::block_device *device , dword directory_addr , 
     }
     memory::pmem_free(directory);
     return false;
+}
+
+int fat::get_file_list(physical_file_location *dir_location , ObjectLinkedList<file_info> &file_list , general_fat_info_t &ginfo) {
+    int i;
+    int offset = 0;
+    int entry_count;
+    int lfn_entry_count;
+    dword dir_cluster_size;
+    sfn_entry_t *sfn_entry;
+    lfn_entry_t *lfn_entry;
+    byte *directory;
+    common_vbr_t *vbr = (common_vbr_t *)ginfo.vbr;
+
+    entry_count = get_directory_info(dir_location->block_device , dir_location->block_location , ginfo);
+    dir_cluster_size = get_file_cluster_count(dir_location->block_device , dir_location->block_location , ginfo);
+    directory = (byte *)memory::pmem_alloc(dir_cluster_size*vbr->sectors_per_cluster*vbr->bytes_per_sector);
+    debug::out::printf("entry_count   : %d\n" , entry_count);
+    debug::out::printf("cluster count : %d\n" , dir_cluster_size);
+    if(dir_location->block_location == ginfo.root_dir_loc) {
+        dir_location->block_device->device_driver->read(dir_location->block_device , dir_location->block_location , ginfo.root_dir_size , directory);
+    }
+    else {
+        read_cluster(dir_location->block_device , sector_to_cluster(dir_location->block_location , ginfo) , dir_cluster_size , directory , ginfo);
+    }
+    
+    int file_count = 0;
+    char temp_file_name[(entry_count*(5+6+2))+1];
+    debug::out::printf("directory location : %d\n" , dir_location->block_location);
+    for(i = 0; i < entry_count; i++) {
+        sfn_entry = (sfn_entry_t *)(directory+offset);
+        lfn_entry = (lfn_entry_t *)(directory+offset);
+        if(lfn_entry->attribute == FAT_ATTRIBUTE_LFN) {
+            lfn_entry_count = lfn_entry->seq_number^0x40;
+            if(get_filename_from_lfn(temp_file_name , lfn_entry) == 0) {
+                offset += sizeof(sfn_entry_t);
+                continue;
+            }
+            
+            // increment the offset
+            offset += lfn_entry_count*sizeof(lfn_entry_t);
+            file_count++;
+
+            sfn_entry_t entry;
+            // copy the entry
+            memcpy(&entry , (sfn_entry_t *)(directory+offset) , sizeof(sfn_entry_t));
+            file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , entry , ginfo);
+            file_list.add_object_rear(new_file_info);
+        }
+        else offset += sizeof(sfn_entry_t);
+    }
+    memory::pmem_free(directory);
+    return file_count;
 }

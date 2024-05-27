@@ -15,6 +15,7 @@
 
 #include <kernel/interface_type.hpp>
 #include <kernel/block_device_driver.hpp>
+#include <kernel/virtual_file_system.hpp>
 
 #define FAT_ATTRIBUTE_READONLY    0x01
 #define FAT_ATTRIBUTE_HIDDEN      0x02
@@ -100,6 +101,8 @@ namespace fat {
         dword invalid_cluster_info;
     }general_fat_info_t;
 
+    file_info *write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo);
+
     dword cluster_to_sector(dword cluster_num , general_fat_info_t &ginfo);
     dword sector_to_cluster(dword sector_num , general_fat_info_t &ginfo);
 
@@ -125,7 +128,8 @@ namespace fat {
     bool rewrite_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *sfn_name , sfn_entry_t *new_sfn_entry , general_fat_info_t &ginfo);
     bool mark_entry_removed(blockdev::block_device *device , dword directory_addr , const char *sfn_name , general_fat_info_t &ginfo);
     bool get_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info_t &ginfo);
-
+    
+    int get_file_list(physical_file_location *dir_location , ObjectLinkedList<file_info> &file_list , general_fat_info_t &ginfo);
 };
 
 #endif

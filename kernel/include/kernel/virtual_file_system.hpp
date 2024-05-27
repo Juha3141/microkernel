@@ -73,7 +73,7 @@ typedef struct file_info_s {
     /* For tree structure */
     file_info_s *parent_dir;
     // cached
-    ObjectLinkedList<file_info_s> *file_lists; /* only for directory */
+    ObjectLinkedList<file_info_s> *file_list; /* only for directory */
     
     /* physical information */
     bool is_mounted; 
@@ -107,7 +107,7 @@ namespace vfs {
     struct VirtualFileSystemManager { // General VFS manager
         SINGLETON_PATTERN_PMEM(VirtualFileSystemManager);
 
-        void init(file_info *rdir , char dir_ident);
+        void init(file_info *rdir , blockdev::block_device *root_device , char dir_ident);
         void add_object(file_info *file , file_info *directory);
         bool remove_object(file_info *file);
 
@@ -146,7 +146,7 @@ namespace vfs {
     bool close(file_info *file);
     bool remove(const general_file_name file_path);
 
-    bool rename(const general_file_name file_path);
+    bool rename(const general_file_name file_path , const char *new_name);
     bool move(const general_file_name file_path , const general_file_name new_directory);
 
     long read(file_info *file , max_t size , void *buffer);
@@ -154,7 +154,7 @@ namespace vfs {
 
     long lseek(file_info *file , long cursor , int option);
     
-    int read_directory(file_info *file , ObjectLinkedList<char*> &file_list);
+    int read_directory(file_info *file);
 }
 
 #endif

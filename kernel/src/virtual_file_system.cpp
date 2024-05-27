@@ -5,20 +5,21 @@
 
 ////// VirtualFileSystemManager
 
-void vfs::VirtualFileSystemManager::init(file_info *rdir , char dir_ident)  {
-    this->fs_root_dir = rdir;
+void vfs::VirtualFileSystemManager::init(file_info *rdir , blockdev::block_device *root_device , char dir_ident)  {
+    fs_root_dir = rdir;
     fs_root_dir->parent_dir = 0x00;
-    fs_root_dir->file_lists = 0x00;
+    fs_root_dir->file_list = 0x00;
     dir_identifier = dir_ident;
+    root_dev = root_device;
     is_initialized_properly = true;
 }
 
 void vfs::VirtualFileSystemManager::add_object(file_info *file , file_info *directory) {
-    if(directory->file_lists == 0x00) {
-        directory->file_lists = new ObjectLinkedList<file_info_s>;
-        directory->file_lists->init();
+    if(directory->file_list == 0x00) {
+        directory->file_list = new ObjectLinkedList<file_info_s>;
+        directory->file_list->init();
     }
-    directory->file_lists->add_object_rear(file);
+    directory->file_list->add_object_rear(file);
     file->parent_dir = directory;
 }
 
@@ -26,6 +27,12 @@ bool vfs::VirtualFileSystemManager::remove_object(file_info *file) {
     return false;
 }
 
+/// @brief Search the file_info object
+/// @param level_count 
+/// @param search_root 
+/// @param file_links 
+/// @param last_hit_loc return  
+/// @return file_info object
 file_info *vfs::VirtualFileSystemManager::search_object_last(int level_count , file_info *search_root , char **file_links , int &last_hit_loc) {
     file_info *ptr = search_root;
     int i = 0;
@@ -37,8 +44,8 @@ file_info *vfs::VirtualFileSystemManager::search_object_last(int level_count , f
     }
     for(; i < level_count; i++) {
         last_hit_loc = i;
-        if(ptr->file_lists == 0x00) return ptr;
-        ObjectLinkedList<file_info_s>::node_s *node = ptr->file_lists->search<char*>([](file_info_s *obj , char *str) { return (strcmp(obj->file_name , str) == 0); } , file_links[i]);
+        if(ptr->file_list == 0x00) return ptr;
+        ObjectLinkedList<file_info_s>::node_s *node = ptr->file_list->search<char*>([](file_info_s *obj , char *str) { return (strcmp(obj->file_name , str) == 0); } , file_links[i]);
         if(node == 0x00) return ptr;
 
         ptr = node->object;
@@ -86,10 +93,7 @@ int vfs::VirtualFileSystemManager::auto_parse_name(const char *file_name , char 
 /// Standard vfs functions
 
 void vfs::init(blockdev::block_device *root_device) {
-    debug::push_function("vfs::init");
-    file_info *root_file = (file_info *)memory::pmem_alloc(sizeof(file_info));
-    strcpy(root_file->file_name , "@");
-    root_file->is_mounted = true;
+    file_info *root_file = create_file_info_struct({0x00 , 0x00 , 0x00} , "@" , FILE_TYPE_DIRECTORY , 0);
 
     // mount the file
     if(vfs::mount(root_file , root_device) == false) {
@@ -97,11 +101,10 @@ void vfs::init(blockdev::block_device *root_device) {
         GLOBAL_OBJECT(VirtualFileSystemManager)->is_initialized_properly = false;
         return;
     }
-    debug::out::printf("");
+    
     debug::out::printf(DEBUG_SPECIAL , "fs_driver : 0x%lx\n" , root_file->mount_loc_info.fs_driver);
     debug::out::printf(DEBUG_SPECIAL , "Device %s%d : File system detected, %s\n" , root_device->device_driver->driver_name , root_device->id , root_file->mount_loc_info.fs_driver->fs_string);
-    GLOBAL_OBJECT(VirtualFileSystemManager)->init(root_file , '/');
-    debug::pop_function();
+    GLOBAL_OBJECT(VirtualFileSystemManager)->init(root_file , root_device , '/');
 }
 
 file_info *vfs::get_root_directory(void) { return GLOBAL_OBJECT(VirtualFileSystemManager)->fs_root_dir; }
@@ -125,6 +128,8 @@ file_info *vfs::create_file_info_struct(
     new_file->file_size = file_size;
     new_file->who_open_list = new ObjectLinkedList<open_info_t>;
     new_file->who_open_list->init();
+
+    new_file->file_list = 0x00;
     return new_file;
 }
 
@@ -364,9 +369,8 @@ bool vfs::remove(const general_file_name file_path) {
     return 0x00;
 }
 
-
-bool vfs::rename(const general_file_name file_path) {
-    return 0x00;
+bool vfs::rename(const general_file_name file_path , const char *new_name) {
+    return false;
 }
 
 bool vfs::move(const general_file_name file_path , const general_file_name new_directory) {
@@ -606,7 +610,45 @@ long vfs::lseek(file_info *file , long cursor , int option) {
     return who_opened->object->open_offset;
 }
 
+static void discard_file_info(file_info *file) {
+    if(file->who_open_list != 0x00) memory::pmem_free(file->who_open_list);
+    if(file->file_list != 0x00) memory::pmem_free(file->file_list);
+    memory::pmem_free(file);
+}
+
+/// @brief Read the files in the directory and store the file_info structure to the "file_list" cache.
+///        This function does not return any sort of list or file names. Instead, it stores the list of file into the
+///        file_list structure in file_info structure. 
+/// @param root_directory file_info of the directory
+/// @return File count
+int vfs::read_directory(file_info *directory) {
+    ObjectLinkedList<file_info> file_info_list;
+    file_info_list.init();
+    physical_file_location *file_loc = fsdev::get_physical_loc_info(directory);
+    if(file_loc == 0x00) return -1;
+
+    int file_count = file_loc->fs_driver->read_directory(directory , file_info_list);
+    ObjectLinkedList<file_info>::node_s *ptr = file_info_list.get_start_node();
+
+    while(ptr != 0x00) {
+        file_info *new_file = ptr->object;
+        ObjectLinkedList<file_info>::node_s *file_node = directory->file_list->search<char *>(
+            [](file_info *o , char *fn) { return (strcmp(o->file_name , fn) == 0); } , 
+            new_file->file_name
+        );
+        
+        // does not exist, register new one
+        if(file_node == 0x00) {
+            new_file->parent_dir = directory;
+            directory->file_list->add_object_rear(new_file);
+        }
+        // already exist, just discard
+        else {
+            discard_file_info(new_file);
+        }
+
+        ptr = ptr->next;
+    }
     
-int vfs::read_directory(file_info *file , ObjectLinkedList<char*> &file_list) {
-    return 0x00;
+    return file_count;
 }

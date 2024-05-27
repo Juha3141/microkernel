@@ -3,46 +3,6 @@
 
 #include <kernel/kmem_manager.hpp>
 
-// base functions
-
-static file_info *write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
-    int file_type;
-    switch(sfn_entry.attribute) {
-        case FAT_ATTRIBUTE_READONLY:
-            file_type = FILE_TYPE_READONLY;
-            break;
-        case FAT_ATTRIBUTE_HIDDEN:
-            file_type = FILE_TYPE_HIDDEN;
-            break;
-        case FAT_ATTRIBUTE_SYSTEM:
-            file_type = FILE_TYPE_SYSTEM;
-            break;
-        case FAT_ATTRIBUTE_SYSTEMDIR:
-            file_type = FILE_TYPE_DIRECTORY|FILE_TYPE_SYSTEM;
-            break;
-        case FAT_ATTRIBUTE_NORMAL:
-            file_type = FILE_TYPE_FILE;
-            break;
-        case FAT_ATTRIBUTE_DIRECTORY:
-            file_type = FILE_TYPE_DIRECTORY;
-            break;
-    };
-    dword cluster_location = (sfn_entry.starting_cluster_high << 16)|sfn_entry.starting_cluster_low;
-
-    debug::out::printf("debugging the sfn entry...\n");
-    debug::out::printf("sfn_entry.file_name         = \"%s\"\n" , sfn_entry.file_name);
-    debug::out::printf("sfn_entry.attribute         = 0x%02x\n" , sfn_entry.attribute);
-    debug::out::printf("sfn_entry.starting_cluster  = 0x%08x\n" , cluster_location);
-    debug::out::printf("sfn_entry.file_size         = %dB\n" , sfn_entry.file_size);
-
-    physical_file_location file_ploc = {
-        .block_location = fat::cluster_to_sector(cluster_location , ginfo) , 
-        .block_device = rootdir_loc->block_device , 
-        .fs_driver = rootdir_loc->fs_driver ,  
-    };
-    return vfs::create_file_info_struct(file_ploc , file_name , file_type , sfn_entry.file_size);
-}
-
 //////////////// FAT16 ////////////////
 
 bool fat16::fat16_driver::check(blockdev::block_device *device) {
@@ -122,7 +82,7 @@ file_info *fat16::fat16_driver::get_file_handle(const general_file_name file_nam
         debug::out::printf("next : %dcluster (%dsector)\n" , cluster , fat::cluster_to_sector(cluster , ginfo));
     }
     
-    file_info *new_file = write_file_info_by_sfn(rootdir_file_loc , file_name.file_name , sfn_entry , ginfo);
+    file_info *new_file = fat::write_file_info_by_sfn(rootdir_file_loc , file_name.file_name , sfn_entry , ginfo);
     return new_file;
 }
 
@@ -194,7 +154,7 @@ max_t fat16::fat16_driver::get_cluster_start_address(file_info *file , max_t lin
 
     block_size = file_loc->block_device->geometry.block_size;
 
-    // search the cluster
+    // search for the cluster
     max_t block_loc = file_loc->block_location;
     max_t cluster_loc = fat::sector_to_cluster(block_loc , ginfo);
     for(int i = 0; i < (linear_block_addr/(vbr.sectors_per_cluster)); i++) {
@@ -203,8 +163,8 @@ max_t fat16::fat16_driver::get_cluster_start_address(file_info *file , max_t lin
             return INVALID;
         }
     }
-    max_t sector_loc = fat::cluster_to_sector(cluster_loc , ginfo);
     // calculate the sector location
+    max_t sector_loc = fat::cluster_to_sector(cluster_loc , ginfo);
     return sector_loc;
 }
 
@@ -234,10 +194,16 @@ bool fat16::fat16_driver::apply_new_file_info(file_info *file , max_t new_size) 
     return true;
 }
 
-int fat16::fat16_driver::read_directory(file_info *file , max_t cursor) {
-    return 0x00;
-}
+int fat16::fat16_driver::read_directory(file_info *file , ObjectLinkedList<file_info> &file_list) {
+    physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
+    fat::general_fat_info_t ginfo;
+    fat16::fat16_vbr_t vbr;
 
+    fat::get_vbr(file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
+    fat16::get_ginfo(ginfo , &vbr);
+
+    return fat::get_file_list(file_loc , file_list , ginfo);
+}
 
 ////////////////// FAT12 //////////////////
 

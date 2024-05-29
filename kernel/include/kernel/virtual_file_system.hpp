@@ -109,11 +109,13 @@ namespace vfs {
 
         void init(file_info *rdir , blockdev::block_device *root_device , char dir_ident);
         void add_object(file_info *file , file_info *directory);
-        bool remove_object(file_info *file);
+        bool remove_object(const char *file_name , file_info *directory);
 
         file_info *search_object_last(int level_count , file_info *search_root , char **file_links , int &last_hit_loc);
         int auto_parse_dir_count(const char *file_name);
         int auto_parse_name(const char *file_name , char **parsed);
+
+        void get_file_base_name(const char *full_file_path , char *base_name);
 
         // root directory
         file_info *fs_root_dir;

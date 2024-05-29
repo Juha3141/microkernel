@@ -23,8 +23,15 @@ void vfs::VirtualFileSystemManager::add_object(file_info *file , file_info *dire
     file->parent_dir = directory;
 }
 
-bool vfs::VirtualFileSystemManager::remove_object(file_info *file) {
-    return false;
+bool vfs::VirtualFileSystemManager::remove_object(const char *file_name , file_info *directory) {
+    if(directory->file_list == 0x00) return false;
+    return directory->file_list->remove_node(
+        directory->file_list->search<const char *>(
+            [](file_info *f , const char *fn) {
+                return strcmp(f->file_name , fn) == 0;
+            } , file_name
+        )
+    );
 }
 
 /// @brief Search the file_info object
@@ -88,6 +95,17 @@ int vfs::VirtualFileSystemManager::auto_parse_name(const char *file_name , char 
     parsed[j] = (char *)memory::pmem_alloc(i-prev_index+1);
     strncpy(parsed[j] , file_name+prev_index , i-prev_index);
     return dir_count;
+}
+
+void vfs::VirtualFileSystemManager::get_file_base_name(const char *full_file_path , char *base_name) {
+    int full_length = strlen(full_file_path);
+    int last_ident_index = 0;
+    int i = full_length-1;
+    int j = 0;
+    for(; i >= 0; i--) { if(full_file_path[i] == dir_identifier) { break; } }
+    last_ident_index = i;
+    for(i = full_length-1; i > last_ident_index; i--) { base_name[(i-last_ident_index)-1] = full_file_path[i]; }
+    base_name[full_length-last_ident_index-1] = 0;
 }
 
 /// Standard vfs functions
@@ -366,7 +384,20 @@ bool vfs::close(file_info *file) {
 }
 
 bool vfs::remove(const general_file_name file_path) {
-    return 0x00;
+    file_info *parent_dir = get_file_by_cache_and_phys(file_path , 1);
+    physical_file_location *parent_loc = fsdev::get_physical_loc_info(parent_dir);
+    VirtualFileSystemManager *vfs_mgr = GLOBAL_OBJECT(VirtualFileSystemManager);
+
+    if(parent_dir == 0x00) return false;
+    char base_file_name[strlen(file_path.file_name)+2];
+    vfs_mgr->get_file_base_name(file_path.file_name , base_file_name);
+
+    debug::out::printf("base_file_name : %s\n" , base_file_name);
+
+    if(parent_loc->fs_driver->remove({base_file_name , parent_dir}) == false) return false;
+    vfs_mgr->remove_object(base_file_name , parent_dir);
+
+    return true;
 }
 
 bool vfs::rename(const general_file_name file_path , const char *new_name) {

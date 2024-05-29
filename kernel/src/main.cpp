@@ -62,12 +62,6 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     // mount to the root device
     vfs::init(device);
 
-    file_info *file_hello = vfs::open({"@/Hello.txt" , 0x00} , FILE_OPEN_RW);
-    vfs::create({"@/test_disk" , 0x00} , FILE_TYPE_DIRECTORY);
-    file_info *mount = vfs::open({"@/test_disk" , 0x00} , FILE_OPEN_RW);
-    vfs::mount(mount , device);
-    
-    
     while(1) {
         ;
     }

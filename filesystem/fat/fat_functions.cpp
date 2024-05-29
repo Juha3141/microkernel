@@ -584,7 +584,7 @@ bool fat::rewrite_sfn_entry(blockdev::block_device *device , dword directory_add
     return false;
 }
 
-/// @brief Mark entire entry(which includes LFN entry) to removed
+/// @brief Mark entire entry(including LFN entry) removed
 /// @param device Target storage
 /// @param directory_addr Sector address of the directory
 /// @param offset Absolute offset from the start of the directory
@@ -655,7 +655,7 @@ bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_ad
     int absolute_offset = 0;
     int cluster_number = 0;
     int entry_count = 0;
-    unsigned int DirectoryClusterSize;
+    unsigned int directory_cluster_size;
     sfn_entry_t *sfn_entry;
     lfn_entry_t *lfn_entry;
     byte *directory;
@@ -665,7 +665,7 @@ bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_ad
     common_vbr_t *vbr = (common_vbr_t *)ginfo.vbr;
     // Get information of directory
     entry_count = get_directory_info(device , directory_addr , ginfo);
-    DirectoryClusterSize = get_file_cluster_count(device , directory_addr , ginfo);
+    directory_cluster_size = get_file_cluster_count(device , directory_addr , ginfo);
     // Process it differently when it's a root directory
     if(directory_addr == ginfo.root_dir_loc) {
         // Root directory is small; we can just get entire root directory and process it(straightforward!)
@@ -714,7 +714,7 @@ bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_ad
     }
     // Not a root directory, should be process differently by just partially reading the contents of the directory
     cluster_number = sector_to_cluster(directory_addr , ginfo);
-    for(i = 0; i < DirectoryClusterSize; i++) {
+    for(i = 0; i < directory_cluster_size; i++) {
         directory = (byte *)memory::pmem_alloc(vbr->sectors_per_cluster*vbr->bytes_per_sector);
         read_cluster(device , cluster_number , 1 , directory , ginfo);
         for(offset = 0; offset < vbr->sectors_per_cluster*vbr->bytes_per_sector; offset += sizeof(sfn_entry_t)) {
@@ -726,7 +726,7 @@ bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_ad
             if(memcmp(((sfn_entry_t *)(directory+(offset)))->file_name , sfn_name , 11) == 0) {
                 // Absolute offset : Based on the "Start" of the directory
                 absolute_offset = offset+(i*vbr->sectors_per_cluster*vbr->bytes_per_sector);
-                // printf("Found file!!, Absolute offset : %d\n" , offset);
+                debug::out::printf("Found file!!, Absolute offset : %d\n" , offset);
                 remove_entry_by_sfn_offset(device , directory_addr , offset , ginfo);
                 memory::pmem_free(directory);
                 return true;

@@ -87,7 +87,34 @@ file_info *fat16::fat16_driver::get_file_handle(const general_file_name file_nam
 }
 
 bool fat16::fat16_driver::remove(const general_file_name file_name) {
-    return false;
+    physical_file_location *rootdir_file_loc = fsdev::get_physical_loc_info(file_name.root_directory);
+    // The juxtaposition of namespaces
+    fat::general_fat_info_t ginfo;
+    fat16::fat16_vbr_t vbr;
+    fat::get_vbr(rootdir_file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
+    fat16::get_ginfo(ginfo , &vbr);
+
+    sfn_entry_t sfn_entry;
+    if(fat::get_sfn_entry(rootdir_file_loc->block_device , rootdir_file_loc->block_location , file_name.file_name , &sfn_entry , ginfo) == false) {
+        debug::out::printf("sfn entry not found!\n");
+        return false;
+    }
+
+    dword starting_cluster_location = (sfn_entry.starting_cluster_high << 16)|sfn_entry.starting_cluster_low;
+    dword cluster_count = sfn_entry.file_size/(vbr.sectors_per_cluster*vbr.bytes_per_sector)
+                +(sfn_entry.file_size%(vbr.sectors_per_cluster*vbr.bytes_per_sector) != 0);
+    
+    char sfn_name[12] = {0 , };
+    fat::create_sfn_name(sfn_name , file_name.file_name , 1);
+    if(fat::mark_entry_removed(rootdir_file_loc->block_device , rootdir_file_loc->block_location , sfn_name , ginfo) == false) return false;
+    
+    dword cluster_ptr = starting_cluster_location;
+    for(dword i = 0; i < cluster_count; i++) {
+        dword next_cluster = fat::find_next_cluster(rootdir_file_loc->block_device , cluster_ptr , ginfo);
+        fat::write_cluster_info(rootdir_file_loc->block_device , cluster_ptr , 0x00 , ginfo);
+        cluster_ptr = next_cluster;
+    }
+    return true;
 }
 
 bool fat16::fat16_driver::rename(const general_file_name file_name , const char *new_name) {

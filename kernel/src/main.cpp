@@ -67,33 +67,7 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     file_info *mount = vfs::open({"@/test_disk" , 0x00} , FILE_OPEN_RW);
     vfs::mount(mount , device);
     
-    file_info *root_dir = vfs::open({"@" , 0x00} , FILE_OPEN_RW);
-    if(root_dir == 0x00) {
-        debug::out::printf("not found!\n");
-        while(1) {
-            ;
-        }
-    }
-
-    int file_count = vfs::read_directory(root_dir);
-    debug::out::printf("file_count : %d\n" , file_count);
     
-    ObjectLinkedList<file_info> *file_list = root_dir->file_list;
-
-    ObjectLinkedList<file_info>::node_s *ptr = file_list->get_start_node();
-    for(int i = 0; i < file_count; i++) {
-        debug::out::printf("%s  " , ptr->object->file_name);
-        debug::out::raw_printf("%d\n" , ptr->object->file_size);
-
-        ptr = ptr->next;
-    }
-    
-    char buffer[512];
-    file_info *longfilenametesting = vfs::open({"TestFiles/longfilenametesting.txt" , root_dir} , FILE_OPEN_RW);
-
-    vfs::read(longfilenametesting , longfilenametesting->file_size , buffer);
-    debug::dump_memory((max_t)buffer , longfilenametesting->file_size , true);
-
     while(1) {
         ;
     }

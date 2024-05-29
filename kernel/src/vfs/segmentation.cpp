@@ -1,7 +1,7 @@
 #include <kernel/segmentation.hpp>
 #include <kernel/kmem_manager.hpp>
 #include <kernel/debug.hpp>
-#include <hardware/segmentation_hardware.hpp>
+#include <arch/segmentation_hardware.hpp>
 
 #include <string.hpp>
 

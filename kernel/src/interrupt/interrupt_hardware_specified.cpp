@@ -5,8 +5,8 @@
 
 #include <kernel/debug.hpp>
 
-#include <hardware/interrupt_hardware.hpp>
-#include <hardware/interrupt_controller.hpp>
+#include <arch/interrupt_hardware.hpp>
+#include <arch/interrupt_controller.hpp>
 
 #ifdef USE_HARDWARE_INTERRUPT
 

@@ -12,7 +12,7 @@
 #include <kernel/segmentation.hpp>
 #include <kernel/interrupt.hpp>
 #include <kernel/debug.hpp>
-#include <hardware/segmentation_hardware.hpp>
+#include <arch/segmentation_hardware.hpp>
 
 #include <arch_inline_asm.hpp>
 

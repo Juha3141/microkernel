@@ -10,7 +10,7 @@
 
 #include <kernel/interrupt.hpp>
 #include <kernel/debug.hpp>
-#include <hardware/interrupt_hardware.hpp>
+#include <arch/interrupt_hardware.hpp>
 
 #include <x86_64/idt.hpp>
 #include <x86_64/gdt.hpp>

@@ -12,8 +12,8 @@
 #define _INTERRUPT_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <hardware/interrupt_hardware.hpp>
-#include <hardware/interrupt_controller.hpp>
+#include <arch/interrupt_hardware.hpp>
+#include <arch/interrupt_controller.hpp>
 #include <kernel/kmem_manager.hpp>
 
 #include <kernel/interrupt_hardware_specified.hpp>

@@ -14,8 +14,8 @@
 #define _FAT_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/block_device_driver.hpp>
-#include <kernel/virtual_file_system.hpp>
+#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/vfs/virtual_file_system.hpp>
 
 #define FAT_ATTRIBUTE_READONLY    0x01
 #define FAT_ATTRIBUTE_HIDDEN      0x02

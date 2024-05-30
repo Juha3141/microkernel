@@ -1,7 +1,7 @@
 #ifndef _x86_64_IDT_HPP_
 #define _x86_64_IDT_HPP_
 
-#include <kernel/interrupt.hpp>
+#include <kernel/interrupt/interrupt.hpp>
 #include <x86_64/descriptor_table.hpp>
 
 #define IDT_ENTRYCOUNT GENERAL_INTERRUPT_MAXCOUNT

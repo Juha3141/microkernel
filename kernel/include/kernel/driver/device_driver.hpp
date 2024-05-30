@@ -4,7 +4,7 @@
 #include <kernel/interface_type.hpp>
 #include <object_manager.hpp>
 #include <linked_list.hpp>
-#include <kernel/interrupt.hpp>
+#include <kernel/interrupt/interrupt.hpp>
 
 typedef max_t resource_flag_t;
 typedef max_t etc_resource_t;

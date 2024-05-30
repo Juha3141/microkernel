@@ -1,7 +1,7 @@
 #ifndef _CHAR_DEVICE_DRIVER_HPP_
 #define _CHAR_DEVICE_DRIVER_HPP_
 
-#include <kernel/device_driver.hpp>
+#include <kernel/driver/device_driver.hpp>
 
 // https://www.youtube.com/watch?v=kCAv53P1otM&t=5288s
 

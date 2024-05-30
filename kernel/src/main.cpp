@@ -1,15 +1,16 @@
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 #include <kernel/debug.hpp>
-#include <kernel/interrupt.hpp>
-#include <kernel/exception.hpp>
-#include <kernel/segmentation.hpp>
+#include <kernel/interrupt/interrupt.hpp>
+#include <kernel/interrupt/exception.hpp>
+#include <kernel/mem/segmentation.hpp>
 #include <kernel/io_port.hpp>
 
-#include <kernel/storage_system.hpp>
-#include <kernel/block_device_driver.hpp>
-#include <kernel/char_device_driver.hpp>
-#include <kernel/partition_driver.hpp>
-#include <kernel/virtual_file_system.hpp>
+#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/driver/char_device_driver.hpp>
+
+#include <kernel/vfs/storage_system.hpp>
+#include <kernel/vfs/partition_driver.hpp>
+#include <kernel/vfs/virtual_file_system.hpp>
 
 #include <kernel/kernel_argument.hpp>
 
@@ -61,6 +62,7 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     
     // mount to the root device
     vfs::init(device);
+    debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
 
     while(1) {
         ;

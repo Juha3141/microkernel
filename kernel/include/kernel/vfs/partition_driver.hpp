@@ -13,8 +13,8 @@
 #define _PARTITION_DRIVER_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/block_device_driver.hpp>
-#include <kernel/storage_system.hpp>
+#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/vfs/storage_system.hpp>
 
 #include <object_manager.hpp>
 #include <linked_list.hpp>

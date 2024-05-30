@@ -2,7 +2,7 @@
 #define _RAMDISK_DRIVER_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/block_device_driver.hpp>
+#include <kernel/driver/block_device_driver.hpp>
 
 struct ramdisk_driver : public blockdev::block_device_driver {
     static void register_driver(void);

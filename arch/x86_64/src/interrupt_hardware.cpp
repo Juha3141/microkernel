@@ -8,7 +8,7 @@
  * 
  */
 
-#include <kernel/interrupt.hpp>
+#include <kernel/interrupt/interrupt.hpp>
 #include <kernel/debug.hpp>
 #include <arch/interrupt_hardware.hpp>
 

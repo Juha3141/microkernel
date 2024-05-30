@@ -6,8 +6,8 @@
  * contact : ianisnumber2027@gmail.com
  */
 
-#include <kernel/kmem_manager.hpp>
-#include <kernel/nodes_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
+#include <kernel/mem/nodes_manager.hpp>
 
 #include <string.hpp>
 

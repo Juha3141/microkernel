@@ -1,5 +1,5 @@
-#include <kernel/interrupt_hardware_specified.hpp>
-#include <kernel/interrupt.hpp>
+#include <kernel/interrupt/interrupt_hardware_specified.hpp>
+#include <kernel/interrupt/interrupt.hpp>
 
 #include <arch_inline_asm.hpp>
 

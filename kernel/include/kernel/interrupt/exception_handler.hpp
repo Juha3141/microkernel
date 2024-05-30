@@ -2,7 +2,7 @@
 #define _EXCEPTION_HANDLER_ALLOCATOR_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/exception.hpp>
+#include <kernel/interrupt/exception.hpp>
 
 #define EXCEPTION_HANDLER_MAXCOUNT 64
 

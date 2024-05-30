@@ -2,8 +2,8 @@
 #define _x86_64_DESCRIPTOR_TABLE_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/segmentation.hpp>
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/segmentation.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
 #include <string.hpp>
 

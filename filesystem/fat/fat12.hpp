@@ -2,7 +2,7 @@
 #define _FAT12_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/file_system_driver.hpp>
+#include <kernel/vfs/file_system_driver.hpp>
 
 #include "fat.hpp"
 #include "fat16.hpp"

@@ -3,7 +3,7 @@
 
 #include <kernel/interface_type.hpp>
 #include <string.hpp>
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
 #include <kernel/debug.hpp>
 

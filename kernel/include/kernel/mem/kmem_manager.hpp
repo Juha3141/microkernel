@@ -9,7 +9,7 @@
 #define _KERNEL_MEMORY_MANAGER_H_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/nodes_manager.hpp>
+#include <kernel/mem/nodes_manager.hpp>
 
 #include <kernel/kernel_argument.hpp>
 

@@ -11,7 +11,7 @@
 #define _QUEUE_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
 template <typename T> class ObjectQueue { // circular queue
     public:

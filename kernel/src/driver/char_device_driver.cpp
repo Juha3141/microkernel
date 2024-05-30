@@ -1,5 +1,5 @@
-#include <kernel/char_device_driver.hpp>
-#include <kernel/kmem_manager.hpp>
+#include <kernel/driver/char_device_driver.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
 #include <linked_list.hpp>
 

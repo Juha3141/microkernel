@@ -1,6 +1,6 @@
 #include "fat.hpp"
 
-#include <kernel/virtual_file_system.hpp>
+#include <kernel/vfs/virtual_file_system.hpp>
 
 file_info *fat::write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
     int file_type = 0;

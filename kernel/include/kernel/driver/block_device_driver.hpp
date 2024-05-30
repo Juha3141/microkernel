@@ -1,8 +1,8 @@
 #ifndef _BLOCK_DEVICE_DRIVER_HPP_
 #define _BLOCK_DEVICE_DRIVER_HPP_
 
-#include <kernel/device_driver.hpp>
-#include <kernel/block_device_scheduler.hpp>
+#include <kernel/driver/device_driver.hpp>
+#include <kernel/driver/block_device_scheduler.hpp>
 
 namespace blockdev {
     // pre

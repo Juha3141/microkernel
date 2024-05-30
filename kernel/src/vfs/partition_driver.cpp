@@ -1,4 +1,4 @@
-#include <kernel/partition_driver.hpp>
+#include <kernel/vfs/partition_driver.hpp>
 
 max_t storage_system::register_partition_driver(storage_system::PartitionDriver *partition_driver) {
     PartitionDriverContainer *partitiondrv_container = PartitionDriverContainer::get_self();

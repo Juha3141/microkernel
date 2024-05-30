@@ -7,10 +7,10 @@
  * @copyright Copyright (c) 2024 Ian Juha Cho
  * 
  */
-#include <kernel/exception.hpp>
-#include <kernel/interrupt.hpp>
-#include <kernel/kmem_manager.hpp>
-#include <kernel/exception_handler.hpp>
+#include <kernel/interrupt/exception.hpp>
+#include <kernel/interrupt/interrupt.hpp>
+#include <kernel/mem/kmem_manager.hpp>
+#include <kernel/interrupt/exception_handler.hpp>
 
 #include <kernel/debug.hpp>
 

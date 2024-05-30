@@ -1,8 +1,8 @@
 #ifndef _IDE_HPP_
 #define _IDE_HPP_
 
-#include <kernel/block_device_driver.hpp>
-#include <kernel/storage_system.hpp>
+#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/vfs/storage_system.hpp>
 
 #define IDE_PRIMARY_BASE                 0x1F0
 #define IDE_SECONDARY_BASE               0x170

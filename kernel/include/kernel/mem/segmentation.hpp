@@ -2,7 +2,7 @@
 #define _SEGMENTATION_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
 #include <object_manager.hpp>
 

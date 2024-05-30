@@ -1,7 +1,7 @@
 #include "fat16.hpp"
 #include "fat12.hpp"
 
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
 //////////////// FAT16 ////////////////
 

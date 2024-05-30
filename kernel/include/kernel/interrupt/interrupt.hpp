@@ -14,9 +14,9 @@
 #include <kernel/interface_type.hpp>
 #include <arch/interrupt_hardware.hpp>
 #include <arch/interrupt_controller.hpp>
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
-#include <kernel/interrupt_hardware_specified.hpp>
+#include <kernel/interrupt/interrupt_hardware_specified.hpp>
 
 #include <string.hpp>
 

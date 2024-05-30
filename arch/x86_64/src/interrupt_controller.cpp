@@ -1,6 +1,6 @@
 #include <arch/interrupt_controller.hpp>
 #include <arch/interrupt_hardware.hpp>
-#include <kernel/interrupt.hpp>
+#include <kernel/interrupt/interrupt.hpp>
 #include <kernel/debug.hpp>
 
 #include <x86_64/pic.hpp>

@@ -1,9 +1,9 @@
 #ifndef _FILE_SYSTEM_DRIVER_HPP_
 #define _FILE_SYSTEM_DRIVER_HPP_
 
-#include <kernel/device_driver.hpp>
-#include <kernel/block_device_driver.hpp>
-#include <kernel/virtual_file_system.hpp>
+#include <kernel/driver/device_driver.hpp>
+#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/vfs/virtual_file_system.hpp>
 #include <object_manager.hpp>
 
 #define FILE_OPEN_READONLY   0x01

@@ -1,5 +1,5 @@
 #include "ramdisk.hpp"
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
 static max_t ramdisk_driver_id = 0x00;
 

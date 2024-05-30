@@ -2,7 +2,7 @@
 #define _MBR_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/partition_driver.hpp>
+#include <kernel/vfs/partition_driver.hpp>
 
 #define MBR_ENTRY_OFFSET 446
 

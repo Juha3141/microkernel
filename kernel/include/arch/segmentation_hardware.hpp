@@ -1,7 +1,7 @@
 #ifndef _SEGMENTATION_HARDWARE_HPP_
 #define _SEGMENTATION_HARDWARE_HPP_
 
-#include <kernel/segmentation.hpp>
+#include <kernel/mem/segmentation.hpp>
 
 namespace segmentation {
     namespace hardware {

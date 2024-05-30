@@ -9,8 +9,8 @@
  * 
  */
 
-#include <kernel/segmentation.hpp>
-#include <kernel/interrupt.hpp>
+#include <kernel/mem/segmentation.hpp>
+#include <kernel/interrupt/interrupt.hpp>
 #include <kernel/debug.hpp>
 #include <arch/segmentation_hardware.hpp>
 

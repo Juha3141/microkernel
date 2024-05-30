@@ -1,5 +1,5 @@
-#include <kernel/exception.hpp>
-#include <kernel/exception_handler.hpp>
+#include <kernel/interrupt/exception.hpp>
+#include <kernel/interrupt/exception_handler.hpp>
 
 #include <kernel/debug.hpp>
 

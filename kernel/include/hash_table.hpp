@@ -12,7 +12,7 @@
 #define _HASH_TABLE_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 #include <linked_list.hpp>
 
 typedef int hash_index_t;

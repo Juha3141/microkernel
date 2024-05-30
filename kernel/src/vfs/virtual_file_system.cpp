@@ -1,5 +1,5 @@
-#include <kernel/virtual_file_system.hpp>
-#include <kernel/file_system_driver.hpp>
+#include <kernel/vfs/virtual_file_system.hpp>
+#include <kernel/vfs/file_system_driver.hpp>
 
 #include <kernel/debug.hpp>
 

@@ -1,4 +1,4 @@
-#include <kernel/nodes_manager.hpp>
+#include <kernel/mem/nodes_manager.hpp>
 
 #include <string.hpp>
 

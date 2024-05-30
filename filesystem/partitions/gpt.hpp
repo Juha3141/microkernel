@@ -2,7 +2,7 @@
 #define _GPT_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/partition_driver.hpp>
+#include <kernel/vfs/partition_driver.hpp>
 
 #define GPT_PARTITION_SYSTEM 	       0x00
 #define GPT_PARTITION_EFI_FIRMWARE     0x01

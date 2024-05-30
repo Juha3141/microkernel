@@ -1,6 +1,6 @@
-#include <kernel/interrupt.hpp>
+#include <kernel/interrupt/interrupt.hpp>
 #include <kernel/io_port.hpp>
-#include <kernel/interrupt_hardware_specified.hpp>
+#include <kernel/interrupt/interrupt_hardware_specified.hpp>
 
 #include <string.hpp>
 

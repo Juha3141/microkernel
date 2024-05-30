@@ -12,8 +12,8 @@
 #define _VFS_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/block_device_driver.hpp>
-#include <kernel/char_device_driver.hpp>
+#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/driver/char_device_driver.hpp>
 
 #include <object_manager.hpp>
 #include <hash_table.hpp>

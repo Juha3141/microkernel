@@ -2,8 +2,8 @@
 #define _STORAGE_SYSTEM_HPP_
 
 #include <kernel/interface_type.hpp>
-#include <kernel/interrupt.hpp>
-#include <kernel/block_device_driver.hpp>
+#include <kernel/interrupt/interrupt.hpp>
+#include <kernel/driver/block_device_driver.hpp>
 
 #include <object_manager.hpp>
 #include <linked_list.hpp>

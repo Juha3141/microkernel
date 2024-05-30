@@ -1,7 +1,7 @@
 #include "ide.hpp"
 
-#include <kernel/block_device_driver.hpp>
-#include <kernel/interrupt.hpp>
+#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/interrupt/interrupt.hpp>
 #include <kernel/io_port.hpp>
 #include <kernel/debug.hpp>
 #include <arch_inline_asm.hpp>

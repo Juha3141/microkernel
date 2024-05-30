@@ -1,8 +1,8 @@
-#include <kernel/block_device_driver.hpp>
+#include <kernel/driver/block_device_driver.hpp>
 #include <linked_list.hpp>
-#include <kernel/storage_system.hpp>
+#include <kernel/vfs/storage_system.hpp>
 
-#include <kernel/kmem_manager.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 
 #include <kernel/debug.hpp>
 

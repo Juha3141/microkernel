@@ -1,9 +1,10 @@
-LOADERFOLDER  = loader
 KERNELFOLDER  = kernel
 ARCHFOLDER    = arch
 INTEGRATEDFOLDER = integrated
 FILESYSTEMFOLDER = filesystem
 DRIVERSFOLDER = drivers
+LOADERFOLDER  = loader
+FINALIMAGEFOLDER = image
 
 KRNLIBRARYFOLDER = library
 ROOTBINARYFOLDER = bin
@@ -12,13 +13,16 @@ COMMON_HEADERFOLDER  = include
 COMMON_SRCFOLDER  = src
 
 KERNEL_ELF = Kernel.elf
-KERNEL_FINAL = Kernel.krn
+KERNEL_FINAL = Kernel.krn 
+
+PWD = $(notdir $(shell pwd))
 
 ################ customizable! ################
 
 ARCH = x86_64
-COMPILER = x86_64-elf
+LOADER = grub_iso
 
+COMPILER = x86_64-elf
 CCOPTIONS = -g -ffreestanding -nostdlib \
 -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 \
 -fpack-struct=1 -masm=intel \

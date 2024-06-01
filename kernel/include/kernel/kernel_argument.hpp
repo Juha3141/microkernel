@@ -24,7 +24,7 @@ struct MemoryMap {
 struct KernelArgument {
 	unsigned int signature;               // 0 
 	unsigned int kernel_address;          // 4
-    unsigned int kernel_size;             // 8
+     unsigned int kernel_size;             // 8
 	unsigned int memmap_count;            // 12
 	unsigned int memmap_ptr;              // 16
 	unsigned int kernel_stack_location;   // 20

@@ -14,7 +14,7 @@ FILESYSTEM_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(FILESYSTEMFOLDER)/*/*.obj)
 
 LIBRARIES = $(patsubst %.a,%,$(subst lib,-l,$(notdir $(wildcard $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER)/*.a))))
 
-LINKERSCRIPT = kernel_linker.ld
+LINKERSCRIPT = $(ARCHFOLDER)/$(ARCH)/kernel_linker.ld
 
 all: BuildLibrary BuildKernel BuildArchitecture BuildIntegrated BuildFileSystems BuildDrivers BuildFinalKernel BuildLoader
 

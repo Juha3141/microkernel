@@ -11,9 +11,9 @@ dummyfiles/*
 stub
 bmp_format
 
-bin
-OS.iso
-Kernel.krn
-Kernel.elf
 stub-module
 mount
+OS.iso
+Kernel.elf
+Kernel.krn
+image

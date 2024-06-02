@@ -4,7 +4,6 @@ include common_compilers.mk
 BASH = bash
 QEMU = qemu-system-x86_64
 QEMU_OPTION = -hda rdimg-test.img -m 8192 -rtc base=localtime -M pc -boot d
-TARGET = OS.iso
 
 FIRSTPRIORITY_OBJECT = $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/main.obj
 KERNEL_OBJECTS = $(filter-out $(FIRSTPRIORITY_OBJECT),$(wildcard $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/*.obj)) $(wildcard $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/*/*.obj)
@@ -55,9 +54,10 @@ clean:
 	
 	rm -rf $(KERNEL_ELF)
 	rm -rf $(KERNEL_FINAL)
-	rm -rf $(TARGET)
 
 run: virtualbox
+
+TARGET = image/grub_iso/OS.iso
 
 qemu:
 	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION)

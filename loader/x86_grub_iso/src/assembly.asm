@@ -1,6 +1,5 @@
 [BITS 32]
 
-global DoBIOSInterrupt
 global JumpToKernel64
 
 SECTION .text

@@ -15,7 +15,7 @@ LIBRARIES = $(patsubst %.a,%,$(subst lib,-l,$(notdir $(wildcard $(ROOTBINARYFOLD
 
 LINKERSCRIPT = $(ARCHFOLDER)/$(ARCH)/kernel_linker.ld
 
-all: BuildLibrary BuildKernel BuildArchitecture BuildIntegrated BuildFileSystems BuildDrivers BuildFinalKernel BuildLoader
+all: BuildFullKernel BuildLoader
 
 BuildLibrary:
 	make -C $(KRNLIBRARYFOLDER) all
@@ -38,22 +38,39 @@ BuildDrivers:
 BuildLoader:
 	make -C $(LOADERFOLDER) all
 
-BuildFinalKernel:
+BuildKernelBinary:
 	$(LD) -nostdlib -T $(LINKERSCRIPT) -o $(KERNEL_ELF) $(FIRSTPRIORITY_OBJECT) $(KERNEL_OBJECTS) $(ARCH_OBJECTS) $(INTEGRATED_OBJECTS) $(FILESYSTEM_OBJECTS) -L $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER) $(LIBRARIES)
 	$(OBJCOPY) -O binary $(KERNEL_ELF) $(KERNEL_FINAL)
 
-clean:
+BuildFullKernel: BuildLibrary BuildKernel BuildArchitecture BuildIntegrated BuildFileSystems BuildDrivers BuildKernelBinary
+
+clean: CleanKernelLibrary CleanArch CleanFileSystem CleanIntegrated CleanKernel CleanDrivers CleanLoader
+
+CleanKernelLibrary:
 	make -C $(KRNLIBRARYFOLDER) clean
-	
+
+CleanKernel:
 	make -C $(KERNELFOLDER) clean
-	make -C $(ARCHFOLDER) clean
-	make -C $(FILESYSTEMFOLDER) clean
-	make -C $(INTEGRATEDFOLDER) clean
-	make -C $(DRIVERSFOLDER) clean
-	make -C $(LOADERFOLDER) clean
 	
 	rm -rf $(KERNEL_ELF)
 	rm -rf $(KERNEL_FINAL)
+
+CleanFileSystem:
+	make -C $(FILESYSTEMFOLDER) clean
+
+CleanArch:
+	make -C $(ARCHFOLDER) clean
+
+CleanIntegrated:
+	make -C $(INTEGRATEDFOLDER) clean
+
+CleanDrivers:
+	make -C $(DRIVERSFOLDER) clean
+
+CleanLoader:
+	make -C $(LOADERFOLDER) clean
+
+CleanFullKernel: CleanKernelLibrary CleanKernel CleanFileSystem CleanArch CleanIntegrated CleanDrivers
 
 run: virtualbox
 

@@ -8,7 +8,7 @@
 #include <arch/interrupt_hardware.hpp>
 #include <arch/interrupt_controller.hpp>
 
-#ifdef USE_HARDWARE_INTERRUPT
+#ifdef CONFIG_USE_HARDWARE_INTERRUPT
 
 #define EXCEPTION_HANDLER_FUNCTION_DEFINITION(handler_num) \
 __attribute__ ((naked)) void exception::handlers::handler##handler_num(void) {\

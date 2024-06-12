@@ -21,7 +21,7 @@ PWD = $(notdir $(shell pwd))
 ################ customizable! ################
 
 ARCH = x86_64
-LOADER = x86_compact
+LOADER = x86_grub_iso
 
 COMPILER = x86_64-elf
 CCOPTIONS = -g -ffreestanding -nostdlib \

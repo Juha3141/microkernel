@@ -11,7 +11,7 @@
 #ifndef _HASH_TABLE_HPP_
 #define _HASH_TABLE_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/mem/kmem_manager.hpp>
 #include <linked_list.hpp>
 

@@ -1,7 +1,7 @@
 #ifndef _FAT16_HPP_
 #define _FAT16_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/vfs/file_system_driver.hpp>
 
 #include "fat.hpp"

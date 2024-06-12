@@ -2,7 +2,7 @@
 #define _ESSENTIAL_LIBRARY_HPP_
 
 #include <stdarg.h>
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 
 #define MIN(X , Y) ((X) >= (Y) ? (Y) : (X))
 #define MAX(X , Y) ((X) >= (Y) ? (X) : (Y))

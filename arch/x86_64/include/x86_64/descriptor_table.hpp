@@ -1,7 +1,7 @@
 #ifndef _x86_64_DESCRIPTOR_TABLE_HPP_
 #define _x86_64_DESCRIPTOR_TABLE_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/mem/segmentation.hpp>
 #include <kernel/mem/kmem_manager.hpp>
 

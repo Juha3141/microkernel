@@ -10,7 +10,7 @@
 #ifndef _EXCEPTIONS_HPP_
 #define _EXCEPTIONS_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/interrupt/interrupt.hpp>
 #include <kernel/mem/kmem_manager.hpp>
 

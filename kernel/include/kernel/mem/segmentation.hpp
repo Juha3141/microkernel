@@ -1,7 +1,7 @@
 #ifndef _SEGMENTATION_HPP_
 #define _SEGMENTATION_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/mem/kmem_manager.hpp>
 
 #include <object_manager.hpp>

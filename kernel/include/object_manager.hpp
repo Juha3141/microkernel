@@ -1,7 +1,7 @@
 #ifndef _OBJECT_MANAGER_HPP_
 #define _OBJECT_MANAGER_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <string.hpp>
 #include <kernel/mem/kmem_manager.hpp>
 

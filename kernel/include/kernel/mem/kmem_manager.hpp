@@ -8,7 +8,7 @@
 #ifndef _KERNEL_MEMORY_MANAGER_H_
 #define _KERNEL_MEMORY_MANAGER_H_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/mem/nodes_manager.hpp>
 
 #include <kernel/kernel_argument.hpp>

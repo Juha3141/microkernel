@@ -1,7 +1,7 @@
 #ifndef _INTERRUPT_HARDWARE_HPP_
 #define _INTERRUPT_HARDWARE_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 
 namespace interrupt {
     namespace hardware {

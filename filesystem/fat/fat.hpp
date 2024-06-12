@@ -13,7 +13,7 @@
 #ifndef _FAT_HPP_
 #define _FAT_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/driver/block_device_driver.hpp>
 #include <kernel/vfs/virtual_file_system.hpp>
 

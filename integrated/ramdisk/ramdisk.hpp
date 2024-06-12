@@ -1,7 +1,7 @@
 #ifndef _RAMDISK_DRIVER_HPP_
 #define _RAMDISK_DRIVER_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/driver/block_device_driver.hpp>
 
 struct ramdisk_driver : public blockdev::block_device_driver {

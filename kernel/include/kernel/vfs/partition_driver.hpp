@@ -12,7 +12,7 @@
 #ifndef _PARTITION_DRIVER_HPP_
 #define _PARTITION_DRIVER_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/driver/block_device_driver.hpp>
 #include <kernel/vfs/storage_system.hpp>
 

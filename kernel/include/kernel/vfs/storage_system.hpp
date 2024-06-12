@@ -1,7 +1,7 @@
 #ifndef _STORAGE_SYSTEM_HPP_
 #define _STORAGE_SYSTEM_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/interrupt/interrupt.hpp>
 #include <kernel/driver/block_device_driver.hpp>
 

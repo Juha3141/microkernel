@@ -1,7 +1,7 @@
 #ifndef _RANDOM_HPP_
 #define _RANDOM_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 
 #define RANDOM_MAXIMUM 65536
 

@@ -1,9 +1,9 @@
 #ifndef _INTERRUPT_HARDWARE_SPECIFIED_HPP_
 #define _INTERRUPT_HARDWARE_SPECIFIED_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 
-#ifdef USE_HARDWARE_INTERRUPT
+#ifdef CONFIG_USE_HARDWARE_INTERRUPT
 
 #define INTERRUPT_HARDWARE_SPECIFIED_MAXCOUNT  32
 

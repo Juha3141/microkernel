@@ -11,7 +11,8 @@
 #ifndef _INTERRUPT_HPP_
 #define _INTERRUPT_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
+#include <kernel/configurations.hpp>
 #include <arch/interrupt_hardware.hpp>
 #include <arch/interrupt_controller.hpp>
 #include <kernel/mem/kmem_manager.hpp>
@@ -95,8 +96,8 @@ namespace interrupt {
         void unmask_interrupt(int number) { mask_flag[number] = false; }
         bool is_masked(int number) { return mask_flag[number]; }
     
-        bool mask_flag[GENERAL_INTERRUPT_MAXCOUNT];
-        GeneralInterrupt interrupt_list[GENERAL_INTERRUPT_MAXCOUNT];
+        bool mask_flag[CONFIG_GENERAL_INTERRUPT_MAXCOUNT];
+        GeneralInterrupt interrupt_list[CONFIG_GENERAL_INTERRUPT_MAXCOUNT];
     };
     /* HardwareSpecifiedInterruptManager : Manages interrupt that has no interrupt vector number
      * These kinds of interrupt is only registered by 

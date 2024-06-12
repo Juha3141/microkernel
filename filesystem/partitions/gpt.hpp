@@ -1,7 +1,7 @@
 #ifndef _GPT_HPP_
 #define _GPT_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <kernel/vfs/partition_driver.hpp>
 
 #define GPT_PARTITION_SYSTEM 	       0x00

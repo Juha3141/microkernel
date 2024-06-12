@@ -1,7 +1,7 @@
 #ifndef _MODULES_HPP_
 #define _MODULES_HPP_
 
-#include <kernel/interface_type.hpp>
+#include <kernel/essentials.hpp>
 #include <object_manager.hpp>
 
 namespace modules {

@@ -3,7 +3,6 @@ include common_compilers.mk
 
 BASH = bash
 QEMU = qemu-system-x86_64
-QEMU_OPTION = -hda rdimg-test.img -m 8192 -rtc base=localtime -M pc -boot d
 
 FIRSTPRIORITY_OBJECT = $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/main.obj
 KERNEL_OBJECTS = $(filter-out $(FIRSTPRIORITY_OBJECT),$(wildcard $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/*.obj)) $(wildcard $(ROOTBINARYFOLDER)/$(KERNELFOLDER)/*/*.obj)
@@ -72,25 +71,8 @@ CleanLoader:
 
 CleanFullKernel: CleanKernelLibrary CleanKernel CleanFileSystem CleanArch CleanIntegrated CleanDrivers
 
-run: virtualbox
+run: 
+	make -C $(LOADERFOLDER)/$(LOADER) run
 
-TARGET = image/grub_iso/OS.iso
-
-qemu:
-	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION)
-
-debug_interrupt:
-	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION) -d int -M smm=off -D qemulog.txt
-
-debug: 
-	$(QEMU) -cdrom $(TARGET) $(QEMU_OPTION) -s -S -serial stdio
-
-qemu_hd_old:
-	$(QEMU) -hda $(TARGET) $(QEMU_OPTION) -boot c
-
-debug_hd_old: 
-	$(QEMU) -hda $(TARGET) $(QEMU_OPTION) -boot c -s -S -serial stdio
-
-virtualbox:
-	# qemu-img convert -O qcow2 $(TARGET) $(patsubst %.img,%.qcow2,$(TARGET))
-	vboxmanage startvm "microkernel" -E VBOX_GUI_DBG_AUTO_SHOW=true -E VBOX_GUI_DBG_ENABLED=truesw
+debugrun:
+	make -C $(LOADERFOLDER)/$(LOADER) debugrun

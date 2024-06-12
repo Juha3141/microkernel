@@ -15,12 +15,13 @@ COMMON_SRCFOLDER  = src
 KERNEL_ELF = Kernel.elf
 KERNEL_FINAL = Kernel.krn 
 
+
 PWD = $(notdir $(shell pwd))
 
 ################ customizable! ################
 
 ARCH = x86_64
-LOADER = grub_iso
+LOADER = x86_compact
 
 COMPILER = x86_64-elf
 CCOPTIONS = -g -ffreestanding -nostdlib \

@@ -61,10 +61,11 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     idt_container->entries[number].type = type & 0x0F;
     idt_container->entries[number].selector = segmentation::get_segment_value(SEGMENT_NAME_CODE); 
     idt_container->entries[number].reserved = 0x00;
-    idt_container->entries[number].IST = 0;
-    
+    idt_container->entries[number].IST 
 #ifdef CONFIG_USE_IST
-    idt_container->entries[number].IST = 1;
+     = 1;
+#else
+     = 0;
 #endif
     return true;
 }

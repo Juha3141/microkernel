@@ -47,7 +47,10 @@ BuildImage:
 	$(IMGMAKER) $(TARGET) $(BINARYFOLDER)/bootloader.bin $(BINARYFOLDER)/$(KERNEL_LOADER) $(ROOTDIR)/$(KERNEL_FINAL)
 
 run:
-	qemu-system-x86_64 -hda $(TARGET) -monitor stdio # -S -s -serial stdio
+	qemu-system-x86_64 -hda $(TARGET) -m 2048 -M pc -monitor stdio
+
+debugrun:
+	qemu-system-x86_64 -hda $(TARGET) -m 2048 -M pc -monitor stdio -S -s
 
 %.obj: $(SOURCESFOLDER)/%.c
 	$(CC) -m32 -c $< -o $(BINARYFOLDER)/$@ $(CCOPTIONS)

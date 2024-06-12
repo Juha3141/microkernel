@@ -25,7 +25,7 @@ interrupt_handler_t interrupt::GeneralInterruptManager::discard_interrupt(int nu
     return handler;
 }
 
-#ifdef USE_HARDWARE_INTERRUPT
+#ifdef CONFIG_USE_HARDWARE_INTERRUPT
 
 void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) {
     INTERRUPT_HARDWARE_SPECIFIED_ARRAY
@@ -105,11 +105,12 @@ void interrupt::init(void) {
     interrupt::controller::register_hardware_specified_interrupts();
     interrupt::controller::register_kernel_requested_interrupts();
     
-    if(USE_IST) {
+#ifdef CONFIG_USE_IST
         GLOBAL_OBJECT(InterruptStackTableManager)->ist_location = 0x00;
-        GLOBAL_OBJECT(InterruptStackTableManager)->ist_size = IST_SIZE;
+        GLOBAL_OBJECT(InterruptStackTableManager)->ist_size = CONFIG_IST_SIZE;
         interrupt::hardware::init_ist();
-    }
+#endif
+
 }
 
 /////////////////////////////////////////////////////////
@@ -188,15 +189,15 @@ bool interrupt::hardware_specified::discard_interrupt(const char *name) {
 
 #else 
 
-void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) { WARNING_NOT_USING_HARDWARE_INTERRUPT }
-interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) { WARNING_NOT_USING_HARDWARE_INTERRUPT return 0x00; }
+void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT }
+interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT return 0x00; }
 void interrupt::init(void) { interrupt::hardware::disable(); }
-bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
-bool interrupt::general::discard_interrupt(int number) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
-void interrupt::general::set_interrupt_mask(int number , bool masked) { WARNING_NOT_USING_HARDWARE_INTERRUPT }
-bool interrupt::register_interrupt_by_info(const interrupt::interrupt_info_t int_info , interrupt_handler_t handler , word interrupt_option) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
-bool interrupt::discard_interrupt_by_info(const interrupt::interrupt_info_t int_info) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
-interrupt_handler_t interrupt::hardware_specified::allocate_handler(const char *name) { WARNING_NOT_USING_HARDWARE_INTERRUPT return 0x00; }
-bool interrupt::hardware_specified::discard_interrupt(const char *name) { WARNING_NOT_USING_HARDWARE_INTERRUPT return false; }
+bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT return false; }
+bool interrupt::general::discard_interrupt(int number) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT return false; }
+void interrupt::general::set_interrupt_mask(int number , bool masked) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT }
+bool interrupt::register_interrupt_by_info(const interrupt::interrupt_info_t int_info , interrupt_handler_t handler , word interrupt_option) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT return false; }
+bool interrupt::discard_interrupt_by_info(const interrupt::interrupt_info_t int_info) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT return false; }
+interrupt_handler_t interrupt::hardware_specified::allocate_handler(const char *name) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT return 0x00; }
+bool interrupt::hardware_specified::discard_interrupt(const char *name) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT return false; }
 
 #endif

@@ -29,7 +29,7 @@ bool memory::NodesManager::available(void) {
 /// @param alignment Alignment
 /// @return 
 max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
-	default_t i;
+	int i;
 	max_t address;
 	max_t total_node_size = 0;	// TotalNodeSize : Size of the total node that is going to be used for allocation
 	// Load the node_mgr from the local address

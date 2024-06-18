@@ -7,14 +7,14 @@
 
 /******************* CONFIG_USE_HARDWARE_INTERRUPT *******************/
 #define CONFIG_USE_HARDWARE_INTERRUPT
-#define CONFIG_WARNING_USE_HARDWARE_INTERRUPT WARNING("unusable function called : interrupt is disabled\n");
 
 #define CONFIG_GENERAL_INTERRUPT_MAXCOUNT     256
+
+#define CONFIG_WARNING_HARDWARE_INTERRUPT WARNING("unusable function called : interrupt is disabled\n");
 
 /******************* CONFIG_USE_IST *******************/
 #define CONFIG_USE_IST
 #define CONFIG_IST_SIZE           2048
-
 
 
 #endif

@@ -12,7 +12,7 @@
 #define _TYPES_HPP_
 
 #include <kernel/kernel_argument.hpp>
-#include <architecture_specification.hpp>
+#include <kernel/configurations.hpp>
 
 #define SINGLETON_FUNCTION get_self
 

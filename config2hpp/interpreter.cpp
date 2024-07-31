@@ -2,9 +2,12 @@
 
 std::string convert_to_header_macro_name(std::string file_name) {
     std::transform(file_name.begin() , file_name.end() , file_name.begin() , ::toupper);
-    int index = file_name.find("." , 0);
+    int start_index = file_name.find_last_of("/");
+    std::string without_path = file_name.substr(start_index+1);
     
-    return "_CONFIG_"+file_name.substr(0 , index)+"_";
+    int index = without_path.find("." , 0);
+    
+    return "_CONFIG_"+without_path.substr(0 , index)+"_";
 }
 
 std::string remove_comment(std::string line) {
@@ -39,6 +42,7 @@ bool skip_line(std::string line) {
         new std::regex("\\[([\\w]+)\\][ ]*\\=[ ]*([\\w]+)[ ]*\\{[ ]*") , /* Grouping */\
         new std::regex("([\\w]+)[ ]*\\=[ ]*(.+)[ ]*") , /* Normal */\
         new std::regex("\\@([\\w]+)[ ]*\\=[ ]*(.+)[ ]*") , /* Raw Normal */\
+        new std::regex("\\@\\@([\\w]+)[ ]*\\=[ ]*(.+)[ ]*") , /* Raw Normal Complete */\
         new std::regex("\\}[ ]*WARNING[ ]*\\=[ ]*(.+)") , /* Warning */\
         new std::regex("\\}") , /* End */\
     };
@@ -78,11 +82,16 @@ bool interpret_line(std::string one_line , parsed_data_t &data) {
             data.value = match[2].str();
             break;
         case 3:
+            data.type = VARIABLE_TYPE_NORMAL_COMPLETE_RAW;
+            data.name = match[1].str();
+            data.value = match[2].str();
+            break;
+        case 4:
             data.type = VARIABLE_TYPE_WARNING;
             data.name = "WARNING";
             data.value = match[1].str();
             break;
-        case 4: 
+        case 5: 
             data.type = VARIABLE_TYPE_GROUP_END;
             data.name = "";
             data.value = "";
@@ -113,7 +122,7 @@ std::string convert_to_macro(const parsed_data_t &data) {
     std::string macro = "";
     switch(data.type) {
         case VARIABLE_TYPE_GROUP:
-            macro += "\n/****************** CONFIG_"+global_group+" ******************/\n";
+            macro += "\n/****************** CONFIG_"+data.name+" ******************/\n";
             if(data.value.compare("disabled") == 0) macro += "// ";
             if(data.value.compare("disabled_full") == 0) macro += "// ";
             macro += ("#define CONFIG_USE_"+data.name);
@@ -126,6 +135,10 @@ std::string convert_to_macro(const parsed_data_t &data) {
         case VARIABLE_TYPE_NORMAL_RAW:
             if(global_group_value.compare("disabled_full") == 0) macro = "// ";
             macro += ("#define CONFIG_"+data.name+" "+data.value);
+            break;
+        case VARIABLE_TYPE_NORMAL_COMPLETE_RAW:
+            if(global_group_value.compare("disabled_full") == 0) macro = "// ";
+            macro += ("#define "+data.name+" "+data.value);
             break;
         case VARIABLE_TYPE_WARNING:
             macro += ("#define CONFIG_WARNING_NO_"+global_group+" WARNING("+data.value+");");

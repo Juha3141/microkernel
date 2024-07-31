@@ -10,7 +10,7 @@ int main(int argc , char **argv) {
     config_file.open(argv[1]);
     hpp_output.open(argv[2] , std::ios::trunc);
     if(!config_file.is_open()) {
-        std::cout << "cannot open file" << argv[1] << "\n";
+        std::cout << "cannot open file " << argv[1] << "\n";
         return -1;
     }
 
@@ -38,10 +38,9 @@ int main(int argc , char **argv) {
             std::cout << "line " << line_number << " : regex not matched!\n";
             break;
         }
-        
-        set_global_group(data);
 
         std::string macro = convert_to_macro(data);
+        set_global_group(data);
         // std::cout << "C++ macro : " << macro << "\n";
         if(macro.length() > 0) {
             hpp_output << macro << "\n";

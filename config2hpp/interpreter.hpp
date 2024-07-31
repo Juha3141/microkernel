@@ -7,11 +7,12 @@
 
 #include <regex>
 
-#define VARIABLE_TYPE_NORMAL     1
-#define VARIABLE_TYPE_NORMAL_RAW 2
-#define VARIABLE_TYPE_GROUP      3
-#define VARIABLE_TYPE_GROUP_END  4
-#define VARIABLE_TYPE_WARNING    5
+#define VARIABLE_TYPE_NORMAL               1
+#define VARIABLE_TYPE_NORMAL_RAW           2
+#define VARIABLE_TYPE_NORMAL_COMPLETE_RAW  3
+#define VARIABLE_TYPE_GROUP                4
+#define VARIABLE_TYPE_GROUP_END            5
+#define VARIABLE_TYPE_WARNING              6
 
 typedef struct {
     int type;

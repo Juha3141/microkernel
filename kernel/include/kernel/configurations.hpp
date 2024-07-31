@@ -1,6 +1,8 @@
-#ifndef _CONFIGURATIONS_HPP_
-#define _CONFIGURATIONS_HPP_
+#ifndef _CONFIGURATIONS_
+#define _CONFIGURATIONS_
 
-#include <config/interrupt.hpp>
+#define WARNING(x) debug::out::printf(DEBUG_WARNING , x);
+
+#include <kernel/configurations_macro.hpp>
 
 #endif

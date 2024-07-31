@@ -7,7 +7,7 @@ BINARYFOLDER = $(ROOTDIR)/$(ROOTBINARYFOLDER)
 MAINBINARYFOLDER = $(BINARYFOLDER)/arch
 
 MAINTARGETS = $(subst .cpp,.obj,$(wildcard $(ARCH)/$(COMMON_SRCFOLDER)/*.cpp) $(wildcard $(ARCH)/$(COMMON_SRCFOLDER)/*/*.cpp))
-ASMTARGETS = $(subst .cpp,.aobj,$(wildcard $(ARCH)/$(COMMON_SRCFOLDER)/*.asm))
+ASMTARGETS = $(subst .asm,.aobj,$(wildcard $(ARCH)/$(COMMON_SRCFOLDER)/*.asm))
 SUBDIRECTORIES = $(subst $(COMMON_SRCFOLDER),$(MAINBINARYFOLDER),$(sort $(dir $(wildcard $(COMMON_SRCFOLDER)/*/))))
 
 all: prepare $(MAINTARGETS) $(ASMTARGETS)

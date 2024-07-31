@@ -132,12 +132,12 @@ void segmentation::set_to_data_segment(const char *segment_name) {
 #else
 
 void segmentation::init(void) {}
-bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) { WARNING_NOT_USING_SEGMENTATION return false; }
-bool segmentation::get_segment_info(segment_t segment_value , segmentation::segment_info_t &segment_info) { WARNING_NOT_USING_SEGMENTATION return false; }
-segment_t segmentation::get_segment_value(const char *segment_name) { WARNING_NOT_USING_SEGMENTATION return 0x00; }
-bool segmentation::register_segment(const char *segment_name , max_t start_address , max_t length , word segment_type , max_t task_id) { WARNING_NOT_USING_SEGMENTATION return false; }
-bool segmentation::discard_segment(const char *segment_name) { WARNING_NOT_USING_SEGMENTATION return false; }
-void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) { WARNING_NOT_USING_SEGMENTATION }
-void segmentation::set_to_data_segment(const char *segment_name) { WARNING_NOT_USING_SEGMENTATION }
+bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) { CONFIG_WARNING_NO_SEGMENTATION return false; }
+bool segmentation::get_segment_info(segment_t segment_value , segmentation::segment_info_t &segment_info) { CONFIG_WARNING_NO_SEGMENTATION return false; }
+segment_t segmentation::get_segment_value(const char *segment_name) { CONFIG_WARNING_NO_SEGMENTATION return 0x00; }
+bool segmentation::register_segment(const char *segment_name , max_t start_address , max_t length , word segment_type , max_t task_id) { CONFIG_WARNING_NO_SEGMENTATION return false; }
+bool segmentation::discard_segment(const char *segment_name) { CONFIG_WARNING_NO_SEGMENTATION return false; }
+void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) { CONFIG_WARNING_NO_SEGMENTATION }
+void segmentation::set_to_data_segment(const char *segment_name) { CONFIG_WARNING_NO_SEGMENTATION }
 
 #endif

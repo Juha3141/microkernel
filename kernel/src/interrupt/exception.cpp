@@ -40,7 +40,7 @@ max_t exception::ExceptionManager::register_etc(const char *exception_name) {
     return id;
 }
 
-#ifdef CONFIG_USE_HARDWARE_INTERRUPT
+#ifdef CONFIG_USE_INTERRUPT
 
 void exception::init(void) {
     GLOBAL_OBJECT(ExceptionManager)->init(EXCEPTIONS_MAXCOUNT);
@@ -98,9 +98,9 @@ ptr_t exception::register_exception_etc(const char *exception_name) {
 #else
 
 void exception::init(void) { return; }
-void exception::register_exception_general_int(const char *exception_name , int general_interrupt_number) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT }
-void exception::register_exception_hardware_specified(const char *exception_name , const char *interrupt_name) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT }
-ptr_t exception::register_exception_etc(const char *exception_name) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT return 0x00; }
-void exception::global_exception_handler(int handler_id) { CONFIG_WARNING_USE_HARDWARE_INTERRUPT }
+void exception::register_exception_general_int(const char *exception_name , int general_interrupt_number) { CONFIG_WARNING_NO_INTERRUPT }
+void exception::register_exception_hardware_specified(const char *exception_name , const char *interrupt_name) { CONFIG_WARNING_NO_INTERRUPT }
+ptr_t exception::register_exception_etc(const char *exception_name) { CONFIG_WARNING_NO_INTERRUPT return 0x00; }
+void exception::global_exception_handler(int handler_id) { CONFIG_WARNING_NO_INTERRUPT }
 
 #endif

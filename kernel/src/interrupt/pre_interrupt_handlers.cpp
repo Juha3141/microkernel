@@ -8,7 +8,7 @@
 #include <arch/interrupt_hardware.hpp>
 #include <arch/interrupt_controller.hpp>
 
-#ifdef CONFIG_USE_HARDWARE_INTERRUPT
+#ifdef CONFIG_USE_INTERRUPT
 
 interrupt_handler_t interrupt::handler::get_hardware_specified(int index) {
     INTERRUPT_HARDWARE_SPECIFIED_ARRAY

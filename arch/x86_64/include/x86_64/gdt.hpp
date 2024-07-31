@@ -4,7 +4,7 @@
 #include <x86_64/descriptor_table.hpp>
 #include <kernel/debug.hpp>
 
-#define GDT_ENTRYCOUNT (SEGMENT_MAXCOUNT+1)
+#define GDT_ENTRYCOUNT (CONFIG_SEGMENTATION_SEGMENT_MAXCOUNT+1)
 #define GDT_TYPE_RW                  0b00000010
 #define GDT_TYPE_DC                  0b00000100
 #define GDT_TYPE_E                   0b00001000

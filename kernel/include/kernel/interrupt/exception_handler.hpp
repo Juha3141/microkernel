@@ -9,7 +9,7 @@
 #define EXCEPTION_HANDLER_PTR(handler_num) exception::handlers::handler##handler_num
 #define EXCEPTION_HANDLER_FUNCTION(handler_num) __attribute__ ((naked)) void handler##handler_num(void);
 
-#ifdef CONFIG_USE_HARDWARE_INTERRUPT
+#ifdef CONFIG_USE_INTERRUPT
 
 #define EXCEPTION_HANDLER_ARRAY \
 ptr_t handlers[EXCEPTION_HANDLER_MAXCOUNT] = {\

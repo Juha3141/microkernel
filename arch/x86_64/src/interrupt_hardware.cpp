@@ -49,7 +49,7 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     byte type = 0;
     word privilege = 0;
     x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
-    if(number >= CONFIG_GENERAL_INTERRUPT_MAXCOUNT) return false;
+    if(number >= CONFIG_INTERRUPT_GENERAL_MAXCOUNT) return false;
     idt_container->entries[number].base_low = handler_ptr & 0xFFFF;
     idt_container->entries[number].base_high = handler_ptr >> 16;
     if((interrupt_option & INTERRUPT_HANDLER_EXCEPTION) == INTERRUPT_HANDLER_EXCEPTION) type = IDT_TYPE_32BIT_TRAP_GATE;
@@ -89,7 +89,7 @@ void interrupt::hardware::init_ist(void) {
 }
 bool interrupt::hardware::discard_interrupt(int number) {
     x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
-    if(number >= CONFIG_GENERAL_INTERRUPT_MAXCOUNT) return false;
+    if(number >= CONFIG_INTERRUPT_GENERAL_MAXCOUNT) return false;
     memset(&(idt_container->entries[number]) , 0 , sizeof(x86_64::IDTEntry));
     return true;
 }

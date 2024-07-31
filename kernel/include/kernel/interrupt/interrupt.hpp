@@ -96,8 +96,8 @@ namespace interrupt {
         void unmask_interrupt(int number) { mask_flag[number] = false; }
         bool is_masked(int number) { return mask_flag[number]; }
     
-        bool mask_flag[CONFIG_GENERAL_INTERRUPT_MAXCOUNT];
-        GeneralInterrupt interrupt_list[CONFIG_GENERAL_INTERRUPT_MAXCOUNT];
+        bool mask_flag[CONFIG_INTERRUPT_GENERAL_MAXCOUNT];
+        GeneralInterrupt interrupt_list[CONFIG_INTERRUPT_GENERAL_MAXCOUNT];
     };
     /* HardwareSpecifiedInterruptManager : Manages interrupt that has no interrupt vector number
      * These kinds of interrupt is only registered by 

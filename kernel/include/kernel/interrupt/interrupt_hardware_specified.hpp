@@ -3,7 +3,7 @@
 
 #include <kernel/essentials.hpp>
 
-#ifdef CONFIG_USE_HARDWARE_INTERRUPT
+#ifdef CONFIG_USE_INTERRUPT
 
 #define INTERRUPT_HARDWARE_SPECIFIED_MAXCOUNT  32
 

@@ -7,17 +7,20 @@ BINARYFOLDER = $(ROOTDIR)/$(ROOTBINARYFOLDER)
 MAINBINARYFOLDER = $(BINARYFOLDER)/$(KERNELFOLDER)
 
 MAINTARGETS = $(subst .cpp,.obj,$(wildcard $(COMMON_SRCFOLDER)/*.cpp) $(wildcard $(COMMON_SRCFOLDER)/*/*.cpp))
-ASMTARGETS = $(subst .cpp,.aobj,$(wildcard $(COMMON_SRCFOLDER)/*.asm))
+ASMTARGETS = $(subst .asm,.aobj,$(wildcard $(COMMON_SRCFOLDER)/*.asm))
 SUBDIRECTORIES = $(subst $(COMMON_SRCFOLDER),$(MAINBINARYFOLDER),$(sort $(dir $(wildcard $(COMMON_SRCFOLDER)/*/))))
 
-all: prepare $(ASMSOURCES) $(MAINTARGETS)
+all: prepare mkconfig $(ASMSOURCES) $(MAINTARGETS)
 
 prepare:
 	mkdir $(MAINBINARYFOLDER)
 ifneq "$(SUBDIRECTORIES)" ""
 	mkdir $(SUBDIRECTORIES)
 endif
-	
+
+mkconfig:
+	./config2hpp global_config.config $(COMMON_HEADERFOLDER)/kernel/configurations_macro.hpp
+
 clean:
 	rm -rf $(MAINBINARYFOLDER)
 

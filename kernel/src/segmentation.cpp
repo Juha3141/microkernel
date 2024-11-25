@@ -39,7 +39,7 @@ segment_t segmentation::SegmentsManager::search_segment(const char *segment_name
     return get_data(id)->value;
 }
 
-#ifdef USE_SEGMENTATION
+#ifdef CONFIG_USE_SEGMENTATION
 
 void segmentation::init(void) {
     debug::push_function("seg::init");
@@ -48,7 +48,7 @@ void segmentation::init(void) {
     struct kernel_segments_info kseginfo;
     struct kernel_segments_value ksegvalue;
     SegmentsManager *segment_mgr = SegmentsManager::get_self();
-    segment_mgr->init(SEGMENT_MAXCOUNT);
+    segment_mgr->init(CONFIG_SEGMENTATION_SEGMENT_MAXCOUNT);
     
     /* Use 1-to-1 correspondence for kernel segment */
     kseginfo.kernel_code.start_address = 0x00;

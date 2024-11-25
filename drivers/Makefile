@@ -1,7 +1,4 @@
-ROOTDIR = ..
-
-include $(ROOTDIR)/global_variables.mk
-include $(ROOTDIR)/common_compilers.mk
+include $(ROOTDIR)/build_kernel_common.mk
 
 BINARYFOLDER = $(ROOTDIR)/$(ROOTBINARYFOLDER)
 MAINBINARYFOLDER = $(BINARYFOLDER)/$(DRIVERSFOLDER)
@@ -11,8 +8,6 @@ COMPLETE_ASM_TARGETS = $(foreach dir,$(DRIVERS),$(if $(wildcard $(dir)*.asm),$(s
 DRIVERS = $(sort $(dir $(wildcard ./*/)))
 
 all: prepare loop $(ASMSOURCES) $(MAINTARGETS)
-# $(LD) -nostdlib -T $(LINKERSCRIPT) -o $(ELF) $(FIRSTPRIORITYOBJ) $(OBJECTS) -L $(BINARYFOLDER)/$(KRNLIBRARYFOLDER) $(LIBRARIES)
-# $(OBJCOPY) -O binary $(ELF) $(KERNELTARGET)
 
 prepare:
 	mkdir $(MAINBINARYFOLDER)

@@ -3,7 +3,8 @@ ENTRY(kernel_main)
 
 SECTIONS {
   . = kernel_linear_address;
-  .text : {
+  .text kernel_linear_address : {
+    *(.text.kernel_main)
     *(.text) *(.text.*)
   }
   .data ALIGN(4096) : {

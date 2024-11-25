@@ -1,4 +1,5 @@
 include global_variables.mk
+include configurations.mk
 include common_compilers.mk
 
 BASH = bash
@@ -9,70 +10,45 @@ KERNEL_OBJECTS = $(filter-out $(FIRSTPRIORITY_OBJECT),$(wildcard $(ROOTBINARYFOL
 ARCH_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(ARCHFOLDER)/*.obj) $(wildcard $(ROOTBINARYFOLDER)/$(ARCHFOLDER)/*/*.obj)
 INTEGRATED_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(INTEGRATEDFOLDER)/*/*.obj)
 FILESYSTEM_OBJECTS = $(wildcard $(ROOTBINARYFOLDER)/$(FILESYSTEMFOLDER)/*/*.obj)
+KERNEL_TARGET_OBJECTS = $(FIRSTPRIORITY_OBJECT) $(KERNEL_OBJECTS) $(ARCH_OBJECTS) $(INTEGRATED_OBJECTS) $(FILESYSTEM_OBJECTS)
 
-LIBRARIES = $(patsubst %.a,%,$(subst lib,-l,$(notdir $(wildcard $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER)/*.a))))
+BUILD_TARGET_FOLDERS = $(KERNELFOLDER) $(ARCHFOLDER) $(INTEGRATEDFOLDER) $(FILESYSTEMFOLDER) 
 
-LINKERSCRIPT = $(ARCHFOLDER)/$(ARCH)/kernel_linker.ld
+ROOTDIR = $(PWD)
+MAKE_ARGUMENTS = ROOTDIR=$(ROOTDIR)
 
-all: BuildFullKernel BuildLoader
+all: build_kernel_sources build_kernel_binary build_loader
 
-BuildLibrary:
-	make -C $(KRNLIBRARYFOLDER) all
-
-BuildKernel:
-	make -C $(KERNELFOLDER) all
-
-BuildArchitecture:
-	make -C $(ARCHFOLDER) all
-
-BuildIntegrated:
-	make -C $(INTEGRATEDFOLDER) all
-
-BuildFileSystems:
-	make -C $(FILESYSTEMFOLDER) all
-
-BuildDrivers:
-	make -C $(DRIVERSFOLDER) all
-
-BuildLoader:
-	make -C $(LOADERFOLDER) all
-
-BuildKernelBinary:
-	$(LD) -nostdlib -T $(LINKERSCRIPT) -o $(KERNEL_ELF) $(FIRSTPRIORITY_OBJECT) $(KERNEL_OBJECTS) $(ARCH_OBJECTS) $(INTEGRATED_OBJECTS) $(FILESYSTEM_OBJECTS) -L $(ROOTBINARYFOLDER)/$(KRNLIBRARYFOLDER) $(LIBRARIES)
-	$(OBJCOPY) -O binary $(KERNEL_ELF) $(KERNEL_FINAL)
-
-BuildFullKernel: BuildLibrary BuildKernel BuildArchitecture BuildIntegrated BuildFileSystems BuildDrivers BuildKernelBinary
-
-clean: CleanKernelLibrary CleanArch CleanFileSystem CleanIntegrated CleanKernel CleanDrivers CleanLoader
-
-CleanKernelLibrary:
-	make -C $(KRNLIBRARYFOLDER) clean
-
-CleanKernel:
-	make -C $(KERNELFOLDER) clean
-	
+clean: clean_loader
 	rm -rf $(KERNEL_ELF)
-	rm -rf $(KERNEL_FINAL)
+	rm -rf $(KERNEL_IMG)
+	@echo "$(shell tput bold)================  Cleaning ================$(shell tput sgr0)"
+	for build_dir in $(BUILD_TARGET_FOLDERS); do\
+		echo Cleaning the "$$build_dir" folder...; \
+		make -C $$build_dir clean $(MAKE_ARGUMENTS) CURRENTFOLDER=$$build_dir || exit; \
+	done
 
-CleanFileSystem:
-	make -C $(FILESYSTEMFOLDER) clean
+clean_loader:
+	make -C $(LOADERFOLDER)/$(ARCH)/$(IMAGE) clean $(MAKE_ARGUMENTS) TARGET_DIR=$(ROOTDIR)/$(FINALIMAGEFOLDER)/$(ARCH)/$(IMAGE) 
 
-CleanArch:
-	make -C $(ARCHFOLDER) clean
+build_kernel_sources: 
+	@echo "$(shell tput bold)================  Builing the full kernel sources ================$(shell tput sgr0)"
+	for build_dir in $(BUILD_TARGET_FOLDERS); do\
+		echo Building the "$$build_dir" folder...; \
+		make -C $$build_dir all $(MAKE_ARGUMENTS) CURRENTFOLDER=$$build_dir || exit; \
+	done
 
-CleanIntegrated:
-	make -C $(INTEGRATEDFOLDER) clean
+build_kernel_binary:
+	@echo "$(shell tput bold)================  Builing the kernel binary ================$(shell tput sgr0)"
+	make -f $(ARCHFOLDER)/$(ARCH)/$(BUILD_KERNEL_IMG_MAKEFILE) build_kernel_img ROOTDIR=$(PWD) TARGET_OBJECTS="$(KERNEL_TARGET_OBJECTS)"\
+		LIBRARYFOLDER="." KERNEL_ELF=$(ROOTBINARYFOLDER)/$(KERNEL_ELF) KERNEL_IMG=$(KERNEL_IMG_LOCATION)/$(KERNEL_IMG)
 
-CleanDrivers:
-	make -C $(DRIVERSFOLDER) clean
-
-CleanLoader:
-	make -C $(LOADERFOLDER) clean
-
-CleanFullKernel: CleanKernelLibrary CleanKernel CleanFileSystem CleanArch CleanIntegrated CleanDrivers
+build_loader:
+	@echo "$(shell tput bold)================  Builing the final kernel image ================$(shell tput sgr0)"
+	make -C $(LOADERFOLDER)/$(ARCH)/$(IMAGE) all $(MAKE_ARGUMENTS) TARGET_DIR=$(ROOTDIR)/$(FINALIMAGEFOLDER)/$(ARCH)/$(IMAGE) 
 
 run: 
-	make -C $(LOADERFOLDER)/$(LOADER) run
+	make -C $(LOADERFOLDER)/$(ARCH)/$(IMAGE) run_os $(MAKE_ARGUMENTS) TARGET_DIR=$(ROOTDIR)/$(FINALIMAGEFOLDER)/$(ARCH)/$(IMAGE) 
 
 debugrun:
-	make -C $(LOADERFOLDER)/$(LOADER) debugrun
+	make -C $(LOADERFOLDER)/$(LOADER) debug_run_os $(MAKE_ARGUMENTS) TARGET_DIR=$(ROOTDIR)/$(FINALIMAGEFOLDER)/$(ARCH)/$(IMAGE) 

@@ -6,7 +6,12 @@
 #define KERNEL_NEW_HIGHER_HALF     0xC0000000
 
 void main(void) {
-    
+    unsigned char *vmem = (unsigned char *)0xB8000;
+    const char string[] = "Hello, world!";
+    for(int i = 0; string[i] != 0x00; i++) {
+        *(vmem++) = string[i];
+        *(vmem++) = 0x01;
+    }
     while(1) {
         ;
     }

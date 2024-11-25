@@ -15,6 +15,12 @@ start:
     mov ax , 0x07C0
     mov ds , ax
 
+    ; print "Test"
+    mov ax , 0xB800
+    mov es , ax
+    mov dword[es:0x00] , 0x07650754
+    mov dword[es:0x04] , 0x07740773
+
     xor ax , ax
     mov ss , ax
     mov sp , 0x9FF8

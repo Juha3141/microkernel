@@ -5,7 +5,6 @@
 
 include $(ROOTDIR)/global_variables.mk
 include $(ROOTDIR)/configurations.mk
-include $(ROOTDIR)/common_compilers.mk
 
 BINARYFOLDER = $(ROOTDIR)/$(ROOTBINARYFOLDER)
 MAINBINARYFOLDER = $(BINARYFOLDER)/$(CURRENTFOLDER)

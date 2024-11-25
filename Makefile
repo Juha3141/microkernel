@@ -1,6 +1,5 @@
 include global_variables.mk
 include configurations.mk
-include common_compilers.mk
 
 BASH = bash
 QEMU = qemu-system-x86_64

@@ -661,6 +661,10 @@ int vfs::read_directory(file_info *directory) {
     int file_count = file_loc->fs_driver->read_directory(directory , file_info_list);
     ObjectLinkedList<file_info>::node_s *ptr = file_info_list.get_start_node();
 
+    if(directory->file_list == 0x00) {
+        directory->file_list = new ObjectLinkedList<file_info_s>;
+        directory->file_list->init();
+    }
     while(ptr != 0x00) {
         file_info *new_file = ptr->object;
         ObjectLinkedList<file_info>::node_s *file_node = directory->file_list->search<char *>(

@@ -1,4 +1,4 @@
-#include "lib.hpp"
+#include <string.hpp>
 #include <stdarg.h>
 
 #define NONE 0
@@ -18,8 +18,6 @@ struct FormatData {
     int size;
     int type;
 };
-
-template <typename T> char* itoa_variation(T value, char* result, int base , bool lowercase=true);
 
 /// @brief get flag from format string
 /// @param fmt format string
@@ -97,6 +95,7 @@ template <typename T> int get_integer_digits(T value) {
     return c;
 }
 
+
 void process_added_string_d_i(struct FormatData fd , char *added_string , va_list ap) {
     if(fd.size == NONE) {
         int value = va_arg(ap , int);
@@ -144,6 +143,30 @@ void process_added_string_x_X(struct FormatData fd , char *added_string , va_lis
         unsigned long long int value = va_arg(ap , unsigned long long int);
         itoa_variation<unsigned long long int>(value , added_string , 16 , lowercase);
     }
+}
+
+template <typename T> char* itoa_variation(T value, char* result, int base , bool lowercase) {
+	// check that the base if valid
+    char sample_str_low[] =  "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz";
+    char sample_str_high[] = "ZYXWVUTSRQPONMLKJIHGFEDCBA9876543210123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    char *sample_str = (lowercase) ? sample_str_low : sample_str_high;
+	if (base < 2 || base > 36) { *result = '\0'; return result; }
+	char* ptr = result, *ptr1 = result, tmp_char;
+	T tmp_value;
+	do {
+		tmp_value = value;
+		value /= base;
+		*ptr++ = sample_str[35 + (tmp_value - value * base)];
+	} while ( value );
+	// Apply negative sign
+	if (tmp_value < 0) *ptr++ = '-';
+	*ptr-- = '\0';
+	while(ptr1 < ptr) {
+		tmp_char = *ptr;
+		*ptr--= *ptr1;
+		*ptr1++ = tmp_char;
+	}
+	return result;
 }
 
 void process_format(char *buf , struct FormatData fd , int &buf_i , va_list ap) {
@@ -229,28 +252,4 @@ int sprintf(char *buf , const char *fmt , ...) {
     int ret = vsprintf(buf , fmt , ap);
     va_end(ap);
     return ret;
-}
-
-template <typename T> char* itoa_variation(T value, char* result, int base , bool lowercase) {
-	// check that the base if valid
-    char sample_str_low[] =  "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz";
-    char sample_str_high[] = "ZYXWVUTSRQPONMLKJIHGFEDCBA9876543210123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    char *sample_str = (lowercase) ? sample_str_low : sample_str_high;
-	if (base < 2 || base > 36) { *result = '\0'; return result; }
-	char* ptr = result, *ptr1 = result, tmp_char;
-	T tmp_value;
-	do {
-		tmp_value = value;
-		value /= base;
-		*ptr++ = sample_str[35 + (tmp_value - value * base)];
-	} while ( value );
-	// Apply negative sign
-	if (tmp_value < 0) *ptr++ = '-';
-	*ptr-- = '\0';
-	while(ptr1 < ptr) {
-		tmp_char = *ptr;
-		*ptr--= *ptr1;
-		*ptr1++ = tmp_char;
-	}
-	return result;
 }

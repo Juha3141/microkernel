@@ -7,26 +7,26 @@
 #define MIN(X , Y) ((X) >= (Y) ? (Y) : (X))
 #define MAX(X , Y) ((X) >= (Y) ? (X) : (Y))
 
-extern void *memset(void *s , int c , size_t n);
-extern void *memcpy(void *dest , const void *src , size_t n);
-extern int memcmp(const void *s1 , const void *s2 , size_t n);
+void *memset(void *s , int c , size_t n);
+void *memcpy(void *dest , const void *src , size_t n);
+int memcmp(const void *s1 , const void *s2 , size_t n);
 
-extern size_t strlen(const char *s);
-extern char *strcpy(char *dest , const char *src);
-extern char *strncpy(char *dest , const char *src , size_t n);
-extern char *strcat(char *dest , char *src);
-extern char *strncat(char *dest , const char *src , size_t n);
-extern int strcmp(const char *s1 , const char *s2);
-extern int strncmp(const char *s1 , const char *s2 , size_t n);
+size_t strlen(const char *s);
+char *strcpy(char *dest , const char *src);
+char *strncpy(char *dest , const char *src , size_t n);
+char *strcat(char *dest , char *src);
+char *strncat(char *dest , const char *src , size_t n);
+int strcmp(const char *s1 , const char *s2);
+int strncmp(const char *s1 , const char *s2 , size_t n);
 
-extern int vsprintf(char *buf , const char *fmt , va_list ap);
-extern int sprintf(char *buf , const char *fmt , ...);
+int vsprintf(char *buf , const char *fmt , va_list ap);
+int sprintf(char *buf , const char *fmt , ...);
 
-extern int atoi(const char *nptr);
-extern long int atol(const char *nptr);
-extern long long int atoll(const char *nptr);
-extern char *itoa(int value , char *result , int base);
-template <typename T> extern char *itoa_variation(T value , char *result , int base);
+int atoi(const char *nptr);
+long int atol(const char *nptr);
+long long int atoll(const char *nptr);
+char *itoa(int value , char *result , int base);
+template <typename T> extern char *itoa_variation(T value , char *result , int base , bool lowercase=true);
 
 
 #endif

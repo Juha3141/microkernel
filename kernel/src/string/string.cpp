@@ -1,4 +1,4 @@
-#include "lib.hpp"
+#include <string.hpp>
 
 #define size_t unsigned int
 

@@ -1,6 +1,9 @@
 .vscode
 *.workspace
 *.obj
+*.aobj
+*.bin
+*.elf
 .gdb_history
 bochsrc.txt
 custom_vsprintf*
@@ -11,9 +14,11 @@ dummyfiles/*
 stub
 bmp_format
 
+image/
 stub-module
 mount
-OS.iso
+*.iso
+*.img
 Kernel.elf
 Kernel.krn
 image

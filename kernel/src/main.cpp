@@ -29,6 +29,8 @@ void pmem_alloc_test(int rand_seed);
 void dump_block_devices(void);
 void test_hash(void);
 
+void demo_routine(void);
+
 extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     struct KernelArgument *kargument = (struct KernelArgument *)kernel_argument_struct_addr;
     if(kargument->signature != KERNELINFO_STRUCTURE_SIGNATURE) {
@@ -64,9 +66,36 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     vfs::init(device);
     debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
 
+    demo_routine();
+//  dump_block_devices();
+
     while(1) {
         ;
     }
+}
+
+void demo_routine(void) {
+    file_info *rootdir = vfs::get_root_directory();
+    int file_count = vfs::read_directory(rootdir);
+    debug::out::printf(DEBUG_INFO , "Number of files in the root directory : %d\n" , file_count);
+    ObjectLinkedList<file_info_s>::node_s *f_ptr_node = rootdir->file_list->get_start_node();
+    for(int i = 0; i < file_count; i++) {
+        if(f_ptr_node == 0x00) break;
+        if(f_ptr_node->object->file_type == FILE_TYPE_DIRECTORY) debug::out::printf("%s [DIRECTORY]\n" , f_ptr_node->object->file_name);
+        else debug::out::printf("%s, size = %d\n" , f_ptr_node->object->file_name , f_ptr_node->object->file_size);
+        f_ptr_node = f_ptr_node->next;
+    }
+
+    // read file Hello.txt
+    vfs::create({"hello-new.txt" , rootdir} , FILE_TYPE_FILE);
+    file_info *new_file = vfs::open({"hello-new.txt" , rootdir} , FILE_OPEN_RW);
+    vfs::write(new_file , 25 , "This is a brand new file!");
+    
+    vfs::lseek(new_file , 0 , LSEEK_SET);
+    char buffer[25] = {0 , };
+    vfs::read(new_file , 25 , buffer);
+    
+    debug::out::printf("buffer : %s\n" , buffer);
 }
 
 void dump_block_devices(void) {

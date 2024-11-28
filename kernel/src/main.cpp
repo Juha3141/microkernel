@@ -19,6 +19,8 @@
 #include <integrated_drivers.hpp>
 #include <file_systems.hpp>
 
+#include <arch_inline_asm.hpp>
+
 // For testing
 
 #include <random.hpp>
@@ -31,7 +33,7 @@ void test_hash(void);
 
 void demo_routine(void);
 
-extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
+extern "C" __attribute__ ((section(".entry"))) void kernel_main(unsigned long kernel_argument_struct_addr) {
     struct KernelArgument *kargument = (struct KernelArgument *)kernel_argument_struct_addr;
     if(kargument->signature != KERNELINFO_STRUCTURE_SIGNATURE) {
         debug::panic("kernel structure not found");
@@ -53,6 +55,13 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     debug::out::printf(DEBUG_INFO , "----- Initializing character device driver..\n");
     chardev::init();
     register_basic_kernel_drivers();
+
+    interrupt::hardware::enable();
+
+    while(1) {
+        ;
+    }
+
     debug::out::printf(DEBUG_INFO , "----- Initializing vfs..\n");
     debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , kargument->ramdisk_address , kargument->ramdisk_address+kargument->ramdisk_size);
     // find the ramdisk driver
@@ -66,7 +75,7 @@ extern "C" void kernel_main(unsigned long kernel_argument_struct_addr) {
     vfs::init(device);
     debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
 
-    demo_routine();
+//  demo_routine();
 //  dump_block_devices();
 
     while(1) {

@@ -19,6 +19,8 @@
 
 #include <string.hpp>
 
+static qword ist_address[7];
+
 void interrupt::hardware::enable(void) {
     __asm__ ("sti");
 }
@@ -43,6 +45,8 @@ void interrupt::hardware::init(void) {
     
     debug::pop_function();
 }
+
+qword interrupt::hardware::get_ist_address(void) { return ist_address[0]; }
 
 bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , word interrupt_option) {
     word flags = IDT_FLAGS_P;
@@ -82,11 +86,13 @@ void interrupt::hardware::init_ist(void) {
     tss->ist[0] = (qword)memory::pmem_alloc(512*1024 , 4096)+(512*1024);
     debug::out::printf(DEBUG_INFO , "tss->ist[0] : 0x%X\n" , tss->ist[0]);
     tss->iopb_offset = 0xFFFF;
+    ist_address[0] = (qword)tss->ist[0];
     // Set Segment
     IA ("ltr %0"::"r"((word)gdt_container->tss_segment));
     
     debug::out::printf_function(DEBUG_TEXT , "init_ist" , "TSS segment : 0x%X\n" , gdt_container->tss_segment);
 }
+
 bool interrupt::hardware::discard_interrupt(int number) {
     x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
     if(number >= CONFIG_INTERRUPT_GENERAL_MAXCOUNT) return false;

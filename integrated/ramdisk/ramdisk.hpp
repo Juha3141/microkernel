@@ -9,6 +9,9 @@ struct ramdisk_driver : public blockdev::block_device_driver {
 
     static struct blockdev::block_device *create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr = 0x00);
     bool prepare(void) override;
+    
+    bool open(blockdev::block_device *device);
+    bool close(blockdev::block_device *device);
     max_t read(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) override;
     max_t write(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) override;
     bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;

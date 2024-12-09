@@ -44,17 +44,18 @@ namespace blockdev {
         blockdev::BlockDeviceContainer *logical_block_devs;
     };
     struct block_device : general_device<block_device_driver> {
-
         // Geometry information
         device_geometry geometry;
         // Storage information
         storage_info_t storage_info;
 
         max_t mount_id;
-        // FileSystemDriver *fs_driver;
     };
     struct block_device_driver : general_device_driver<BlockDeviceContainer> {
         virtual bool prepare(void) = 0;
+        virtual bool open(block_device *device) = 0;
+        virtual bool close(block_device *device) = 0;
+
         virtual max_t read(block_device *device , max_t block_address , max_t count , void *buffer) = 0;
         virtual max_t write(block_device *device , max_t block_address , max_t count , void *buffer) = 0;
         virtual bool get_geometry(block_device *device , device_geometry &geometry) = 0;
@@ -88,9 +89,6 @@ namespace blockdev {
     block_device *search_device(max_t driver_id , max_t device_id);
 
     bool discard_device(block_device *device);
-
-    block_device *create_empty_device(void);
-    void designate_resources_count(block_device *device , int io_port_count , int interrupt_count , int flags_count , int etc_res_count);
 };
 
 #endif

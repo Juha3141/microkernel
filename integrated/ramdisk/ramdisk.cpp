@@ -9,8 +9,8 @@ void ramdisk_driver::register_driver(void) {
 
 struct blockdev::block_device *ramdisk_driver::create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr) {
     // Write some basic informations
-    blockdev::block_device *new_device = blockdev::create_empty_device();
-    blockdev::designate_resources_count(new_device , 0 , 0 , 0 , 1);
+    blockdev::block_device *new_device = create_empty_device<blockdev::block_device>();
+    designate_resources_count<blockdev::block_device>(new_device , 0 , 0 , 0 , 1);
     new_device->device_driver = blockdev::search_driver(ramdisk_driver_id);
     ramdisk_info_s *disk_info = (ramdisk_info_s *)memory::pmem_alloc(sizeof(ramdisk_info_s));
 
@@ -27,6 +27,14 @@ struct blockdev::block_device *ramdisk_driver::create(max_t total_sector_count ,
 
 bool ramdisk_driver::prepare(void) {
     return true; // There's actually nothing we have to do!
+}
+
+bool ramdisk_driver::open(blockdev::block_device *device) {
+    return true;
+}
+
+bool ramdisk_driver::close(blockdev::block_device *device) {
+    return true;
 }
 
 max_t ramdisk_driver::read(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) {

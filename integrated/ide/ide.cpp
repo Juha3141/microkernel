@@ -17,18 +17,12 @@ void ide_driver::register_driver(void) {
     blockdev::register_driver(new ide_driver , "idehd");
 }
 
-__attribute__((naked)) void ide::interrupt_handler_irq14(void) { 
-    main_int_handler(true); 
-    interrupt::controller::interrupt_received(32+14);
-    
-    IA_INTERRUPT_RETURN
+void ide::interrupt_handler_irq14(struct Registers *regs) {
+    main_int_handler(true);
 };
 
-__attribute__((naked)) void ide::interrupt_handler_irq15(void) { 
-    main_int_handler(false); 
-    interrupt::controller::interrupt_received(32+15);
-    
-    IA_INTERRUPT_RETURN
+void ide::interrupt_handler_irq15(struct Registers *regs) { 
+    main_int_handler(false);
 };
 
 bool ide_driver::prepare(void) {
@@ -44,8 +38,8 @@ bool ide_driver::prepare(void) {
 
     debug::out::printf_function(DEBUG_INFO , "ide_driver::prepare" , "Searching every ide drives...\n");
     for(i = 0; i < 4; i++) {
-        devices[i] = blockdev::create_empty_device();
-        blockdev::designate_resources_count(devices[i] , 2 , 0 , 1 , 0);
+        devices[i] = create_empty_device<blockdev::block_device>();
+        designate_resources_count<blockdev::block_device>(devices[i] , 2 , 0 , 1 , 0);
 
         devices[i]->resources.io_ports[0] = io_port_info[i][0];
         devices[i]->resources.io_ports[1] = io_port_info[i][1];
@@ -70,6 +64,14 @@ bool ide_driver::wait(io_port base_port) {
 
         if((status & IDE_STATUS_DRQ) == IDE_STATUS_DRQ) break;
     }while((status & IDE_STATUS_BUSY) == IDE_STATUS_BUSY);
+    return true;
+}
+
+bool ide_driver::open(blockdev::block_device *device) {
+    return true;
+}
+
+bool ide_driver::close(blockdev::block_device *device) {
     return true;
 }
 
@@ -220,8 +222,8 @@ bool ide_cd_driver::prepare(void) {
 
     debug::out::printf_function(DEBUG_INFO , "ide_cd_driver::prepare" , "Searching every ide cd drives...\n");
     for(int i = 0; i < 4; i++) {
-        devices[i] = blockdev::create_empty_device();
-        blockdev::designate_resources_count(devices[i] , 2 , 0 , 1 , 0);
+        devices[i] = create_empty_device<blockdev::block_device>();
+        designate_resources_count<blockdev::block_device>(devices[i] , 2 , 0 , 1 , 0);
 
         devices[i]->resources.io_ports[0] = io_port_info[i][0];
         devices[i]->resources.io_ports[1] = io_port_info[i][1];
@@ -244,6 +246,14 @@ bool ide_cd_driver::send_command(word base_port , byte *command) {
     for(int i = 0; i < 6; i++) {
         io_write_word(base_port+IDE_PORT_DATA , ((word *)command)[i]);
     }
+    return true;
+}
+
+bool ide_cd_driver::open(blockdev::block_device *device) {
+    return true;
+}
+
+bool ide_cd_driver::close(blockdev::block_device *device) {
     return true;
 }
 

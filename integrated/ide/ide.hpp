@@ -57,6 +57,8 @@ struct ide_driver : blockdev::block_device_driver {
     static void register_driver(void);
 
     bool prepare(void) override;
+    bool open(blockdev::block_device *device) override;
+    bool close(blockdev::block_device *device) override;
     max_t read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
     max_t write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
     bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;
@@ -72,6 +74,8 @@ struct ide_cd_driver : blockdev::block_device_driver { // inherit from IDEDriver
     static void register_driver(void);
     
     bool prepare(void) override;
+    bool open(blockdev::block_device *device) override;
+    bool close(blockdev::block_device *device) override;
     max_t read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
     max_t write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
     bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;
@@ -103,8 +107,8 @@ namespace ide {
         word model[20];
         word reserved_3[210];
     }cd_geometry_t;
-    void interrupt_handler_irq14(void);
-    void interrupt_handler_irq15(void);
+    void interrupt_handler_irq14(struct Registers *regs);
+    void interrupt_handler_irq15(struct Registers *regs);
     
     void main_int_handler(bool Primary);
 }

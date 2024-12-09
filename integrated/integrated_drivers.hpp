@@ -14,12 +14,15 @@
 // headers here
 #include <ramdisk/ramdisk.hpp>
 #include <ide/ide.hpp>
+#include <ps2/ps2.hpp>
 
 // register_driver function here
 #define INTEGRATED_DRIVER_LIST { \
     ramdisk_driver::register_driver , \
     ide_driver::register_driver , \
     ide_cd_driver::register_driver , \
+    ps2_keyboard_driver::register_driver , \
+    ps2_mouse_driver::register_driver , \
 }
 
 #endif

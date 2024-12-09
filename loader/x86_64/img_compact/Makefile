@@ -39,4 +39,4 @@ run_os:
 debug_run_os:
 	qemu-system-x86_64 -hda $(TARGET) -m 2048 -M pc -monitor stdio -S -s
 
-include ../../build_loader_common.mk
+include $(ROOTDIR)/build_loader_common.mk

@@ -18,8 +18,8 @@ flags_value equ (1 << 2)|(1 << 0) ; flag 0 : align 4kb, flag 2 : GUI
     entry_addr:    dd 0x00
 
     mode_type:     dd 0x00
-    width:         dd 1024
-    height:        dd 768
+    width:         dd 800
+    height:        dd 600
     depth:         dd 32
 
 global Entry

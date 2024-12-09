@@ -33,7 +33,7 @@ void storage_system::add_logical_device(blockdev::block_device_driver *driver , 
     logical_block_device_driver *logical_driver = new logical_block_device_driver;
     logical_driver->set_super_driver(driver);
     new_logical_device->device_driver = logical_driver;
-    new_logical_device = blockdev::create_empty_device();
+    new_logical_device = create_empty_device<blockdev::block_device>();
     new_logical_device->id = device->id;
     memcpy(&new_logical_device->resources , &device->resources , sizeof(device_resources));
     memcpy(&new_logical_device->storage_info.partition_info , &partition_info , sizeof(blockdev::partition_info_t));

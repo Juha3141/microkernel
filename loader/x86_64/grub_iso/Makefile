@@ -35,6 +35,6 @@ run_os: $(TARGET)
 	qemu-system-x86_64 -cdrom $(TARGET) -hda rdimg-test.img -boot d -m 2048 -M pc -rtc base=localtime -monitor stdio
 
 debug_run_os: $(TARGET)
-	qemu-system-x86_64 -cdrom $(TARGET) -hda rdimg-test.img -boot d -m 2048 -M pc -rtc base=localtime -monitor stdio
+	qemu-system-x86_64 -cdrom $(TARGET) -hda rdimg-test.img -boot d -m 2048 -M pc -rtc base=localtime -monitor stdio -S -s
 
-include ../../build_loader_common.mk
+include $(ROOTDIR)/build_loader_common.mk

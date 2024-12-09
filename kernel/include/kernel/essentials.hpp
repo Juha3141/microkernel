@@ -1,7 +1,7 @@
 /**
  * @file essentials.hpp
  * @author Ian Juha Cho (ianisnumber2027@gmail.com)
- * @brief A header that includes some essential files
+ * @brief A header that includes essential kernel headers
  * @date 2024-06-12
  * 
  * @copyright Copyright (c) 2024 Ian Juha Cho.

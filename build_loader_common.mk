@@ -8,6 +8,7 @@
 # LOADER_ASOPTIONS : assembler options
 # LOADER_LDOPTIONS : ld compiler options
 # LOADER_LINKERSCRIPT : path to the linker script
+# LOADER_LD_LIBRARIES : libraries options for loader
 # LOADER_LD_OUT       : output file name for the ld compiler
 # C_EXTENSION         : C/C++ source file's extension
 # AS_EXTENSION        : assembly source file's extension
@@ -33,7 +34,7 @@
 include $(ROOTDIR)/configurations.mk
 include $(ROOTDIR)/global_variables.mk
 
-BINARYFOLDER = $(ROOTDIR)/$(ROOTBINARYFOLDER)/$(LOADERFOLDER)/$(ARCH)/$(IMAGE)
+BINARYFOLDER = $(ROOTDIR)/$(ROOTBINARYFOLDER)/$(LOADERFOLDER)/$(ARCH)/$(LOADER)
 
 clean: remove_target
 	rm -rf $(BINARYFOLDER)
@@ -51,11 +52,8 @@ prepare:
 	mkdir -p $(BINARYFOLDER)
 	mkdir -p $(TARGET_DIR)
 
-	echo $(AUTO_CC_TARGETS)
-	echo $(AUTO_AS_TARGETS)
-
 build_objects:
-	$(LOADER_LD) -T $(LOADER_LINKERSCRIPT) -o $(LOADER_LD_OUT) $(LOADER_LDOPTIONS) $(wildcard $(BINARYFOLDER)/*.obj) $(wildcard $(BINARYFOLDER)/*.aobj)
+	$(LOADER_LD) -T $(LOADER_LINKERSCRIPT) -o $(LOADER_LD_OUT) $(LOADER_LDOPTIONS) $(wildcard $(BINARYFOLDER)/*.obj) $(wildcard $(BINARYFOLDER)/*.aobj) $(LOADER_LD_LIBRARIES)
 
 %.obj: %.$(C_EXTENSION)
 	$(LOADER_CC) -c $< -o $(subst $(SOURCESFOLDER),$(BINARYFOLDER),$@) $(LOADER_CCOPTIONS)\

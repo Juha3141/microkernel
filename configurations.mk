@@ -1,5 +1,5 @@
 ARCH = x86_64
-IMAGE = grub_iso
+LOADER = uefi
 
 KERNEL_COMPILER = x86_64-elf
 KERNEL_CCOPTIONS = -g -ffreestanding -nostdlib \

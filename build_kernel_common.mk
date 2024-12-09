@@ -23,7 +23,7 @@ ASMTARGETS = $(foreach dir,$(SUBDIRECTORIES),$(if $(wildcard $(dir)*.asm),$(subs
 
 endif
 
-all: prepare $(ASMTARGETS) $(MAINTARGETS)
+all: prepare $(MAINTARGETS) $(ASMTARGETS)
 
 prepare:
 	mkdir $(MAINBINARYFOLDER)
@@ -44,6 +44,6 @@ else
 endif
 
 %.aobj: %.asm
-	$(KERNEL_AS) $(COMMON_SRCFOLDER)/$@ -f elf64 -o $(MAINBINARYFOLDER)/$(subst .asm,.obj,$@)
+	$(KERNEL_AS) $< -f elf64 -o $(subst $(SEARCH_LOCATION),$(MAINBINARYFOLDER),$@)
 
 .PHONY: clean all 

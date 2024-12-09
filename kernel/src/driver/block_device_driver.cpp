@@ -72,30 +72,3 @@ blockdev::block_device *blockdev::search_device(blockdev::block_device_driver *d
 blockdev::block_device *blockdev::search_device(const char *driver_name , max_t device_id) { return blockdev::search_device(search_driver(driver_name) , device_id); }
 
 bool blockdev::discard_device(blockdev::block_device *device) { return device->device_driver->device_container->discard_object(device); }
-
-/// @brief Create empty device with essential informations
-/// @param driver driver for device
-/// @param storage_type type of storage
-/// @return new empty device
-blockdev::block_device *blockdev::create_empty_device(void) {
-    block_device *device = (block_device *)memory::pmem_alloc(sizeof(block_device));
-    memset(device , 0 , sizeof(block_device));
-    return device;
-}
-
-template <typename T> inline T *alloc_by_cnt(int cnt) { return (T *)memory::pmem_alloc(cnt*sizeof(T)); } 
-
-void blockdev::designate_resources_count(blockdev::block_device *device , int io_port_count , int interrupt_count , int flags_count , int etc_res_count) {
-    if(io_port_count > 0) {
-        device->resources.io_port_count = io_port_count;
-        device->resources.io_ports = alloc_by_cnt<io_port>(io_port_count);
-    }
-    if(flags_count > 0) {
-        device->resources.flags_count = flags_count;
-        device->resources.flags = alloc_by_cnt<resource_flag_t>(flags_count);
-    }
-    if(etc_res_count > 0) {
-        device->resources.etc_resources_count = etc_res_count;
-        device->resources.etc_resources = alloc_by_cnt<etc_resource_t>(etc_res_count);
-    }
-}

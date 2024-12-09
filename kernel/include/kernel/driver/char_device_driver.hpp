@@ -13,6 +13,8 @@ namespace chardev {
         // nothing yet..?
     };
     struct char_device_driver : general_device_driver<CharDeviceContainer> {
+        virtual bool prepare(void) = 0;
+        
         virtual bool open(char_device *device) = 0;
         virtual bool close(char_device *device) = 0; 
         virtual max_t read(char_device *device , void *buffer , max_t size) = 0;
@@ -34,7 +36,6 @@ namespace chardev {
     max_t discard_driver(const char *driver_name);
     max_t discard_driver(max_t driver_id);
 
-
     max_t register_device(char_device_driver *driver , char_device *device);
     max_t register_device(const char *driver_name , char_device *device);
     max_t register_device(max_t driver_id , char_device *device);
@@ -43,7 +44,6 @@ namespace chardev {
     char_device *search_device(max_t driver_id , max_t device_id);
 
     bool discard_device(char_device *device);
-
 };
 
 #endif

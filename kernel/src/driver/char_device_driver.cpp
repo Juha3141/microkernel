@@ -20,9 +20,11 @@ max_t chardev::register_driver(chardev::char_device_driver *driver , const char 
     driver->driver_id = id;
     if(id == INVALID) return INVALID; 
     driver->device_container = new CharDeviceContainer;
+    driver->device_container->init(256);
     // assign new local device container
     // Driver contains its devices
     strcpy(driver->driver_name , driver_name);
+    driver->prepare();
     
     debug::out::printf_function(DEBUG_TEXT , "bdev::reg_drv" , "Registered character device driver, id : %d name : \"%s\"\n" , driver->driver_id , driver->driver_name);
     return driver->driver_id;

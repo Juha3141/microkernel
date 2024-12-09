@@ -4,6 +4,7 @@
 #include <kernel/essentials.hpp>
 #include <object_manager.hpp>
 #include <linked_list.hpp>
+#include <kernel/mem/kmem_manager.hpp>
 #include <kernel/interrupt/interrupt.hpp>
 
 #include <kernel/io_port.hpp>
@@ -38,5 +39,34 @@ template <typename T> struct general_device_driver {
     T *device_container;
     char driver_name[24];
 };
+
+/// @brief Create empty device with essential informations
+/// @param driver driver for device
+/// @param storage_type type of storage
+/// @return new empty device
+template <typename T> T *create_empty_device(void) {
+    T *device = (T *)memory::pmem_alloc(sizeof(T));
+    memset(device , 0 , sizeof(T));
+    return device;
+}
+
+template <typename T> void designate_resources_count(T *device , int io_port_count , int interrupt_count , int flags_count , int etc_res_count) {
+    if(io_port_count > 0) {
+        device->resources.io_port_count = io_port_count;
+        device->resources.io_ports = (io_port *)memory::pmem_alloc(io_port_count*sizeof(io_port));
+    }
+    if(interrupt_count > 0) {
+        device->resources.interrupt_count = interrupt_count;
+        device->resources.interrupts = (interrupt::interrupt_info_t *)memory::pmem_alloc(interrupt_count*sizeof(interrupt::interrupt_info_t));
+    }
+    if(flags_count > 0) {
+        device->resources.flags_count = flags_count;
+        device->resources.flags = (resource_flag_t *)memory::pmem_alloc(flags_count*sizeof(resource_flag_t));
+    }
+    if(etc_res_count > 0) {
+        device->resources.etc_resources_count = etc_res_count;
+        device->resources.etc_resources = (etc_resource_t *)memory::pmem_alloc(etc_res_count*sizeof(etc_resource_t));
+    }
+}
 
 #endif

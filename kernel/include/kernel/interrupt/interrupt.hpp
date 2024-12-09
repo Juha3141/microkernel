@@ -17,7 +17,7 @@
 #include <arch/interrupt_controller.hpp>
 #include <kernel/mem/kmem_manager.hpp>
 
-#include <kernel/interrupt/interrupt_hardware_specified.hpp>
+#include <kernel/interrupt/predeclared_interrupt_handlers.hpp>
 
 #include <string.hpp>
 
@@ -133,8 +133,10 @@ namespace interrupt {
      * The typical interrupt handler that is managed with numeric interrupt vector corresponding to each interrupt.
      */
     namespace general {
-        bool register_interrupt(int number , interrupt_handler_t handler , word interrupt_option); // Register interrupt handler
+        bool register_interrupt(int number , interrupt_handler_t handler , word interrupt_option , bool wrapper=true); // Register interrupt handler
         bool discard_interrupt(int number);                      // Discard interrupt handler
+
+        interrupt_handler_t get_interrupt_handler(int number);
         void set_interrupt_mask(int number , bool masked);
     }
     /* <Hardware-registered interrupt>
@@ -152,11 +154,10 @@ namespace interrupt {
 
         bool register_interrupt(const char *name , interrupt_handler_t handler);
         bool discard_interrupt(const char *name);
+
+        interrupt_handler_t get_interrupt_handler(const char *name);
         void set_interrupt_mask(int number , bool masked);
     }
-
-    // Sorry for bad english lol
-    extern "C" void interrupt_handler_common(max_t stack_address , struct SavedRegisters *saved_regs , int int_num);
 
     bool register_interrupt_by_info(const interrupt_info_t int_info , interrupt_handler_t handler , word option=0x00);
     bool discard_interrupt_by_info(const interrupt_info_t int_info);

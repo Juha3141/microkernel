@@ -5,19 +5,16 @@
 
 namespace interrupt {
     namespace controller {
-        void init(void);
-        void register_hardware_specified_interrupts(void);
-        void register_kernel_requested_interrupts(void);
+        void ARCHDEP init(void);
+        void ARCHDEP register_hardware_specified_interrupts(void);
+        void ARCHDEP register_kernel_requested_interrupts(void);
 
-        void set_interrupt_mask(int number , bool masked);
-        void set_hardware_specified_interrupt_mask();
-        void disable_all_interrupt(void);
+        void ARCHDEP set_interrupt_mask(int number , bool masked);
+        void ARCHDEP set_hardware_specified_interrupt_mask();
+        void ARCHDEP disable_all_interrupt(void);
 
-        void interrupt_received(void);        // EOI
-        void interrupt_received(int number);
-
-        extern "C" void save_registers(struct SavedRegister *regs);  // Save register routine
-        extern "C" void load_registers(struct SavedRegister *regs);  // Load register routine
+        void ARCHDEP interrupt_received(void);        // EOI
+        void ARCHDEP interrupt_received(int number);
     }
 }
 

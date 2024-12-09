@@ -182,6 +182,10 @@ vptr_t *memory::pmem_alloc(max_t size , max_t alignment) {
 	vptr_t *ptr = 0x00;
 	debug::push_function("pmem_alloc");
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
+	if(size == 0x00) { 
+		debug::out::printf(DEBUG_WARNING , "allocation warning : zero allocation size\n");
+		return 0x00;
+	}
 	for(int i = 0; i < segments_mgr->managers_count; i++) {
 		if(!segments_mgr->node_managers[i].available()) continue;
 		if((ptr = (vptr_t *)segments_mgr->node_managers[i].allocate(size , alignment)) != 0x00) {

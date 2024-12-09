@@ -22,6 +22,19 @@ namespace storage_system {
         }
         bool init(void) { return false; }
         bool prepare(void) override { debug::out::printf(DEBUG_WARNING , "logical_storage_device_driver::prepare : not allowed\n"); return false; }
+        
+        bool open(blockdev::block_device *device) {
+            struct blockdev::block_device *physical_super_device = get_physical_super_device(device);
+            if(!check(physical_super_device , device)) return false;
+            // Get physical storage pointer of logical storage
+            return physical_super_device->device_driver->open(physical_super_device);
+        }
+        bool close(blockdev::block_device *device) {
+            struct blockdev::block_device *physical_super_device = get_physical_super_device(device);
+            if(!check(physical_super_device , device)) return false;
+            // Get physical storage pointer of logical storage
+            return physical_super_device->device_driver->close(physical_super_device);
+        }
         max_t read(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) override {
             struct blockdev::block_device *physical_super_device = get_physical_super_device(device);
             if(!check(physical_super_device , device)) return 0x00;

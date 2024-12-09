@@ -1,6 +1,6 @@
 #include <kernel/interrupt/interrupt.hpp>
 #include <kernel/io_port.hpp>
-#include <kernel/interrupt/interrupt_hardware_specified.hpp>
+#include <kernel/interrupt/predeclared_interrupt_handlers.hpp>
 
 #include <string.hpp>
 
@@ -28,17 +28,17 @@ interrupt_handler_t interrupt::GeneralInterruptManager::discard_interrupt(int nu
 #ifdef CONFIG_USE_INTERRUPT
 
 void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) {
-    INTERRUPT_HARDWARE_SPECIFIED_ARRAY
+    INTERRUPT_HARDWARE_SPECIFIED_WRAPPER_ARRAY
     interrupt_maxcount = maxcount;
     interrupt_list = (SpecialInterrupt *)memory::pmem_alloc(maxcount*sizeof(SpecialInterrupt));
     for(int i = 0; i < maxcount; i++) {
         interrupt_list[i].occupied = false;
-        interrupt_list[i].assigned_interrupt_handler = handlers[i];
+        interrupt_list[i].assigned_interrupt_handler = hardware_specified_wrapper_array[i];
     }
 }
 
 interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) {
-    INTERRUPT_HARDWARE_SPECIFIED_ARRAY
+    INTERRUPT_HARDWARE_SPECIFIED_WRAPPER_ARRAY
     int index = 0;
     for(; index < interrupt_maxcount; index++) {
         if(interrupt_list[index].occupied == false) break;
@@ -50,7 +50,7 @@ interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_inter
     strcpy(interrupt_list[index].name , name);
     interrupt_list[index].occupied = true;
     interrupt_list[index].interrupt_handler = 0x00;
-    interrupt_list[index].assigned_interrupt_handler = (interrupt_handler_t)handlers[index];
+    interrupt_list[index].assigned_interrupt_handler = (interrupt_handler_t)hardware_specified_wrapper_array[index];
     interrupt_list[index].interrupt_handler = handler;
     return interrupt_list[index].assigned_interrupt_handler;
 }
@@ -98,7 +98,7 @@ void interrupt::init(void) {
     interrupt::hardware::disable();
     interrupt::hardware::init();
     GLOBAL_OBJECT(GeneralInterruptManager)->init();
-    GLOBAL_OBJECT(HardwareSpecifiedInterruptManager)->init(INTERRUPT_HARDWARE_SPECIFIED_MAXCOUNT);
+    GLOBAL_OBJECT(HardwareSpecifiedInterruptManager)->init(INTERRUPT_HARDWARE_SPECIFIED_WRAPPER_MAXCOUNT);
 
     interrupt::controller::init();
     interrupt::controller::disable_all_interrupt();
@@ -114,11 +114,15 @@ void interrupt::init(void) {
 }
 
 /////////////////////////////////////////////////////////
-//                     general part                    //
+//                  general interrupt                  //
 /////////////////////////////////////////////////////////
 
-bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option) {
-    if(interrupt::hardware::register_interrupt(number , (ptr_t)handler , interrupt_option) == false) return false;
+bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option , bool wrapper) {
+    if(GLOBAL_OBJECT(GeneralInterruptManager)->interrupt_list[number].handler != 0x00) { return false; }
+    INTERRUPT_GENERAL_INT_WRAPPER_ARRAY
+    ptr_t wrapper_handler = wrapper ? (ptr_t)general_int_wrapper_array[number] : (ptr_t)handler;
+    if(interrupt::hardware::register_interrupt(number , wrapper_handler , interrupt_option) == false) return false;
+    
     interrupt::controller::set_interrupt_mask(number , false);
     return GLOBAL_OBJECT(GeneralInterruptManager)->register_interrupt(number , handler , interrupt_option);
 }
@@ -127,6 +131,10 @@ bool interrupt::general::discard_interrupt(int number) {
     if(interrupt::hardware::discard_interrupt(number) == false) return false;
     interrupt::controller::set_interrupt_mask(number , true);
     return GLOBAL_OBJECT(GeneralInterruptManager)->discard_interrupt(number);
+}
+
+interrupt_handler_t interrupt::general::get_interrupt_handler(int number) {
+    return GLOBAL_OBJECT(GeneralInterruptManager)->interrupt_list[number].handler;
 }
 
 void interrupt::general::set_interrupt_mask(int number , bool masked) {

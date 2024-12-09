@@ -67,7 +67,7 @@ void exception::register_exception_general_int(const char *exception_name , int 
     interrupt_handler_t int_handler = (interrupt_handler_t)handlers[internal_id];
     
     exception_mgr->set_handler(internal_id , handlers[internal_id]);
-    interrupt::general::register_interrupt(general_interrupt_number , int_handler , INTERRUPT_HANDLER_EXCEPTION|INTERRUPT_HANDLER_LEVEL_KERNEL);
+    interrupt::general::register_interrupt(general_interrupt_number , int_handler , INTERRUPT_HANDLER_EXCEPTION|INTERRUPT_HANDLER_LEVEL_KERNEL , false);
 }
 
 void exception::register_exception_hardware_specified(const char *exception_name , const char *interrupt_name) {

@@ -1,10 +1,13 @@
-kernel_linear_address = 0xC0000000;
 ENTRY(kernel_main)
 
+INCLUDE arch_configurations.ld
+
 SECTIONS {
-  . = kernel_linear_address;
-  .text kernel_linear_address : {
-    *(.text.kernel_main)
+  . = _KERNEL_LOAD_LOCATION;
+  .entry _KERNEL_LOAD_LOCATION : {
+    *(.entry) *(.entry.*)
+  }
+  .text ALIGN(4096) : {
     *(.text) *(.text.*)
   }
   .data ALIGN(4096) : {

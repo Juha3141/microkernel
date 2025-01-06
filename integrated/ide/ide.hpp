@@ -54,8 +54,6 @@
 #define IDE_CD_IO_READ_GET_MODEL 0x01
 
 struct ide_driver : blockdev::block_device_driver {
-    static void register_driver(void);
-
     bool prepare(void) override;
     bool open(blockdev::block_device *device) override;
     bool close(blockdev::block_device *device) override;

@@ -3,10 +3,6 @@
 
 static max_t ramdisk_driver_id = 0x00;
 
-void ramdisk_driver::register_driver(void) {
-    ramdisk_driver_id = blockdev::register_driver(new ramdisk_driver , "rd");
-}
-
 struct blockdev::block_device *ramdisk_driver::create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr) {
     // Write some basic informations
     blockdev::block_device *new_device = create_empty_device<blockdev::block_device>();
@@ -73,3 +69,9 @@ bool ramdisk_driver::get_geometry(blockdev::block_device *device , blockdev::dev
 bool ramdisk_driver::io_read(blockdev::block_device *device , max_t command , max_t arguments , max_t &data_out) { return false; }
 
 bool ramdisk_driver::io_write(blockdev::block_device *device , max_t command , max_t arguments) { return false; }
+
+static void init_ramdisk_driver(void) {
+    ramdisk_driver_id = blockdev::register_driver(new ramdisk_driver , "rd");
+}
+
+INIT_DEVICE_DRIVER(init_ramdisk_driver)

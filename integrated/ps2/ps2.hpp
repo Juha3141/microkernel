@@ -8,8 +8,6 @@
 #define PS2_DATA_PORT    0x60
 
 struct ps2_keyboard_driver : chardev::char_device_driver {
-    static void register_driver(void);
-
     bool prepare(void) override;
     bool open(chardev::char_device *device) override;
     bool close(chardev::char_device *device) override;
@@ -20,8 +18,6 @@ struct ps2_keyboard_driver : chardev::char_device_driver {
 };
 
 struct ps2_mouse_driver : chardev::char_device_driver {
-    static void register_driver(void);
-    
     bool prepare(void) override;
     bool open(chardev::char_device *device) override;
     bool close(chardev::char_device *device) override;

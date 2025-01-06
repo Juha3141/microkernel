@@ -10,12 +10,6 @@ struct mouse_data {
     byte y_movement;
 };
 
-
-void ps2_mouse_driver::register_driver(void) {
-    ps2::initialize();
-    ps2_mouse_driver_id = chardev::register_driver(new ps2_mouse_driver , "ps2mouse");
-}
-
 bool ps2_mouse_driver::prepare(void) {
     chardev::char_device *device = create_empty_device<chardev::char_device>();
     // interrupt : 1 (IRQ 12)
@@ -83,3 +77,11 @@ bool ps2_mouse_driver::io_read(chardev::char_device *device , max_t command , ma
 bool ps2_mouse_driver::io_write(chardev::char_device *device , max_t command , max_t argument) { 
     return 0;
 }
+
+
+static void init_ps2_mouse_driver(void) {
+    ps2::initialize();
+    ps2_mouse_driver_id = chardev::register_driver(new ps2_mouse_driver , "ps2mouse");
+}
+
+INIT_DEVICE_DRIVER(init_ps2_mouse_driver)

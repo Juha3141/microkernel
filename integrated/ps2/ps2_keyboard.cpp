@@ -4,11 +4,6 @@
 
 static max_t ps2_keyboard_driver_id;
 
-void ps2_keyboard_driver::register_driver(void) {
-    ps2::initialize();
-    ps2_keyboard_driver_id = chardev::register_driver(new ps2_keyboard_driver , "ps2kbd");
-}
-
 bool ps2_keyboard_driver::prepare(void) {
     chardev::char_device *device = create_empty_device<chardev::char_device>();
     // interrupt : 1 (IRQ 1)
@@ -60,3 +55,11 @@ bool ps2_keyboard_driver::io_read(chardev::char_device *device , max_t command ,
 bool ps2_keyboard_driver::io_write(chardev::char_device *device , max_t command , max_t argument) { 
     return 0;
 }
+
+
+static void init_ps2_keyboard_driver(void) {
+    ps2::initialize();
+    ps2_keyboard_driver_id = chardev::register_driver(new ps2_keyboard_driver , "ps2kbd");
+}
+
+INIT_DEVICE_DRIVER(init_ps2_keyboard_driver)

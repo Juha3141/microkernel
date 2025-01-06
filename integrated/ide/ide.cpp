@@ -9,14 +9,6 @@
 static bool primary_interrupt_flag = false;
 static bool secondary_interrupt_flag = false;
 
-void ide_driver::register_driver(void) {
-    io_write_byte(IDE_DEVICECONTROL_PRIMARY_BASE+IDE_PORT_DIGITAL_OUTPUT , 0);
-    io_write_byte(IDE_DEVICECONTROL_SECONDARY_BASE+IDE_PORT_DIGITAL_OUTPUT , 0);
-    interrupt::general::register_interrupt(32+14 , ide::interrupt_handler_irq14 , INTERRUPT_HANDLER_LEVEL_KERNEL|INTERRUPT_HANDLER_HARDWARE);
-    interrupt::general::register_interrupt(32+15 , ide::interrupt_handler_irq15 , INTERRUPT_HANDLER_LEVEL_KERNEL|INTERRUPT_HANDLER_HARDWARE);
-    blockdev::register_driver(new ide_driver , "idehd");
-}
-
 void ide::interrupt_handler_irq14(struct Registers *regs) {
     main_int_handler(true);
 };
@@ -362,3 +354,14 @@ bool ide_cd_driver::io_read(blockdev::block_device *device , max_t command , max
 bool ide_cd_driver::io_write(blockdev::block_device *device , max_t command , max_t argument) {
     return false;
 }
+
+
+static void init_ide_driver(void) {
+    io_write_byte(IDE_DEVICECONTROL_PRIMARY_BASE+IDE_PORT_DIGITAL_OUTPUT , 0);
+    io_write_byte(IDE_DEVICECONTROL_SECONDARY_BASE+IDE_PORT_DIGITAL_OUTPUT , 0);
+    interrupt::general::register_interrupt(32+14 , ide::interrupt_handler_irq14 , INTERRUPT_HANDLER_LEVEL_KERNEL|INTERRUPT_HANDLER_HARDWARE);
+    interrupt::general::register_interrupt(32+15 , ide::interrupt_handler_irq15 , INTERRUPT_HANDLER_LEVEL_KERNEL|INTERRUPT_HANDLER_HARDWARE);
+    blockdev::register_driver(new ide_driver , "idehd");
+}
+
+INIT_DEVICE_DRIVER(init_ide_driver)

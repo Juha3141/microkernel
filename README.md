@@ -16,7 +16,7 @@ Here's some current progress and future plans (decoratively displayed as To-do l
 - [X] ~~Much more flexible way to compile project~~
 - [ ] Much much more flexible way to compile project
 - [X] GRUB Loader
-- [ ] EFI Loader
+- [X] EFI Loader
 - [ ] Interface between Kernel and Hardware
 - [X] Physical Memory Allocator
 - [ ] Paging system (+ Page Frame Manager)

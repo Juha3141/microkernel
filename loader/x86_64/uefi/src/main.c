@@ -1,18 +1,18 @@
 #include <efi.h>
 #include <efilib.h>
 
-EFI_FILE_HANDLE get_volume(EFI_HANDLE image) {
+#include <loader/loader_argument.hpp>
+
+EFI_STATUS get_volume(EFI_HANDLE image , EFI_FILE_HANDLE *volume) {
     EFI_LOADED_IMAGE *loaded_image = NULL;
     EFI_GUID lip_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
     EFI_FILE_IO_INTERFACE *io_volume;
     EFI_GUID fs_guid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
-    EFI_FILE_HANDLE volume;
 
-    uefi_call_wrapper(BS->HandleProtocol , 3 , image , &(lip_guid) , (void **)&loaded_image);
+    uefi_call_wrapper(BS->HandleProtocol , 3 , image , &lip_guid , (void **)&loaded_image);
     uefi_call_wrapper(BS->HandleProtocol , 3 , loaded_image->DeviceHandle , &fs_guid , (void *)&io_volume);
 
-    uefi_call_wrapper(io_volume->OpenVolume , 2 , io_volume , &volume);
-    return volume;
+    return uefi_call_wrapper(io_volume->OpenVolume , 2 , io_volume , volume);
 }
 
 wchar_t *get_efi_memory_type_str(EFI_MEMORY_TYPE type) {
@@ -38,6 +38,8 @@ wchar_t *get_efi_memory_type_str(EFI_MEMORY_TYPE type) {
     return "Unknown";
 }
 
+#define MINIMUM_KERNEL_RELOCATE_LOCATION 0x100000
+
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_table) {
     EFI_STATUS status;
     InitializeLib(image_handle , system_table);
@@ -46,8 +48,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     // fetch memory map
     UINTN memmap_size = 16384 , memmap_key = 0 , memmap_descriptor_size = 0;
     UINT32 memmap_descriptor_version;
-    EFI_MEMORY_DESCRIPTOR *memory_descriptor = 0x100000;
-    Print(L"memory_descriptor = 0x%X\n" , memory_descriptor);
+    EFI_MEMORY_DESCRIPTOR *memory_descriptor = AllocatePool(memmap_size);
     status = uefi_call_wrapper(BS->GetMemoryMap , 5 , &memmap_size , memory_descriptor , &memmap_key , &memmap_descriptor_size , &memmap_descriptor_version);
     if(status == EFI_BUFFER_TOO_SMALL) {
         Print(L"Unable to get memory map! EFI_BUFFER_TOO_SMALL\n");
@@ -88,14 +89,15 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     }
     Print(L"Total amount of memory : %dMB\n" , total_memory_size/1024/1024);
 
-
-    EFI_FILE_HANDLE volume = get_volume(image_handle);
+    EFI_FILE_HANDLE volume;
     EFI_FILE_HANDLE kernel_file_handle;
     EFI_FILE_INFO *kernel_file_info;
-    uefi_call_wrapper(volume->Open , 5 , volume , &kernel_file_handle , L"Kernel.krn" , EFI_FILE_MODE_READ , EFI_FILE_READ_ONLY|EFI_FILE_HIDDEN|EFI_FILE_SYSTEM);
+    status = get_volume(image_handle , &volume);
+    Print(L"get_volume() done, status = 0x%X\n" , status);
+    status = uefi_call_wrapper(volume->Open , 5 , volume , &kernel_file_handle , L"Kernel.krn" , EFI_FILE_MODE_READ , EFI_FILE_READ_ONLY|EFI_FILE_HIDDEN|EFI_FILE_SYSTEM);
+    Print(L"status = 0x%X\n" , status);
     kernel_file_info = LibFileInfo(kernel_file_handle);
     Print(L"kernel file size : %d\n" , kernel_file_info->FileSize);
-
 
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
     EFI_GUID gop_guid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
@@ -112,13 +114,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     Print(L"Pixel per scan line : %u\n" , gop->Mode->Info->PixelsPerScanLine);
     Print(L"Frame Buffer : 0x%X ~ 0x%X (Size : %d)\n" , gop->Mode->FrameBufferBase , gop->Mode->FrameBufferBase+gop->Mode->FrameBufferSize , gop->Mode->FrameBufferSize);
     
-    UINT8 *frame_buffer = (UINT8 *)gop->Mode->FrameBufferBase;
-    for(int i = 0; i < gop->Mode->Info->PixelsPerScanLine*4; i += 4) {
-        frame_buffer[i]   = 0xFF; // B
-        frame_buffer[i+1] = 0xD8; // G
-        frame_buffer[i+2] = 0x00; // R
-        frame_buffer[i+4] = 0x00; // Resv
-    }
+    // struct LoaderArgument *loader_argument = (struct LoaderArgument *);
 
     while(1) {
         ;

@@ -95,14 +95,14 @@ LongModeGDTR:
 
 LongModeEntry:
     xor rax , rax
-    mov eax , dword[rdi+20] ; kernel_stack_location
-    add eax , dword[rdi+24] ; kernel_stack_size
+    mov eax , dword[rdi+(4*5)] ; kernel_stack_location
+    add eax , dword[rdi+(4*6)] ; kernel_stack_size
     sub rax , 8
     mov rbp , rax
     mov rsp , rax
 
     xor rdx , rdx
-    mov edx , dword[rdi+36] ; kernel_linear_address
+    mov edx , dword[rdi+(4*9)] ; kernel_linear_address
 
     call rdx
 

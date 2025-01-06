@@ -12,14 +12,17 @@
 #include <kernel/vfs/partition_driver.hpp>
 #include <kernel/vfs/virtual_file_system.hpp>
 
-#include <kernel/kernel_argument.hpp>
-
 #include <kernel/integrated.hpp>
 
-#include <integrated_drivers.hpp>
-#include <file_systems.hpp>
+#include <kernel/section.hpp>
+
+#include <kernel/vfs/file_system_driver.hpp>
+#include <kernel/vfs/virtual_file_system.hpp>
+#include <ramdisk/ramdisk.hpp>
 
 #include <arch_inline_asm.hpp>
+
+#include <loader/loader_argument.hpp>
 
 // For testing
 
@@ -29,18 +32,19 @@
 
 void pmem_alloc_test(int rand_seed);
 void dump_block_devices(void);
-void test_hash(void);
-
 void demo_routine(void);
 
-extern "C" __attribute__ ((section(".entry"))) void kernel_main(unsigned long kernel_argument_struct_addr) {
-    struct KernelArgument *kargument = (struct KernelArgument *)kernel_argument_struct_addr;
-    if(kargument->signature != KERNELINFO_STRUCTURE_SIGNATURE) {
-        debug::panic("kernel structure not found");
+
+
+extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_argument) {
+    if(loader_argument->signature != LOADER_ARGUMENT_SIGNATURE) {
+        while(1) {
+            ;
+        }
     }
-    debug::init(kargument);
-    debug::out::clear_screen(0x07);
-    memory::pmem_init(kargument->memmap_count , (struct MemoryMap *)((max_t)kargument->memmap_ptr) , kargument);
+
+    memory::pmem_init(loader_argument->memmap_count , (struct MemoryMap *)((max_t)loader_argument->memmap_ptr) , loader_argument);
+    debug::init(loader_argument);
 
     segmentation::init();
     interrupt::init();
@@ -54,7 +58,7 @@ extern "C" __attribute__ ((section(".entry"))) void kernel_main(unsigned long ke
     fsdev::init();
     debug::out::printf(DEBUG_INFO , "----- Initializing character device driver..\n");
     chardev::init();
-    register_basic_kernel_drivers();
+    register_kernel_device_drivers();
 
     interrupt::hardware::enable();
 
@@ -63,12 +67,12 @@ extern "C" __attribute__ ((section(".entry"))) void kernel_main(unsigned long ke
     }
 
     debug::out::printf(DEBUG_INFO , "----- Initializing vfs..\n");
-    debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , kargument->ramdisk_address , kargument->ramdisk_address+kargument->ramdisk_size);
+    debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , loader_argument->ramdisk_address , loader_argument->ramdisk_address+loader_argument->ramdisk_size);
     // find the ramdisk driver
-    if(kargument->ramdisk_address == 0x00) {
+    if(loader_argument->ramdisk_address == 0x00) {
         debug::panic("No ramdisk found!\n"); // frick! I forgot to add the ramdisk!
     }
-    blockdev::block_device *device = ramdisk_driver::create(kargument->ramdisk_size/512 , 512 , kargument->ramdisk_address);
+    blockdev::block_device *device = ramdisk_driver::create(loader_argument->ramdisk_size/512 , 512 , loader_argument->ramdisk_address);
     blockdev::register_device(device->device_driver->driver_id , device);
     
     // mount to the root device

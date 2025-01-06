@@ -8,6 +8,7 @@
 
 #include <kernel/mem/kmem_manager.hpp>
 #include <kernel/mem/nodes_manager.hpp>
+#include <loader/loader_argument.hpp>
 
 #include <string.hpp>
 
@@ -29,7 +30,7 @@ void memory::get_kstruct_boundary(struct Boundary &boundary) {
 	memcpy(&boundary , &kstruct_mgr.boundary , sizeof(struct Boundary));
 }
 
-void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , struct KernelArgument *kargument) {
+void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , struct LoaderArgument *kargument) {
 	debug::push_function("d_kstruct_b");
 	struct MemoryMap *memmap = (struct MemoryMap *)((max_t)kargument->memmap_ptr);
 	max_t kernel_end_address = kargument->total_kernel_area_end;
@@ -48,19 +49,19 @@ void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary ,
 		&& kargument->total_kernel_area_start >= address && kargument->total_kernel_area_start <= address+length) { // is kernel inside?
 			// determine boundary
 			// If segment cannot hold more than designated size, just use maximum size for the segment
-			new_mboundary.end_address = MIN(address+length , new_mboundary.start_address+KERNELSTRUCTURE_LENGTH);
+			new_mboundary.end_address = MIN(address+length , new_mboundary.start_address+LOADER_ARGUMENT_LENGTH);
 			debug::out::printf(DEBUG_INFO , "kstruct_boundary : 0x%X~0x%X\n" , new_mboundary.start_address , new_mboundary.end_address);
 			debug::pop_function();
 			return;
 		}
 	}
-	new_mboundary.end_address = new_mboundary.start_address+KERNELSTRUCTURE_LENGTH;
+	new_mboundary.end_address = new_mboundary.start_address+LOADER_ARGUMENT_LENGTH;
 	debug::out::printf(DEBUG_INFO , "def,kstruct_boundary : 0x%X~0x%X\n" , new_mboundary.start_address , new_mboundary.end_address);
 	debug::pop_function();
 	return;
 }
 
-int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *new_msegment_list , struct KernelArgument *kargument) {
+int memory::determine_pmem_boundary(struct Boundary protect , struct Boundary *new_msegment_list , struct LoaderArgument *kargument) {
 	debug::push_function("d_pmem_b");
 
 	int seg_index = 0;
@@ -145,7 +146,7 @@ int memory::SegmentsManager::get_segment_index(max_t address) {
 	return -1;
 }
 
-void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct KernelArgument *kargument) {
+void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct LoaderArgument *kargument) {
 	debug::push_function("pmem_init");
 	
 	int usable_seg_count = 0;

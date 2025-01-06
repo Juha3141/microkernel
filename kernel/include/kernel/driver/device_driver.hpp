@@ -9,6 +9,13 @@
 
 #include <kernel/io_port.hpp>
 
+typedef void(*device_driver_init_func_ptr_t)(void);
+
+#define INIT_DEVICE_DRIVER_PRIORITY(init_driver , priority) void __register_device_driver_init_##priority_##init_driver(void) { init_driver(); } \
+static __attribute__ ((section(".drivers_init."#priority))) device_driver_init_func_ptr_t __device_driver_init_##priority_##init_driver  = __register_device_driver_init_##priority_##init_driver; 
+
+#define INIT_DEVICE_DRIVER(init_driver) INIT_DEVICE_DRIVER_PRIORITY(init_driver , 0)
+
 typedef max_t resource_flag_t;
 typedef max_t etc_resource_t;
 
@@ -68,5 +75,7 @@ template <typename T> void designate_resources_count(T *device , int io_port_cou
         device->resources.etc_resources = (etc_resource_t *)memory::pmem_alloc(etc_res_count*sizeof(etc_resource_t));
     }
 }
+
+void register_kernel_device_drivers(void);
 
 #endif

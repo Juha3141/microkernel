@@ -11,7 +11,7 @@
 #include <kernel/essentials.hpp>
 #include <kernel/mem/nodes_manager.hpp>
 
-#include <kernel/kernel_argument.hpp>
+#include <loader/loader_argument.hpp>
 
 #define KERNEL_MEMORY_SEGMENT_THRESHOLD 512*1024  // 512KB
 
@@ -22,8 +22,8 @@ namespace memory {
     };
     void get_kstruct_boundary(struct Boundary &boundary);
 
-    void determine_kstruct_boundary(struct Boundary &new_mboundary , struct KernelArgument *kargument);
-    int determine_pmem_boundary(struct Boundary protect , struct Boundary *new_mboundary , struct KernelArgument *kargument);
+    void determine_kstruct_boundary(struct Boundary &new_mboundary , struct LoaderArgument *kargument);
+    int determine_pmem_boundary(struct Boundary protect , struct Boundary *new_mboundary , struct LoaderArgument *kargument);
 
     void kstruct_init(struct Boundary boundary);
     void *kstruct_alloc(max_t size , max_t alignment=0);
@@ -43,7 +43,7 @@ namespace memory {
     };
     
     // pmem (physical memory) allocation
-    void pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct KernelArgument *kargument);
+    void pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct LoaderArgument *kargument);
     vptr_t *pmem_alloc(max_t size , max_t alignment=0);
     void pmem_free(vptr_t *ptr);
     bool pmem_protect(struct Boundary boundary);

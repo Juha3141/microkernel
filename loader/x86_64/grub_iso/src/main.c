@@ -4,9 +4,29 @@
 
 #include <intel_paging.h>
 
-#define KERNEL_STRUCTURE_SIGNATURE 0xC001D00D
+#define MULTIBOOT_HEADER_FLAG_VALUE  MULTIBOOT_PAGE_ALIGN|MULTIBOOT_VIDEO_MODE
+
+__attribute__ ((section(".multiboot_header"))) struct multiboot_header multiboot_header = {
+	.magic    = MULTIBOOT_HEADER_MAGIC , 
+	.flags    = MULTIBOOT_HEADER_FLAG_VALUE , 
+	.checksum = -(MULTIBOOT_HEADER_MAGIC+MULTIBOOT_HEADER_FLAG_VALUE) , 
+
+	.header_addr = 0x00 , 
+	.load_addr     = 0x00 , 
+	.load_end_addr = 0x00 ,
+	.bss_end_addr  = 0x00 , 
+	.entry_addr    = 0x00 , 
+
+	.mode_type = 0x00 , 
+	.width     = 800 , 
+	.height    = 600 , 
+	.depth     = 32
+};
+
 #define KERNEL_STRUCTURE_STACKSIZE 8*1024*1024
 #define KERNEL_NEW_HIGHER_HALF     0xC0000000
+
+unsigned int align(address , alignment) { return ((((unsigned int)(address/alignment))+1)*alignment); }
 
 typedef struct m_mmap_x32 {
 	unsigned int size;
@@ -33,10 +53,6 @@ int DetectMemory(struct MemoryMap *mmap , struct multiboot_info *MultibootInfo) 
 		i++;
 	}
 	return i;
-}
-
-unsigned int align(unsigned int address , unsigned int alignment) {
-	return (((unsigned int)(address/alignment))+1)*alignment;
 }
 
 multiboot_module_t *search_module(struct multiboot_info *multiboot_info , const char *cmdline) {
@@ -104,38 +120,38 @@ void Main(struct multiboot_info *multiboot_info) {
 	unsigned int kernel_struct_addr = align(kernel_addr+kernel_size , PAGE_SIZE);
 	
 	// write the signature to the kernel struct area
-	struct KernelArgument *kargument = (struct KernelArgument *)kernel_struct_addr;
+	struct LoaderArgument *loader_argument = (struct LoaderArgument *)kernel_struct_addr;
 	PrintString(0x07 , "Kernel structure : 0x%X\n" , kernel_struct_addr);
-	memset(kargument , 0 , sizeof(struct KernelArgument));
-	kargument->signature = KERNEL_STRUCTURE_SIGNATURE;
+	memset(loader_argument , 0 , sizeof(struct LoaderArgument));
+	loader_argument->signature = LOADER_ARGUMENT_SIGNATURE;
 	// total_kernel_boundary : total boundary that contains kernel and other necessary stuff
 	// physical memory manager will protect the "total bound"
-	kargument->total_kernel_area_start = kernel_addr;
+	loader_argument->total_kernel_area_start = kernel_addr;
 	
-	kargument->kernel_address = kernel_addr;
-	kargument->kernel_size = kernel_size;
+	loader_argument->kernel_address = kernel_addr;
+	loader_argument->kernel_size = kernel_size;
 
-	kargument->ramdisk_address = ramdisk_addr;
-	kargument->ramdisk_size = ramdisk_size;
+	loader_argument->ramdisk_address = ramdisk_addr;
+	loader_argument->ramdisk_size = ramdisk_size;
 
-	kernel_struct_addr += sizeof(struct KernelArgument);
+	kernel_struct_addr += sizeof(struct LoaderArgument);
 	
 	// Global memory map
 	struct MemoryMap *memmap = (struct MemoryMap *)kernel_struct_addr;
-	kargument->memmap_ptr = (struct MemMap *)kernel_struct_addr;
+	loader_argument->memmap_ptr = (struct MemoryMap *)kernel_struct_addr;
 	// initialize memory map area
 	memset(memmap , 0 , sizeof(struct MemoryMap)*32);
 	kernel_struct_addr += sizeof(struct MemoryMap)*32; // maximum 32
 	
 	PrintString(0x07 , "memmap location : 0x%X\n" , memmap);
-	kargument->memmap_count = DetectMemory(memmap , multiboot_info);
+	loader_argument->memmap_count = DetectMemory(memmap , multiboot_info);
 
-	kargument->kernel_stack_location = kernel_struct_addr;
-	kargument->kernel_stack_size = KERNEL_STRUCTURE_STACKSIZE;
-	memset((unsigned char *)kargument->kernel_stack_location , 0 , kargument->kernel_stack_size);
-	kernel_struct_addr += kargument->kernel_stack_size; // 128kb kernel stack
+	loader_argument->kernel_stack_location = kernel_struct_addr;
+	loader_argument->kernel_stack_size = KERNEL_STRUCTURE_STACKSIZE;
+	memset((unsigned char *)loader_argument->kernel_stack_location , 0 , loader_argument->kernel_stack_size);
+	kernel_struct_addr += loader_argument->kernel_stack_size; // 128kb kernel stack
 	
-	PrintString(0x07 , "kernel stack address : 0x%X\n" , kargument->kernel_stack_location);
+	PrintString(0x07 , "kernel stack address : 0x%X\n" , loader_argument->kernel_stack_location);
 	kernel_struct_addr = align(kernel_struct_addr , 4096);
 	pml4t_entry_location = kernel_struct_addr;
 	PrintString(0x07 , "PML4 table location  : 0x%X\n" , kernel_struct_addr);
@@ -143,29 +159,33 @@ void Main(struct multiboot_info *multiboot_info) {
 	pml4t_entry_size = pml4t_entry_end-pml4t_entry_location;
 
 	// address should be aligned to 2MB
-	kargument->kernel_linear_address = KERNEL_NEW_HIGHER_HALF;
-	PrintString(0x07 , "kernel_page_size : %d\n" , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)));
-	RelocatePage(kargument->kernel_address , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)) , kargument->kernel_linear_address , pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
+	loader_argument->kernel_linear_address = KERNEL_NEW_HIGHER_HALF;
+	PrintString(0x07 , "kernel_page_size : %d\n" , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)));
+	RelocatePage(loader_argument->kernel_address , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)) , loader_argument->kernel_linear_address , pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
 	// Make original kernel not present
-	// RelocatePage(kargument->kernel_address , ((kargument->kernel_size)/PAGE_SIZE)+((kargument->kernel_size%PAGE_SIZE != 0)) , kargument->kernel_address , kargument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
+	// RelocatePage(loader_argument->kernel_address , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)) , loader_argument->kernel_address , loader_argument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
 
-	kargument->total_kernel_area_end = pml4t_entry_end;
+	loader_argument->total_kernel_area_end = pml4t_entry_end;
 
 	// graphic system!
-	kargument->video_mode = KERNELARG_VIDEOMODE_TEXTMODE;
-	kargument->framebuffer_addr = 0xB8000;
-	kargument->framebuffer_width = 80;
-	kargument->framebuffer_height = 25;
-	kargument->framebuffer_depth = 0x00;
-	if((multiboot_info->flags & (1 << 12)) == (1 << 12)) {
-		kargument->video_mode = KERNELARG_VIDEOMODE_GRAPHIC;
-		kargument->framebuffer_addr = multiboot_info->framebuffer_addr;
-		kargument->framebuffer_width = multiboot_info->framebuffer_width;
-		kargument->framebuffer_height = multiboot_info->framebuffer_height;
-		kargument->framebuffer_depth = multiboot_info->framebuffer_bpp;
-	}
+	loader_argument->video_mode                  = LOADER_ARGUMENT_VIDEOMODE_TEXTMODE;
+	loader_argument->dbg_text_framebuffer_addr   = 0xB8000;
+	loader_argument->dbg_text_framebuffer_width  = 80;
+	loader_argument->dbg_text_framebuffer_height = 25;
+	loader_argument->dbg_text_framebuffer_depth  = 0x00;
+	strcpy(loader_argument->debug_interface_identifier , "b8000");
 
-	JumpToKernel64((unsigned int)kargument , pml4t_entry_location);
+	if((multiboot_header.flags & MULTIBOOT_VIDEO_MODE) == MULTIBOOT_VIDEO_MODE) { // VESA video mode
+		loader_argument->video_mode                     = LOADER_ARGUMENT_VIDEOMODE_GRAPHIC;
+		loader_argument->dbg_graphic_framebuffer_addr   = multiboot_info->framebuffer_addr;
+		loader_argument->dbg_graphic_framebuffer_width  = multiboot_info->framebuffer_width;
+		loader_argument->dbg_graphic_framebuffer_height = multiboot_info->framebuffer_height;
+		loader_argument->dbg_graphic_framebuffer_depth  = multiboot_info->framebuffer_bpp;
+		strcpy(loader_argument->debug_interface_identifier , "framebuffer");
+	}
+	PrintString(0x07 , "loader_argument->debug_interface_identifier : %s\n" , loader_argument->debug_interface_identifier);
+
+	JumpToKernel64((unsigned int)loader_argument , pml4t_entry_location);
 
 	while(1) {
 		;

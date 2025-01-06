@@ -11,7 +11,7 @@
 #ifndef _TYPES_HPP_
 #define _TYPES_HPP_
 
-#include <kernel/kernel_argument.hpp>
+#include <loader/loader_argument.hpp>
 #include <kernel/configurations.hpp>
 
 #define SINGLETON_FUNCTION get_self

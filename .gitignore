@@ -23,5 +23,7 @@ Kernel.elf
 Kernel.krn
 image
 log.txt
+*.so
+*.efi
 
 gnu-efi/

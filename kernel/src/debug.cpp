@@ -11,19 +11,54 @@ struct {
     bool func_indent;
     bool enable_debug;
 
+    int x , y;
+    debug_color_t background_color , foreground_color;
+
     word option_flags;
+
+    debug::debug_interface *current_debug_interface;
 }debug_info;
 
-void debug::init(KernelArgument *kernel_argument) {
+extern qword __debug_interface_start__;
+extern qword __debug_interface_end__;
+
+typedef void debug_interface_init_func_t(void);
+
+void init_debug_interface_initializers(void) {
+    for(qword func_ptr_ptr = (qword)&__debug_interface_start__; func_ptr_ptr < (qword)&__debug_interface_end__; func_ptr_ptr += sizeof(debug_interface_init_func_ptr_t)) {
+        qword func_ptr = *((qword *)func_ptr_ptr);
+        ((void(*)(void))func_ptr)();
+    }
+}
+
+void debug::init(LoaderArgument *loader_argument) {
     debug_info.function_stack_index = 0;
     memset(debug_info.function_stack , 0 , sizeof(debug_info.function_stack));
     set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_FIRST_INFO|DEBUG_DISPLAY_INDENTATION , true);
     debug_info.option_flags = 0b11111111;
-
-    debug::out::init(kernel_argument);
+    
+    GLOBAL_OBJECT(DebugInterfaceContainer)->init(512);
+    debug_info.current_debug_interface = 0x00;
+    
+    init_debug_interface_initializers();
+    set_current_debug_interface(loader_argument->debug_interface_identifier);
+    current_debug_interface()->init(loader_argument);
     
     debug::enable();
 }
+
+void debug::register_debug_interface(struct debug::debug_interface *interface , const char *interface_identifier) { strcpy(interface->interface_identifier , interface_identifier); GLOBAL_OBJECT(DebugInterfaceContainer)->register_object(interface); }
+void debug::register_debug_interface(struct debug::debug_interface *interface) { GLOBAL_OBJECT(DebugInterfaceContainer)->register_object(interface); }
+
+void debug::set_current_debug_interface(const char *interface_identifier) {
+    max_t id = GLOBAL_OBJECT(DebugInterfaceContainer)->search<const char *>([](debug::debug_interface *data , const char *str) { 
+        return (bool)(strcmp(data->interface_identifier , str) == 0);
+    } , interface_identifier);
+    if(id == INVALID) return;
+    debug_info.current_debug_interface = GLOBAL_OBJECT(DebugInterfaceContainer)->get_object(id);
+}
+
+struct debug::debug_interface *debug::current_debug_interface() { return debug_info.current_debug_interface; }
 
 void debug::dump_memory(max_t address , max_t length , bool debug_string) {
     byte *ptr = (byte *)address;
@@ -124,6 +159,7 @@ const char *debug::out::debugstr(debug_m mode) {
 }
 
 void debug::push_function(const char *function) {
+    if(!debug_info.enable_debug) return;
     if(debug_info.function_stack_index >= DEBUG_FUNCTION_STACK_MAX) {
         return; // exceeded? just don't add
     }
@@ -137,6 +173,7 @@ void debug::push_function(const char *function) {
 }
 
 void debug::pop_function(void) {
+    if(!debug_info.enable_debug) return;
     if(debug_info.function_stack_index <= 0) return;
     debug_info.function_stack_index--;
 }
@@ -157,29 +194,30 @@ void debug::display_set(word option) { debug_info.option_flags |= option; }
 void debug::display_mask(word option) { debug_info.option_flags &= ~option; }
 
 void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
+    debug_interface *interface = current_debug_interface();
     if(debug_info.enable_debug == false) return;
-    debug_color_t color = debugcolor(mode);
+    debug_color_t color = interface->get_color_by_mode(mode);
     if((debug_info.option_flags & mode) == 0x00) return; // the mode is set as not to be displayed
     set_foreground_color(color);
     if(debug_info.info_display) {
-        print_str(debugstr(mode));
+        interface->print_str(debugstr(mode));
     }
     if(debug_info.function_display && debug_info.function_stack_index > 0) {
         if(debug_info.func_indent) { // indent for debugging the flow of function
             for(int i = 0; i < debug_info.function_stack_index-1; i++) {
-                print_str(" ");
+                interface->print_str(" ");
             }
         }
-        print_str("(");
-        print_str(debug_info.function_stack[debug_info.function_stack_index-1]);
-        print_str(") ");
+        interface->print_str("(");
+        interface->print_str(debug_info.function_stack[debug_info.function_stack_index-1]);
+        interface->print_str(") ");
     }
 
     char string[DEBUG_PRINTF_STR_STACK];
     vsprintf(string , fmt , ap);
-    print_str(string);
+    interface->print_str(string);
 
-    set_foreground_color(debugcolor(DEBUG_TEXT));
+    set_foreground_color(interface->get_color_by_mode(DEBUG_TEXT));
 }
 
 void debug::out::printf(debug_m mode , const char *fmt , ...) {
@@ -218,3 +256,16 @@ void debug::out::raw_printf(const char *fmt , ...) {
     print_str(string);
     va_end(ap);
 }
+
+void debug::out::clear_screen(debug_color_t color) { current_debug_interface()->clear_screen(color); }
+
+void debug::out::print_str(const char *str) { current_debug_interface()->print_str(str); }
+void debug::out::set_cursor_position(int x , int y) { current_debug_interface()->set_cursor_position(x , y); }
+void debug::out::move_cursor_position(int relative_x , int relative_y) { current_debug_interface()->move_cursor_position(relative_x , relative_y); }
+void debug::out::get_position_info(int &x , int &y) { current_debug_interface()->get_position_info(x , y); }
+
+void debug::out::set_background_color(debug_color_t background_color) { current_debug_interface()->set_foreground_color(background_color); }
+void debug::out::set_foreground_color(debug_color_t foreground_color) { current_debug_interface()->set_foreground_color(foreground_color); }
+
+debug_color_t debug::out::get_background_color(void) { return current_debug_interface()->get_background_color(); }
+debug_color_t debug::out::get_foreground_color(void) { return current_debug_interface()->get_foreground_color(); }

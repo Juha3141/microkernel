@@ -123,6 +123,8 @@ void debug_interface_framebuffer::init(struct LoaderArgument *loader_argument) {
 
     scrinfo.font_avg_width = consolas_15px_bmp_font_avg_width;
     scrinfo.font_avg_height = consolas_15px_bmp_font_avg_height;
+
+    scrinfo.color_foreground = get_color_by_mode(DEBUG_TEXT);
 }
 
 void debug_interface_framebuffer::clear_screen(debug_color_t color) {
@@ -152,18 +154,32 @@ static void process_newline(void) {
     if((scrinfo.char_y+1)*scrinfo.font_avg_height < scrinfo.height) {
         return;
     }
-    int x = 0 , y = 0;
     int elev = scrinfo.font_avg_height;
-    for(y = 0; y < scrinfo.height-elev; y++) {
-        for(x = 0; x < scrinfo.width; x++) {
-            draw_pixel(x , y , get_pixel(x , y+elev));
+    memmove(((void *)scrinfo.vmem) , 
+            ((void *)scrinfo.vmem+(scrinfo.width*scrinfo.font_avg_height*(scrinfo.depth/8))) , scrinfo.width*(scrinfo.height-elev)*(scrinfo.depth/8));
+    
+    int depth_byte = scrinfo.depth/8;
+    if(depth_byte == 1) {
+        for(int off = (scrinfo.height-elev)*scrinfo.width; off < (scrinfo.height-1)*scrinfo.width; off += 1) {
+            *((byte *)scrinfo.vmem+off) = scrinfo.color_background;
         }
     }
-    for(int y = scrinfo.height-elev; y < scrinfo.height; y++) {
-        for(x = 0; x < scrinfo.width; x++) {
-            draw_pixel(x , y , scrinfo.color_background);
+    if(depth_byte == 2) {
+        for(int off = (scrinfo.height-elev)*scrinfo.width*depth_byte; off < (scrinfo.height-1)*scrinfo.width*depth_byte; off += 2) {
+            *((word *)(scrinfo.vmem+off)) = (word)(scrinfo.color_background & 0xffff);
         }
     }
+    if(depth_byte == 4) {
+        for(int off = (scrinfo.height-elev)*scrinfo.width*depth_byte; off < (scrinfo.height-1)*scrinfo.width*depth_byte; off += 4) {
+            *((dword *)(scrinfo.vmem+off)) = (dword)(scrinfo.color_background & 0xffffffff);
+        }
+    }
+    if(depth_byte == 8) {
+        for(int off = (scrinfo.height-elev)*scrinfo.width*depth_byte; off < (scrinfo.height-1)*scrinfo.width*depth_byte; off += 8) {
+            *((qword *)(scrinfo.vmem+off)) = (qword)scrinfo.color_background;
+        }
+    }
+    
     scrinfo.char_y -= 1; 
 }
 

@@ -21,12 +21,12 @@ namespace memory {
         max_t end_address;
     };
     void get_kstruct_boundary(struct Boundary &boundary);
-
-    void determine_kstruct_boundary(struct Boundary &new_mboundary , struct LoaderArgument *kargument);
-    int determine_pmem_boundary(struct Boundary protect , struct Boundary *new_mboundary , struct LoaderArgument *kargument);
-
+    
     void kstruct_init(struct Boundary boundary);
     void *kstruct_alloc(max_t size , max_t alignment=0);
+
+    max_t kstruct_get_current_addr(void);
+    void kstruct_rollback_addr(max_t prev_addr);
     
     // SegmentsManager : Manager of segments, decide what segments to be used next
     // Global class, use singleton pattern

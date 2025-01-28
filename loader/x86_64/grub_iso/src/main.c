@@ -4,7 +4,7 @@
 
 #include <intel_paging.h>
 
-#define MULTIBOOT_HEADER_FLAG_VALUE  MULTIBOOT_PAGE_ALIGN|MULTIBOOT_VIDEO_MODE
+#define MULTIBOOT_HEADER_FLAG_VALUE  MULTIBOOT_PAGE_ALIGN
 
 __attribute__ ((section(".multiboot_header"))) struct multiboot_header multiboot_header = {
 	.magic    = MULTIBOOT_HEADER_MAGIC , 
@@ -125,10 +125,8 @@ void Main(struct multiboot_info *multiboot_info) {
 	memset(loader_argument , 0 , sizeof(struct LoaderArgument));
 	loader_argument->signature = LOADER_ARGUMENT_SIGNATURE;
 	// total_kernel_boundary : total boundary that contains kernel and other necessary stuff
-	// physical memory manager will protect the "total bound"
-	loader_argument->total_kernel_area_start = kernel_addr;
-	
-	loader_argument->kernel_address = kernel_addr;
+	// physical memory manager will protect the "total boundary" [DEPRECATED]
+	loader_argument->kernel_physical_location = kernel_addr;
 	loader_argument->kernel_size = kernel_size;
 
 	loader_argument->ramdisk_address = ramdisk_addr;
@@ -138,7 +136,7 @@ void Main(struct multiboot_info *multiboot_info) {
 	
 	// Global memory map
 	struct MemoryMap *memmap = (struct MemoryMap *)kernel_struct_addr;
-	loader_argument->memmap_ptr = (struct MemoryMap *)kernel_struct_addr;
+	loader_argument->memmap_location = (struct MemoryMap *)kernel_struct_addr;
 	// initialize memory map area
 	memset(memmap , 0 , sizeof(struct MemoryMap)*32);
 	kernel_struct_addr += sizeof(struct MemoryMap)*32; // maximum 32
@@ -159,13 +157,11 @@ void Main(struct multiboot_info *multiboot_info) {
 	pml4t_entry_size = pml4t_entry_end-pml4t_entry_location;
 
 	// address should be aligned to 2MB
-	loader_argument->kernel_linear_address = KERNEL_NEW_HIGHER_HALF;
+	loader_argument->kernel_linear_location = KERNEL_NEW_HIGHER_HALF;
 	PrintString(0x07 , "kernel_page_size : %d\n" , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)));
-	RelocatePage(loader_argument->kernel_address , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)) , loader_argument->kernel_linear_address , pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
+	RelocatePage(loader_argument->kernel_physical_location , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)) , loader_argument->kernel_linear_location , pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
 	// Make original kernel not present
 	// RelocatePage(loader_argument->kernel_address , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)) , loader_argument->kernel_address , loader_argument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
-
-	loader_argument->total_kernel_area_end = pml4t_entry_end;
 
 	// graphic system!
 	loader_argument->video_mode                  = LOADER_ARGUMENT_VIDEOMODE_TEXTMODE;

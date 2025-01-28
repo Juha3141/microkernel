@@ -1,5 +1,6 @@
-include global_variables.mk
 include configurations.mk
+include global_variables.mk
+include $(ARCH_CONFIGURATION_MAKEFILE)
 
 BASH = bash
 QEMU = qemu-system-x86_64

@@ -38,22 +38,6 @@ void ps2::write_controller_configuration_byte(byte configuration_byte) {
 }
 
 void enable_mouse(void) {
-    byte ACK , compaq_status;
-    io_write_byte(PS2_COMMAND_PORT , 0xA8); // enable auxiliary mouse device
-    ps2::flush_output_buffer();
-
-    io_write_byte(PS2_COMMAND_PORT , 0x20);
-    ps2::wait_for_output_buffer_status(PS2_FULL);
-
-    compaq_status = io_read_byte(PS2_DATA_PORT); // read the compaq status
-    debug::out::printf("compaq_status = 0x%X\n" , compaq_status);
-    compaq_status |= (1 << 1); // enale IRQ12 interrupt
-    
-    ps2::wait_for_input_buffer_status(PS2_EMPTY); // write the compaq status
-    io_write_byte(PS2_COMMAND_PORT , 0x60);
-    ps2::wait_for_input_buffer_status(PS2_EMPTY);
-    io_write_byte(PS2_DATA_PORT , compaq_status);
-
     ps2::wait_for_input_buffer_status(PS2_EMPTY); // set the settings to default
     io_write_byte(PS2_COMMAND_PORT , 0xD4); 
     ps2::wait_for_input_buffer_status(PS2_EMPTY);
@@ -67,12 +51,9 @@ void enable_mouse(void) {
     io_write_byte(PS2_DATA_PORT , 0xF4);
     debug::out::printf("Enabling data packet streaming\n");
 
-    // read ACK
+    // clear out the output buffer
     ps2::wait_for_output_buffer_status(PS2_FULL);
-    if((ACK = io_read_byte(PS2_DATA_PORT)) != 0xFA) {
-        debug::out::printf("Error!\n");
-        return;
-    }
+    byte buffer = io_read_byte(PS2_DATA_PORT);
 }
 
 bool ps2::initialize(void) {

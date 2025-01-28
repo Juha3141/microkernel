@@ -2,21 +2,121 @@
 
 #define size_t unsigned int
 
-void *memset(void *s , int c , size_t n) {
-    unsigned char *ptr = (unsigned char *)s;
-    for(size_t i = 0; i < n; i++) {
-        *ptr++ = c;
+void *memset(void *dest , int c , size_t n) {
+    unsigned char *dest_ptr_char = (unsigned char *)dest;
+    max_t aligned_dest = alignto((max_t)dest , WORD_SIZE);
+    
+    if(n <= WORD_SIZE) { // no optimization
+        for(size_t i = 0; i < n; i++) { *dest_ptr_char++ = (unsigned char)c; }
+        return dest;
     }
-    return ptr;
+
+    // fill out the front area
+    max_t dest_remaining = aligned_dest-(max_t)dest;
+    for(size_t i = 0; i < dest_remaining; i++) { 
+        *dest_ptr_char++ = (unsigned char)c; 
+    }
+    max_t size = n-dest_remaining;
+    size = size-(size%WORD_SIZE);
+    max_t dest_remaining_rear = n-size-dest_remaining;
+
+    max_t *dest_ptr = (max_t *)((max_t)dest+dest_remaining);
+
+    max_t fill_data = 0x00; 
+    for(int i = 0; i < WORD_SIZE; i++) {
+        fill_data |= (((max_t)c & 0xff) << i*8);
+    }
+    
+    for(size_t k = 0; k < size/WORD_SIZE; k++) { 
+        dest_ptr[k] = fill_data;
+    }
+
+    dest_ptr_char = (unsigned char *)dest+size;
+    for(int i = 0; i < dest_remaining_rear; i++) {
+        *dest_ptr_char++ = (unsigned char)c;
+    }
+
+    return dest;
 }
 
 void *memcpy(void *dest , const void *src , size_t n) {
-    unsigned char *dest_ptr = (unsigned char *)dest;
-    unsigned char *src_ptr = (unsigned char *)src;
-    for(size_t i = 0; i < n; i++) {
-        *dest_ptr++ = *src_ptr++;
+    unsigned char *dest_ptr_char = (unsigned char *)dest;
+    unsigned char *src_ptr_char  = (unsigned char *)src;
+    max_t aligned_dest = alignto((max_t)dest , WORD_SIZE);
+    
+    if(n <= WORD_SIZE) { // no optimization
+        for(size_t i = 0; i < n; i++) { *dest_ptr_char++ = *src_ptr_char++; }
+        return dest;
+    }
+
+    // fill out the front area
+    max_t dest_remaining = aligned_dest-(max_t)dest;
+    
+    for(size_t i = 0; i < dest_remaining; i++) { 
+        *dest_ptr_char++ = *src_ptr_char++;
+    }
+    max_t size = n-dest_remaining;
+    size = size-(size%WORD_SIZE);
+    max_t dest_remaining_rear = n-size-dest_remaining;
+
+    max_t *dest_ptr = (max_t *)((max_t)dest+dest_remaining);
+    max_t *src_ptr  = (max_t *)((max_t)src+dest_remaining);
+    for(size_t k = 0; k < size/WORD_SIZE; k++) { 
+        dest_ptr[k] = src_ptr[k];
+    }
+
+    // fill out remaining chunk
+    dest_ptr_char = (unsigned char *)dest+size;
+    src_ptr_char  = (unsigned char *)src+size;
+    for(int i = 0; i < dest_remaining_rear; i++) {
+        *dest_ptr_char++ = *src_ptr_char++;
+    }
+
+    return dest;
+}
+
+static void *memcpy_reverse(void *dest , const void *src , size_t n) {
+    unsigned char *dest_ptr_char = (unsigned char *)dest;
+    unsigned char *src_ptr_char  = (unsigned char *)src;
+    max_t aligned_dest = alignto((max_t)dest , WORD_SIZE);
+    
+    if(n <= WORD_SIZE) { // no optimization
+        for(size_t i = 0; i < n; i++) { *dest_ptr_char++ = *src_ptr_char++; }
+        return dest;
+    }
+
+    // fill out the area from the rear
+    max_t dest_remaining_front = aligned_dest-(max_t)dest;
+    max_t size = n-dest_remaining_front;
+    size = size-(size%WORD_SIZE);
+    max_t dest_remaining_rear = n-size-dest_remaining_front;
+
+    dest_ptr_char = (unsigned char *)dest+n;
+    src_ptr_char  = (unsigned char *)src+n;
+    for(int i = 0; i < dest_remaining_rear; i++) {
+        *--dest_ptr_char = *--src_ptr_char;
+    }
+
+    max_t *dest_ptr = (max_t *)((max_t)dest+size+dest_remaining_front);
+    max_t *src_ptr  = (max_t *)((max_t)src+size+dest_remaining_front);
+    for(size_t i = 0; i < size/WORD_SIZE; i++) {
+        *--dest_ptr = *--src_ptr;
+    }
+
+    // fill out remaining front chunk
+    dest_ptr_char = (unsigned char *)dest+dest_remaining_front;
+    src_ptr_char  = (unsigned char *)src+dest_remaining_front;
+    for(size_t i = 0; i < dest_remaining_front; i++) { 
+        *--dest_ptr_char = *--src_ptr_char;
     }
     return dest;
+}
+
+void *memmove(void *dest , const void *src , size_t n) {
+    if(dest == src) return dest;
+
+    if(dest < src) { return memcpy(dest , src , n); }
+    return memcpy_reverse(dest , src , n);
 }
 
 int memcmp(const void *s1 , const void *s2 , size_t n) {

@@ -4,7 +4,7 @@ LOADER_CC = gcc
 LOADER_LD = ld
 LOADER_AS = nasm
 
-LOADER_CCOPTIONS = -fpack-struct=1 -I$(GNU_EFI_DIR)/inc -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -maccumulate-outgoing-args
+LOADER_CCOPTIONS = -g -masm=intel -fpack-struct=1 -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -maccumulate-outgoing-args
 LOADER_LDOPTIONS = -shared -Bsymbolic -L$(GNU_EFI_DIR)/x86_64/lib -L$(GNU_EFI_DIR)/x86_64/gnuefi $(GNU_EFI_DIR)/x86_64/gnuefi/crt0-efi-x86_64.o 
 LOADER_ASOPTIONS = -f elf64
 
@@ -18,6 +18,8 @@ AS_EXTENSION = asm
 SOURCESFOLDER = src
 INCLUDEFOLDER = include
 
+INCLUDEPATHS = $(GNU_EFI_DIR)/inc
+
 LINK_OBJECTS = yes
 
 EFI_TARGET = $(BINARYFOLDER)/bootx64.efi
@@ -28,7 +30,7 @@ remove_target:
 build_bootloader:
 
 build_efi_executable:
-	$(OBJCOPY) -j .text -j .sdata -j .data -j .rodata -j .dynamic -j .dynsym  -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-x86_64 --subsystem=10 $(LOADER_LD_OUT) $(EFI_TARGET)
+	objcopy -j .text -j .sdata -j .data -j .rodata -j .dynamic -j .dynsym  -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-x86_64 --subsystem=10 $(LOADER_LD_OUT) $(EFI_TARGET)
 
 build_final_image: build_efi_executable
 	dd if=/dev/zero of=$(TARGET) bs=512 count=93750
@@ -54,5 +56,6 @@ run_os:
 	qemu-system-x86_64 -cpu qemu64 -m 2048 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio
 
 debug_run_os:
+	qemu-system-x86_64 -cpu qemu64 -m 2048 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -S -s
 
 include $(ROOTDIR)/build_loader_common.mk

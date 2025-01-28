@@ -3,8 +3,9 @@ ENTRY(kernel_main)
 INCLUDE arch_configurations.ld
 
 SECTIONS {
-  . = _KERNEL_LOAD_LOCATION;
-  .entry _KERNEL_LOAD_LOCATION : {
+  /* temporarily change the kernel load address for debugging purpose */
+  . = 0x100000;
+  .entry 0x100000 : {
     *(.entry) *(.entry.*)
   }
   .text ALIGN(4096) : {

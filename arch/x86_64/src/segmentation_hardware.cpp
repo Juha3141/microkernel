@@ -40,7 +40,7 @@ void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segment
     debug::out::printf(DEBUG_INFO , "sizeof(GDTEntry) : %d\n" , sizeof(x86_64::GDTEntry));
     debug::out::printf(DEBUG_INFO , "sizeof(LDTEntry) : %d\n" , sizeof(x86_64::LDTEntry));
 
-    IA ("lgdt [%0]"::"r"(gdtr_ptr));
+    __asm__ ("lgdt [%0]"::"r"(gdtr_ptr));
     debug::pop_function();
 }
 
@@ -92,28 +92,28 @@ void segmentation::hardware::discard_segment(segment_t segment) {
 }
 
 __attribute__ ((naked)) void segmentation::hardware::set_to_code_segment(segment_t segment) {
-    IA ("mov rbx , qword[rsp-8]"); // Return address of current function (Stored in RSP)
-    IA ("push %0"::"r"(segment));  // Push new code segment
-    IA ("push rbx");               // Push the return address
+    __asm__ ("mov rbx , qword[rsp-8]"); // Return address of current function (Stored in RSP)
+    __asm__ ("push %0"::"r"(segment));  // Push new code segment
+    __asm__ ("push rbx");               // Push the return address
 
-    IA ("retfq");                  // Set the code segment and go back to return address
+    __asm__ ("retfq");                  // Set the code segment and go back to return address
 }
 
 __attribute__ ((naked)) void segmentation::hardware::set_to_code_segment(segment_t segment , ptr_t new_point) {
-    IA ("push %0"::"r"(segment));         // Push new code segment
-    IA ("mov rax , %0"::"r"(new_point));  // Push new entry point
-    IA ("push rax");
+    __asm__ ("push %0"::"r"(segment));         // Push new code segment
+    __asm__ ("mov rax , %0"::"r"(new_point));  // Push new entry point
+    __asm__ ("push rax");
 
-    IA ("retfq");                  // Set the code segment and jump to the address
+    __asm__ ("retfq");                  // Set the code segment and jump to the address
 }
 
 __attribute__((naked)) void segmentation::hardware::set_to_data_segment(segment_t segment) {
-    IA ("mov ax , %0"::"r"(segment));
-    IA ("mov ds , ax");
-    IA ("mov es , ax");
-    IA ("mov fs , ax");
-    IA ("mov gs , ax");
-    IA ("mov ss , ax");
+    __asm__ ("mov ax , %0"::"r"(segment));
+    __asm__ ("mov ds , ax");
+    __asm__ ("mov es , ax");
+    __asm__ ("mov fs , ax");
+    __asm__ ("mov gs , ax");
+    __asm__ ("mov ss , ax");
 
     IA_RETURN
 }

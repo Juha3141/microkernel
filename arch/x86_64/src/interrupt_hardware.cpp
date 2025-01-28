@@ -38,7 +38,7 @@ void interrupt::hardware::init(void) {
     idt_container->init(IDT_ENTRYCOUNT);
     // Register IDTR
     max_t idtr_ptr = (max_t)&idt_container->reg;
-    IA ("lidt [%0]"::"r"(idtr_ptr));
+    __asm__ ("lidt [%0]"::"r"(idtr_ptr));
     
     debug::out::printf("idtr_ptr      : 0x%X\n" , idtr_ptr);
     debug::out::printf("idt base_addr : 0x%X\n" , idt_container->entries);
@@ -88,7 +88,7 @@ void interrupt::hardware::init_ist(void) {
     tss->iopb_offset = 0xFFFF;
     ist_address[0] = (qword)tss->ist[0];
     // Set Segment
-    IA ("ltr %0"::"r"((word)gdt_container->tss_segment));
+    __asm__ ("ltr %0"::"r"((word)gdt_container->tss_segment));
     
     debug::out::printf_function(DEBUG_TEXT , "init_ist" , "TSS segment : 0x%X\n" , gdt_container->tss_segment);
 }

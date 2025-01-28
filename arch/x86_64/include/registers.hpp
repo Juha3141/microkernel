@@ -33,6 +33,8 @@ struct Registers {
 
     qword rflags; // 22
     qword rip;    // 23
+    
+    qword cr3;    // 24
 };
 
 #endif

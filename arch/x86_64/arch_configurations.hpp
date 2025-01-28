@@ -1,14 +1,6 @@
-// Global architecture-specific configurations for both kernel and loader.
+#ifndef _ARCH_CONFIGRUATION_HPP_
+#define _ARCH_CONFIGURATION_HPP_
 
-#ifndef _ARCH_CONFIGURATIONS_HPP_
-#define _ARCH_CONFIGURATIONS_HPP_
-
-#define KERNEL_LOAD_LOCATION 0xC0000000
-
-#ifdef LINKER_SCRIPT
-
-_KERNEL_LOAD_LOCATION = KERNEL_LOAD_LOCATION;
-
-#endif
+#define WORD_SIZE 8
 
 #endif

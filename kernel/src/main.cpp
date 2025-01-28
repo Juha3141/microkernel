@@ -25,26 +25,32 @@
 #include <loader/loader_argument.hpp>
 
 // For testing
-
 #include <random.hpp>
-
 #include <hash_table.hpp>
+#include <arch/switch_context.hpp>
 
 void pmem_alloc_test(int rand_seed);
 void dump_block_devices(void);
 void demo_routine(void);
 
 
+void context_switch_test(qword test);
 
 extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_argument) {
     if(loader_argument->signature != LOADER_ARGUMENT_SIGNATURE) {
+        if(loader_argument->video_mode == LOADER_ARGUMENT_VIDEOMODE_GRAPHIC) *((max_t *)loader_argument->dbg_graphic_framebuffer_addr) = 0xffffffffffffffff;
+        else *((unsigned char *)loader_argument->dbg_text_framebuffer_addr) = 'E';
+
         while(1) {
             ;
         }
     }
-
-    memory::pmem_init(loader_argument->memmap_count , (struct MemoryMap *)((max_t)loader_argument->memmap_ptr) , loader_argument);
+    memory::kstruct_init({loader_argument->kstruct_mem_location , loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size});
     debug::init(loader_argument);
+    debug::out::clear_screen(0x00);
+    debug::out::printf("Hello, world!\n");
+
+    memory::pmem_init(loader_argument->memmap_count , (struct MemoryMap *)((max_t)loader_argument->memmap_location) , loader_argument);
 
     segmentation::init();
     interrupt::init();
@@ -62,26 +68,45 @@ extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_arg
 
     interrupt::hardware::enable();
 
-    while(1) {
-        ;
-    }
-
     debug::out::printf(DEBUG_INFO , "----- Initializing vfs..\n");
     debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , loader_argument->ramdisk_address , loader_argument->ramdisk_address+loader_argument->ramdisk_size);
     // find the ramdisk driver
-    if(loader_argument->ramdisk_address == 0x00) {
-        debug::panic("No ramdisk found!\n"); // frick! I forgot to add the ramdisk!
+    if(loader_argument->is_ramdisk_available) {
+        blockdev::block_device *device = ramdisk_driver::create(loader_argument->ramdisk_size/512 , 512 , loader_argument->ramdisk_address);
+        blockdev::register_device(device->device_driver->driver_id , device);
+        // mount to the root device
+        vfs::init(device);
     }
-    blockdev::block_device *device = ramdisk_driver::create(loader_argument->ramdisk_size/512 , 512 , loader_argument->ramdisk_address);
-    blockdev::register_device(device->device_driver->driver_id , device);
-    
-    // mount to the root device
-    vfs::init(device);
+    else {
+        debug::out::printf("no ramdisk found!\n");
+    }
     debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
+    
+    struct Registers current_context , next_context;
+    memset(&next_context , 0 , sizeof(struct Registers));
+    next_context.rip = (qword)context_switch_test;
+    __asm__ ("mov rax , cr3");
+    __asm__ ("mov %0 , rax":"=r"(next_context.cr3));
+    next_context.rflags = 0x202;
+    next_context.rsp = (qword)memory::pmem_alloc(4096 , 16);
+    next_context.rbp = next_context.rsp;
+    next_context.cs = 0x08;
+    next_context.ds = 0x10;
+    next_context.es = 0x10;
+    next_context.fs = 0x10;
+    next_context.gs = 0x10;
+    next_context.ss = 0x10;
+    next_context.rdi = 0xBABAB01;
+    switch_context(&current_context , &next_context);
+    debug::out::printf("failed!\n");
 
-//  demo_routine();
-//  dump_block_devices();
+    while(1) {
+        ;
+    }
+}
 
+void context_switch_test(qword test) {
+    debug::out::printf("context switch succeed! test = 0x%X\n" , test);
     while(1) {
         ;
     }

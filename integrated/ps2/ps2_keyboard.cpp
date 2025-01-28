@@ -29,6 +29,7 @@ void ps2::ps2_interrupt_handler_irq1(struct Registers *regs) {
 
     Queue<byte>*scan_code_queue = (Queue<byte>*)dev->resources.etc_resources[0];
     scan_code_queue->enqueue(data);
+    debug::out::printf("K : 0x%X\n" , data);
 }
 
 bool ps2_keyboard_driver::open(chardev::char_device *device) { 
@@ -44,6 +45,7 @@ max_t ps2_keyboard_driver::read(chardev::char_device *device , void *buffer , ma
     return 0;
 }
 
+// you cannot write to keyboard
 max_t ps2_keyboard_driver::write(chardev::char_device *device , void *buffer , max_t size) { 
     return 0;
 }

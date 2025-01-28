@@ -102,8 +102,8 @@ LongModeEntry:
     mov rsp , rax
 
     xor rdx , rdx
-    mov edx , dword[rdi+(4*9)] ; kernel_linear_address
-
+    mov edx , dword[rdi+(4*11)] ; kernel_linear_address
+    
     call rdx
 
     jmp $

@@ -3,42 +3,19 @@
 
 #include <loader/loader_argument.hpp>
 
-EFI_STATUS get_volume(EFI_HANDLE image , EFI_FILE_HANDLE *volume) {
-    EFI_LOADED_IMAGE *loaded_image = NULL;
-    EFI_GUID lip_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
-    EFI_FILE_IO_INTERFACE *io_volume;
-    EFI_GUID fs_guid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
-
-    uefi_call_wrapper(BS->HandleProtocol , 3 , image , &lip_guid , (void **)&loaded_image);
-    uefi_call_wrapper(BS->HandleProtocol , 3 , loaded_image->DeviceHandle , &fs_guid , (void *)&io_volume);
-
-    return uefi_call_wrapper(io_volume->OpenVolume , 2 , io_volume , volume);
-}
-
-wchar_t *get_efi_memory_type_str(EFI_MEMORY_TYPE type) {
-    switch(type) {
-        case EfiReservedMemoryType:      return L"EfiReservedMemoryType";
-        case EfiLoaderCode:              return L"EfiLoaderCode";
-        case EfiLoaderData:              return L"EfiLoaderData";
-        case EfiBootServicesCode:        return L"EfiBootServicesCode";
-        case EfiBootServicesData:        return L"EfiBootServicesData";
-        case EfiRuntimeServicesCode:     return L"EfiRuntimeServicesCode";
-        case EfiRuntimeServicesData:     return L"EfiRuntimeServicesData";
-        case EfiConventionalMemory:      return L"EfiConventionalMemory";
-        case EfiUnusableMemory:          return L"EfiUnusableMemory";
-        case EfiACPIReclaimMemory:       return L"EfiACPIReclaimMemory";
-        case EfiACPIMemoryNVS:           return L"EfiACPIMemoryNVS";
-        case EfiMemoryMappedIO:          return L"EfiMemoryMappedIO";
-        case EfiMemoryMappedIOPortSpace: return L"EfiMemoryMappedIOPortSpace";
-        case EfiPalCode:                 return L"EfiPalCode";
-        case EfiPersistentMemory:        return L"EfiPersistentMemory";
-        case EfiUnacceptedMemoryType:    return L"EfiUnacceptedMemoryType";
-        case EfiMaxMemoryType:           return L"EfiMaxMemoryType";
-    };
-    return "Unknown";
-}
-
 #define MINIMUM_KERNEL_RELOCATE_LOCATION 0x100000
+#define KSTRUCT_MEM_SIZE      1*1024*1024 // 1MB
+#define KERNEL_STACK_SIZE     8*1024*1024 // 8MB 
+
+#define ALIGN_SIZE(size , alignment) (size+(alignment-(size%alignment)))
+
+wchar_t *get_efi_memory_type_str(EFI_MEMORY_TYPE type);
+EFI_MEMORY_DESCRIPTOR *find_available_memory_entry(EFI_MEMORY_DESCRIPTOR *memmap_entry , UINT64 memmap_size , 
+    UINT64 memmap_descriptor_size , UINT64 minimum_address , UINT64 minimum_size , EFI_MEMORY_DESCRIPTOR *exclude_entry);
+EFI_FILE_HANDLE get_volume(EFI_HANDLE image);
+unsigned int convert_efi_mem_type_to_kernel(EFI_MEMORY_TYPE efi_mem_type);
+
+extern void jump_to_kernel(struct LoaderArgument *loader_argument , UINT64 kernel_location , UINT64 kernel_stack);
 
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_table) {
     EFI_STATUS status;
@@ -67,9 +44,19 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     Print(L"memmap size : %d\n" , memmap_size);
     Print(L"memmap descriptor size : %d\n" , memmap_descriptor_size);
     
+    UINT64 kernel_memmap_size = ALIGN_SIZE((memmap_size/memmap_descriptor_size)*sizeof(struct MemoryMap) , 4096);
+    struct MemoryMap *kernel_memmap = AllocatePool(kernel_memmap_size);
+    ZeroMem(kernel_memmap , kernel_memmap_size);
     EFI_MEMORY_DESCRIPTOR *memmap_entry = memory_descriptor;
     UINT64 total_memory_size = 0;
     for(int i = 0; i < memmap_size/memmap_descriptor_size; i++) {
+        // copy to the memory map for kernel
+        kernel_memmap[i].addr_high = (memmap_entry->PhysicalStart >> 32);
+        kernel_memmap[i].addr_low  = memmap_entry->PhysicalStart & 0xffffffff;
+        kernel_memmap[i].length_high = (((UINT64)(memmap_entry->NumberOfPages*4096)) >> 32);
+        kernel_memmap[i].length_low  = ((UINT64)(memmap_entry->NumberOfPages*4096)) & 0xffffffff;
+        kernel_memmap[i].type = convert_efi_mem_type_to_kernel(memmap_entry->Type);
+        
         if(memmap_entry->Type == EfiReservedMemoryType) {
             memmap_entry = (EFI_MEMORY_DESCRIPTOR *)((UINT8*)memmap_entry+memmap_descriptor_size);
             continue;
@@ -89,15 +76,68 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     }
     Print(L"Total amount of memory : %dMB\n" , total_memory_size/1024/1024);
 
-    EFI_FILE_HANDLE volume;
     EFI_FILE_HANDLE kernel_file_handle;
     EFI_FILE_INFO *kernel_file_info;
-    status = get_volume(image_handle , &volume);
-    Print(L"get_volume() done, status = 0x%X\n" , status);
+    EFI_FILE_HANDLE volume;
+    volume = get_volume(image_handle);
+    Print(L"volume = 0x%llX\n" , volume);
     status = uefi_call_wrapper(volume->Open , 5 , volume , &kernel_file_handle , L"Kernel.krn" , EFI_FILE_MODE_READ , EFI_FILE_READ_ONLY|EFI_FILE_HIDDEN|EFI_FILE_SYSTEM);
-    Print(L"status = 0x%X\n" , status);
     kernel_file_info = LibFileInfo(kernel_file_handle);
     Print(L"kernel file size : %d\n" , kernel_file_info->FileSize);
+    UINT64 kernel_file_size = kernel_file_info->FileSize;
+    UINT64 kernel_misc_area_size = kernel_memmap_size+KSTRUCT_MEM_SIZE+KERNEL_STACK_SIZE+LOADER_ARGUMENT_LENGTH;
+
+    // align kernel file size to 4096
+    kernel_file_size = ALIGN_SIZE(kernel_file_size , 4096);
+    Print(L"aligned loader argument size : %d\n" , LOADER_ARGUMENT_LENGTH);
+    Print(L"aligned kernel file size     : %d\n" , kernel_file_size);
+
+    UINT64 minimum_kernel_location = MINIMUM_KERNEL_RELOCATE_LOCATION;
+    UINT64 kernel_location = 0x00 , 
+           kernel_stack_location = 0x00 , 
+           kstruct_mem_location = 0x00 , 
+           loader_argument_location = 0x00 , 
+           kernel_memmap_location = 0x00;
+
+    // Find the location for kernel in the memory map
+    EFI_MEMORY_DESCRIPTOR *kernel_stack_memory_chunk;
+    EFI_MEMORY_DESCRIPTOR *kernel_memory_chunk = 
+        find_available_memory_entry(memory_descriptor , memmap_size , memmap_descriptor_size , MINIMUM_KERNEL_RELOCATE_LOCATION , kernel_file_size , 0x00);
+    kernel_location = kernel_memory_chunk->PhysicalStart;
+    // is_kernel_area_monolitic : Indicates whether the total kernel area(kernel+stack+loader argument) is continuous or not
+    char is_kernel_area_monolithic = 0; // 1 : true, 0 : false
+    // if the selected chunk is big enough to also encompass the kernel's stack, locate the kernel's stack next to the kernel
+    if((kernel_memory_chunk->NumberOfPages*4096) >= kernel_file_size+kernel_misc_area_size) {
+        kernel_memmap_location   = kernel_location+kernel_file_size;
+        loader_argument_location = kernel_location+kernel_file_size+kernel_memmap_size;
+        kstruct_mem_location     = kernel_location+kernel_file_size+kernel_memmap_size+LOADER_ARGUMENT_LENGTH;
+        kernel_stack_location    = kernel_location+kernel_file_size+kernel_memmap_size+LOADER_ARGUMENT_LENGTH+KSTRUCT_MEM_SIZE;
+        is_kernel_area_monolithic = 1;
+    }
+    else {
+        kernel_stack_memory_chunk = find_available_memory_entry(memory_descriptor , memmap_size , memmap_descriptor_size , kernel_memory_chunk->PhysicalStart+kernel_file_size , kernel_misc_area_size , kernel_memory_chunk);
+        kernel_memmap_location   = kernel_stack_memory_chunk->PhysicalStart;
+        loader_argument_location = kernel_stack_memory_chunk->PhysicalStart+kernel_memmap_size;
+        kstruct_mem_location     = kernel_stack_memory_chunk->PhysicalStart+kernel_memmap_size+LOADER_ARGUMENT_LENGTH;
+        kernel_stack_location    = kernel_stack_memory_chunk->PhysicalStart+kernel_memmap_size+LOADER_ARGUMENT_LENGTH+KSTRUCT_MEM_SIZE;
+    }
+
+    memcpy(kernel_memmap_location , kernel_memmap , kernel_memmap_size);
+    struct LoaderArgument *loader_argument = (struct LoaderArgument *)loader_argument_location;
+    ZeroMem(loader_argument , sizeof(struct LoaderArgument));
+    loader_argument->signature = LOADER_ARGUMENT_SIGNATURE;
+    loader_argument->kernel_physical_location = kernel_location;
+    loader_argument->kernel_linear_location   = kernel_location; // no higher-half kernel
+    loader_argument->kernel_size              = kernel_file_size;
+    loader_argument->kernel_stack_location = kernel_stack_location;
+    loader_argument->kernel_stack_size     = KERNEL_STACK_SIZE;
+    loader_argument->loader_argument_location = loader_argument;
+    loader_argument->loader_argument_size     = LOADER_ARGUMENT_LENGTH;
+    loader_argument->kstruct_mem_location     = kstruct_mem_location;
+    loader_argument->kstruct_mem_size         = KSTRUCT_MEM_SIZE;
+
+    loader_argument->video_mode = LOADER_ARGUMENT_VIDEOMODE_GRAPHIC;
+    loader_argument->is_ramdisk_available = 0;
 
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
     EFI_GUID gop_guid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
@@ -110,14 +150,128 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     }
 
     Print(L"Resolution : %ux%u\n" , gop->Mode->Info->HorizontalResolution , gop->Mode->Info->VerticalResolution);
-    Print(L"Pixel format : %u\n" , gop->Mode->Info->PixelFormat);
     Print(L"Pixel per scan line : %u\n" , gop->Mode->Info->PixelsPerScanLine);
     Print(L"Frame Buffer : 0x%X ~ 0x%X (Size : %d)\n" , gop->Mode->FrameBufferBase , gop->Mode->FrameBufferBase+gop->Mode->FrameBufferSize , gop->Mode->FrameBufferSize);
     
-    // struct LoaderArgument *loader_argument = (struct LoaderArgument *);
+    loader_argument->dbg_graphic_framebuffer_addr = gop->Mode->FrameBufferBase;
+    loader_argument->dbg_graphic_framebuffer_width = gop->Mode->Info->HorizontalResolution;
+    loader_argument->dbg_graphic_framebuffer_height = gop->Mode->Info->VerticalResolution;
+    loader_argument->dbg_graphic_framebuffer_depth = 32;
+
+    loader_argument->memmap_location = kernel_memmap_location;
+    loader_argument->memmap_count    = memmap_size/memmap_descriptor_size;
+
+    StrCpy(loader_argument->debug_interface_identifier , "framebuffer");
+    
+    UINT64 file_size = kernel_file_info->FileSize;
+    uefi_call_wrapper(kernel_file_handle->Read , 3 , kernel_file_handle , &file_size , (void *)loader_argument->kernel_physical_location);
+    Print(L"kernel_location       = 0x%X~0x%X\n" , loader_argument->kernel_physical_location , loader_argument->kernel_physical_location+loader_argument->kernel_size);
+    Print(L"kernel_stack_location = 0x%X~0x%X\n" , loader_argument->kernel_stack_location , loader_argument->kernel_stack_location+loader_argument->kernel_stack_size);
+    Print(L"loader_argument = 0x%X~0x%X\n" , loader_argument , loader_argument->loader_argument_location+loader_argument->loader_argument_size);
+    Print(L"kernel_memmap   = 0x%X~0x%X\n" , loader_argument->memmap_location , loader_argument->memmap_location+(loader_argument->memmap_count*sizeof(struct MemoryMap)));
+    
+    memmap_size = 16384;
+    Print(L"Jumping to location of kernel : 0x%X...\n" , loader_argument->kernel_physical_location);
+    status = uefi_call_wrapper(BS->GetMemoryMap , 5 , &memmap_size , memory_descriptor , &memmap_key , &memmap_descriptor_size , &memmap_descriptor_version);
+    if(EFI_ERROR(status)) {
+        Print(L"Unable to fetch the memory map key! status = 0x%X\n" , status);
+        while(1) {
+            ;
+        }
+    }
+    status = uefi_call_wrapper(BS->ExitBootServices , 2 , image_handle , memmap_key);
+    if(EFI_ERROR(status)) {
+        Print(L"Unable to exit boot services! status = 0x%X\n" , status);
+        while(1) {
+            ;
+        }
+    }
+    
+    jump_to_kernel(loader_argument , loader_argument->kernel_physical_location , loader_argument->kernel_stack_location+loader_argument->kernel_stack_size);
 
     while(1) {
         ;
-    }
+    }    
     return EFI_SUCCESS;
+}
+
+unsigned int convert_efi_mem_type_to_kernel(EFI_MEMORY_TYPE type) {
+    switch(type) {
+        case EfiReservedMemoryType:      return MEMORYMAP_RESERVED;
+        case EfiLoaderCode:              return MEMORYMAP_EFI_LOADER;
+        case EfiLoaderData:              return MEMORYMAP_EFI_LOADER;
+        case EfiBootServicesCode:        return MEMORYMAP_EFI_BOOT_SERVICE;
+        case EfiBootServicesData:        return MEMORYMAP_EFI_BOOT_SERVICE;
+        case EfiRuntimeServicesCode:     return MEMORYMAP_EFI_RUNTIME;
+        case EfiRuntimeServicesData:     return MEMORYMAP_EFI_RUNTIME;
+        case EfiConventionalMemory:      return MEMORYMAP_USABLE;
+        case EfiUnusableMemory:          return MEMORYMAP_UNUSABLE;
+        case EfiACPIReclaimMemory:       return MEMORYMAP_ACPI_RECLAIM;
+        case EfiACPIMemoryNVS:           return MEMORYMAP_ACPI_NVS;
+        case EfiMemoryMappedIO:          return MEMORYMAP_MISCELLANEOUS;
+        case EfiMemoryMappedIOPortSpace: return MEMORYMAP_MISCELLANEOUS;
+        case EfiPalCode:                 return MEMORYMAP_MISCELLANEOUS;
+        case EfiPersistentMemory:        return MEMORYMAP_MISCELLANEOUS;
+        case EfiUnacceptedMemoryType:    return MEMORYMAP_MISCELLANEOUS;
+        case EfiMaxMemoryType:           return MEMORYMAP_MISCELLANEOUS;
+    };
+    return MEMORYMAP_MISCELLANEOUS;
+}
+
+wchar_t *get_efi_memory_type_str(EFI_MEMORY_TYPE type) {
+    switch(type) {
+        case EfiReservedMemoryType:      return L"EfiReservedMemoryType";
+        case EfiLoaderCode:              return L"EfiLoaderCode";
+        case EfiLoaderData:              return L"EfiLoaderData";
+        case EfiBootServicesCode:        return L"EfiBootServicesCode";
+        case EfiBootServicesData:        return L"EfiBootServicesData";
+        case EfiRuntimeServicesCode:     return L"EfiRuntimeServicesCode";
+        case EfiRuntimeServicesData:     return L"EfiRuntimeServicesData";
+        case EfiConventionalMemory:      return L"EfiConventionalMemory";
+        case EfiUnusableMemory:          return L"EfiUnusableMemory";
+        case EfiACPIReclaimMemory:       return L"EfiACPIReclaimMemory";
+        case EfiACPIMemoryNVS:           return L"EfiACPIMemoryNVS";
+        case EfiMemoryMappedIO:          return L"EfiMemoryMappedIO";
+        case EfiMemoryMappedIOPortSpace: return L"EfiMemoryMappedIOPortSpace";
+        case EfiPalCode:                 return L"EfiPalCode";
+        case EfiPersistentMemory:        return L"EfiPersistentMemory";
+        case EfiUnacceptedMemoryType:    return L"EfiUnacceptedMemoryType";
+        case EfiMaxMemoryType:           return L"EfiMaxMemoryType";
+    };
+    return "Unknown";
+}
+
+EFI_FILE_HANDLE get_volume(EFI_HANDLE image) {
+    EFI_LOADED_IMAGE *loaded_image = NULL;
+    EFI_GUID lip_guid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
+    EFI_FILE_IO_INTERFACE *io_volume;
+    EFI_GUID fs_guid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
+    EFI_FILE_HANDLE volume;
+    EFI_STATUS status = uefi_call_wrapper(BS->HandleProtocol , 3 , image , &lip_guid , (void **)&loaded_image);
+    Print(L"status = %d\n" , status);
+    Print(L"loaded_image = 0x%llX\n" , loaded_image);
+    Print(L"loaded_image->DeviceHandle = 0x%llX\n" , loaded_image->DeviceHandle);
+
+    return LibOpenRoot(((UINT64)loaded_image->DeviceHandle) >> 32);
+}
+
+EFI_MEMORY_DESCRIPTOR *find_available_memory_entry(EFI_MEMORY_DESCRIPTOR *memmap_entry , UINT64 memmap_size , 
+    UINT64 memmap_descriptor_size , UINT64 minimum_address , UINT64 minimum_size , EFI_MEMORY_DESCRIPTOR *exclude_entry) {
+    for(int i = 0; i < memmap_size/memmap_descriptor_size; i++) {
+        if(memmap_entry->Type == EfiReservedMemoryType||memmap_entry->Type == EfiBootServicesCode||memmap_entry->Type == EfiBootServicesData) {
+            goto CONTINUE;
+        }
+        if(memmap_entry == exclude_entry) goto CONTINUE;
+        
+        UINT64 entry_size = memmap_entry->NumberOfPages*4096;
+        UINT64 entry_start = memmap_entry->PhysicalStart , entry_end = memmap_entry->PhysicalStart+entry_size;
+        if(entry_end <= minimum_address) goto CONTINUE;
+        if(entry_size >= minimum_size) {
+            return memmap_entry;
+        }
+
+CONTINUE:
+        memmap_entry = (EFI_MEMORY_DESCRIPTOR *)((UINT8*)memmap_entry+memmap_descriptor_size);
+    }
+    return 0x00;
 }

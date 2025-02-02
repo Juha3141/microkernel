@@ -3,6 +3,6 @@
 
 #include <registers.hpp>
 
-extern "C" void switch_context(struct Registers *current_context , struct Registers *next_context);
+extern "C" void ARCHDEP switch_context(struct Registers *current_context , struct Registers *next_context);
 
 #endif

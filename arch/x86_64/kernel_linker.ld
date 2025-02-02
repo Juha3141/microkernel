@@ -18,22 +18,7 @@ SECTIONS {
   }
   .drivers_init ALIGN(4096) : {
     __drivers_init_start__ = .; /* each different levels */
-    *(.drivers_init.0 .drivers_init.0.*) 
-    *(.drivers_init.1 .drivers_init.1.*) 
-    *(.drivers_init.2 .drivers_init.2.*) 
-    *(.drivers_init.3 .drivers_init.3.*) 
-    *(.drivers_init.4 .drivers_init.4.*) 
-    *(.drivers_init.5 .drivers_init.5.*) 
-    *(.drivers_init.6 .drivers_init.6.*) 
-    *(.drivers_init.7 .drivers_init.7.*) 
-    *(.drivers_init.8 .drivers_init.8.*) 
-    *(.drivers_init.9 .drivers_init.9.*) 
-    *(.drivers_init.10 .drivers_init.10.*) 
-    *(.drivers_init.11 .drivers_init.11.*) 
-    *(.drivers_init.12 .drivers_init.12.*) 
-    *(.drivers_init.13 .drivers_init.13.*) 
-    *(.drivers_init.14 .drivers_init.14.*) 
-    *(.drivers_init.15 .drivers_init.15.*) 
+    *(.drivers_init) *(.drivers_init.*) /* ignore the priority for now */
     __drivers_init_end__ = .;
   }
   .data ALIGN(4096) : {

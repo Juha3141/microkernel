@@ -64,4 +64,4 @@ static void init_ps2_keyboard_driver(void) {
     ps2_keyboard_driver_id = chardev::register_driver(new ps2_keyboard_driver , "ps2kbd");
 }
 
-INIT_DEVICE_DRIVER(init_ps2_keyboard_driver)
+REGISTER_DRIVER(init_ps2_keyboard_driver)

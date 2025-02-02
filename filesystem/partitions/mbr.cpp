@@ -1,7 +1,5 @@
 #include "mbr.hpp"
 
-void MBRPartitionDriver::register_driver(void) { storage_system::register_partition_driver(new MBRPartitionDriver); }
-
 bool MBRPartitionDriver::identify(blockdev::block_device *device) {
     int i;
 	mbr_partition_table partition_table;
@@ -53,6 +51,7 @@ int MBRPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
     return partition_count;
 }
 
+// not implemented
 bool MBRPartitionDriver::create_partition(blockdev::block_device *device , blockdev::partition_info_t partition) {
 	return false;
 }
@@ -64,3 +63,7 @@ bool MBRPartitionDriver::remove_partition(blockdev::block_device *device , block
 bool MBRPartitionDriver::modify_partition(blockdev::block_device *device , blockdev::partition_info_t old_partition , blockdev::partition_info_t new_partition_info) {
 	return false;
 }
+
+static void init_mbr_partition_driver(void) { storage_system::register_partition_driver(new MBRPartitionDriver); }
+
+REGISTER_DRIVER(init_mbr_partition_driver)

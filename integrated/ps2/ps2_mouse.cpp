@@ -84,4 +84,4 @@ static void init_ps2_mouse_driver(void) {
     ps2_mouse_driver_id = chardev::register_driver(new ps2_mouse_driver , "ps2mouse");
 }
 
-INIT_DEVICE_DRIVER(init_ps2_mouse_driver)
+REGISTER_DRIVER(init_ps2_mouse_driver)

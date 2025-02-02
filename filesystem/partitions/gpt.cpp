@@ -2,8 +2,6 @@
 
 #include <kernel/debug.hpp>
 
-void GPTPartitionDriver::register_driver(void) { storage_system::register_partition_driver(new GPTPartitionDriver); }
-
 bool GPTPartitionDriver::identify(blockdev::block_device *device) {
     byte buffer[512];
     if((device->device_driver == 0x00)
@@ -88,3 +86,9 @@ bool GPTPartitionDriver::remove_partition(blockdev::block_device *device , block
 bool GPTPartitionDriver::modify_partition(blockdev::block_device *device , blockdev::partition_info_t old_partition , blockdev::partition_info_t new_partition_info) {
     return false;
 }
+
+static void init_gpt_partition_driver(void) {
+    storage_system::register_partition_driver(new GPTPartitionDriver);
+}
+
+REGISTER_DRIVER(init_gpt_partition_driver)

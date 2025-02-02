@@ -247,11 +247,7 @@ bool fat12::fat12_driver::check(blockdev::block_device *device) {
     return (memcmp(boot_sector->fs_type , "FAT12" , 5) == 0) && (memcmp(boot_sector->jump_code , (void *)&jump_code , 3) == 0);
 }
 
-void fat12::register_driver(void) { fsdev::register_driver(new fat12_driver , "fat12"); }
-
 ////////////////// FAT16 //////////////////
-
-void fat16::register_driver(void) { fsdev::register_driver(new fat16_driver , "fat16"); }
 
 void fat16::write_vbr(fat16::fat16_vbr_t *vbr , blockdev::block_device *device , const char *oem_id , const char *volume_label , const char *fs) {
     dword total_sector_count = device->geometry.lba_total_block_count;
@@ -385,3 +381,9 @@ dword fat16::get_root_directory_size(fat16::fat16_vbr_t *vbr) { return ((((vbr->
 dword fat16::get_data_area_loc(fat16::fat16_vbr_t *vbr) {
     return fat16::get_root_directory(vbr)+fat16::get_root_directory_size(vbr);
 }
+
+static void init_fat12_fs_driver(void) { fsdev::register_driver(new fat12::fat12_driver , "fat12"); }
+static void init_fat16_fs_driver(void) { fsdev::register_driver(new fat16::fat16_driver , "fat16"); }
+
+REGISTER_DRIVER(init_fat12_fs_driver)
+REGISTER_DRIVER(init_fat16_fs_driver)

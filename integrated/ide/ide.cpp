@@ -197,11 +197,6 @@ void ide::main_int_handler(bool is_primary) {
     }
 }
 
-
-void ide_cd_driver::register_driver(void) {
-    blockdev::register_driver(new ide_cd_driver , "idecd");
-}
-
 bool ide_cd_driver::prepare(void) {
     bool is_master_info[] = {true , false , true , false};
     io_port io_port_info[][2] = {
@@ -355,13 +350,13 @@ bool ide_cd_driver::io_write(blockdev::block_device *device , max_t command , ma
     return false;
 }
 
-
 static void init_ide_driver(void) {
     io_write_byte(IDE_DEVICECONTROL_PRIMARY_BASE+IDE_PORT_DIGITAL_OUTPUT , 0);
     io_write_byte(IDE_DEVICECONTROL_SECONDARY_BASE+IDE_PORT_DIGITAL_OUTPUT , 0);
     interrupt::general::register_interrupt(32+14 , ide::interrupt_handler_irq14 , INTERRUPT_HANDLER_LEVEL_KERNEL|INTERRUPT_HANDLER_HARDWARE);
     interrupt::general::register_interrupt(32+15 , ide::interrupt_handler_irq15 , INTERRUPT_HANDLER_LEVEL_KERNEL|INTERRUPT_HANDLER_HARDWARE);
     blockdev::register_driver(new ide_driver , "idehd");
+    blockdev::register_driver(new ide_cd_driver , "idecd");
 }
 
-INIT_DEVICE_DRIVER(init_ide_driver)
+REGISTER_DRIVER(init_ide_driver)

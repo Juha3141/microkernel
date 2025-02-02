@@ -74,4 +74,4 @@ static void init_ramdisk_driver(void) {
     ramdisk_driver_id = blockdev::register_driver(new ramdisk_driver , "rd");
 }
 
-INIT_DEVICE_DRIVER(init_ramdisk_driver)
+REGISTER_DRIVER(init_ramdisk_driver)

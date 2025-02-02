@@ -249,31 +249,32 @@ void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct Lo
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	segments_mgr->init(pmem_boundary_entry_count , pmem_boundary);
 	is_pmem_alloc_available = true;
+	
 	debug::pop_function();
 }
 
 max_t memory::SegmentsManager::get_currently_using_mem(void) {
 	max_t currently_using_mem = 0;
 	for(int i = 0; i < managers_count; i++) {
-		currently_using_mem += node_managers[i].currently_using_mem;
+		currently_using_mem += node_managers[i].memory_usage;
 		// debug::out::printf("node_managers[%d].currently_using_mem : %d\n" , i , node_managers[i].currently_using_mem);
 	}
 	return currently_using_mem;
 }
 
-vptr_t *memory::pmem_alloc(max_t size , max_t alignment) {
-	vptr_t *ptr = 0x00;
+void *memory::pmem_alloc(max_t size , max_t alignment) {
+	void *ptr = 0x00;
 	if(!is_pmem_alloc_available) return memory::kstruct_alloc(size , alignment);
 
 	debug::push_function("pmem_alloc");
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
-	if(size == 0x00) { 
+	if(size == 0x00) {
 		debug::out::printf(DEBUG_WARNING , "allocation warning : zero allocation size\n");
 		return 0x00;
 	}
 	for(int i = 0; i < segments_mgr->managers_count; i++) {
 		if(!segments_mgr->node_managers[i].available()) continue;
-		if((ptr = (vptr_t *)segments_mgr->node_managers[i].allocate(size , alignment)) != 0x00) {
+		if((ptr = (void *)segments_mgr->node_managers[i].allocate(size , alignment)) != 0x00) {
 			break;
 		}
 	}
@@ -284,7 +285,7 @@ vptr_t *memory::pmem_alloc(max_t size , max_t alignment) {
 	return ptr;
 }
 
-void memory::pmem_free(vptr_t *ptr) {
+void memory::pmem_free(void *ptr) {
 	debug::push_function("pmem_free");
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	int index;

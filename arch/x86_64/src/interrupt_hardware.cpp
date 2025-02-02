@@ -32,8 +32,6 @@ void interrupt::hardware::disable(void) {
 void interrupt::hardware::init(void) {
     interrupt::hardware::disable();
 
-    debug::push_function("int::hw::init");
-
     x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
     idt_container->init(IDT_ENTRYCOUNT);
     // Register IDTR
@@ -42,8 +40,6 @@ void interrupt::hardware::init(void) {
     
     debug::out::printf("idtr_ptr      : 0x%X\n" , idtr_ptr);
     debug::out::printf("idt base_addr : 0x%X\n" , idt_container->entries);
-    
-    debug::pop_function();
 }
 
 qword interrupt::hardware::get_ist_address(void) { return ist_address[0]; }

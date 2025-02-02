@@ -49,13 +49,14 @@ extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_arg
     debug::init(loader_argument);
     debug::out::clear_screen(0x00);
     debug::out::printf("Hello, world!\n");
-
+    
     memory::pmem_init(loader_argument->memmap_count , (struct MemoryMap *)((max_t)loader_argument->memmap_location) , loader_argument);
 
+    debug::out::printf(DEBUG_INFO , "----- Initializing segmentation system..\n");
     segmentation::init();
+    debug::out::printf(DEBUG_INFO , "----- Initializing interrupt system..\n");
     interrupt::init();
     exception::init();
-    interrupt::hardware::enable();
 
     debug::out::printf(DEBUG_INFO , "----- Initializing block device driver..\n");
     blockdev::init();
@@ -64,7 +65,7 @@ extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_arg
     fsdev::init();
     debug::out::printf(DEBUG_INFO , "----- Initializing character device driver..\n");
     chardev::init();
-    register_kernel_device_drivers();
+    register_kernel_drivers();
 
     interrupt::hardware::enable();
 
@@ -81,32 +82,14 @@ extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_arg
         debug::out::printf("no ramdisk found!\n");
     }
     debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
-    
-    struct Registers current_context , next_context;
-    memset(&next_context , 0 , sizeof(struct Registers));
-    next_context.rip = (qword)context_switch_test;
-    __asm__ ("mov rax , cr3");
-    __asm__ ("mov %0 , rax":"=r"(next_context.cr3));
-    next_context.rflags = 0x202;
-    next_context.rsp = (qword)memory::pmem_alloc(4096 , 16);
-    next_context.rbp = next_context.rsp;
-    next_context.cs = 0x08;
-    next_context.ds = 0x10;
-    next_context.es = 0x10;
-    next_context.fs = 0x10;
-    next_context.gs = 0x10;
-    next_context.ss = 0x10;
-    next_context.rdi = 0xBABAB01;
-    switch_context(&current_context , &next_context);
-    debug::out::printf("failed!\n");
 
-    while(1) {
-        ;
-    }
-}
+    max_t aligned_2M = (max_t)memory::pmem_alloc(2*1024*1024 , 2*1024*1024);
+    debug::out::printf("allocated location : 0x%X\n" , aligned_2M);
 
-void context_switch_test(qword test) {
-    debug::out::printf("context switch succeed! test = 0x%X\n" , test);
+    // this is so cool!!!
+    debug::out::printf("%s, line %d\n" , __FILE__ , __LINE__);
+
+    debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
     while(1) {
         ;
     }
@@ -186,7 +169,7 @@ void pmem_alloc_test(int rand_seed) {
     for(int i = 0; i < 8; i++) {
         alloc_size[i] = (rand()+512)%4096;
         max_t ptr = (max_t)memory::pmem_alloc(alloc_size[i]);
-        memset((vptr_t *)ptr , 0xDA , alloc_size[i]);
+        memset((void *)ptr , 0xDA , alloc_size[i]);
         debug::out::printf("%d : 0x%X - 0x%X\n" , i , ptr , ptr+alloc_size[i]);
         ptr_list[i] = ptr;
         demanded += alloc_size[i];
@@ -194,8 +177,8 @@ void pmem_alloc_test(int rand_seed) {
     debug::out::printf("physical usage       : %d\n" , memory::pmem_usage());
     debug::out::printf("allocation requested : %d\n" , demanded);
     for(int i = 0; i < 8; i++) {
-        memset((vptr_t *)ptr_list[i] , 0 , alloc_size[i]);
-        memory::pmem_free((vptr_t *)ptr_list[i]);
+        memset((void *)ptr_list[i] , 0 , alloc_size[i]);
+        memory::pmem_free((void *)ptr_list[i]);
         debug::out::printf("%d : Free 0x%X - usage %d\n" , i , ptr_list[i] , memory::pmem_usage());
     }
     debug::pop_function();

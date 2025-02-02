@@ -33,16 +33,17 @@ namespace memory {
 
             bool available(void);
 
-            max_t currently_using_mem;
+            max_t memory_usage;
 
             max_t mem_start_address;
             max_t mem_end_address;
         private:
+	        struct NodesTuple { struct Node *node_1; struct Node *node_2; };
             struct Node *create_new_node(max_t size , max_t alignment);
-            struct Node *align(struct Node *node , max_t alignment , max_t previous_node); // Align newly created node
+            struct Node *align(struct Node *node , max_t alignment); // Align newly created node
             struct Node *search_first_fit(max_t size);
             struct Node *search_aligned(max_t size , max_t alignment);
-            struct Node *search_new_node_location(max_t *prev_node);
+            struct NodesTuple search_new_node_location(void);
 
             void write_node_data(struct Node *node , unsigned char occupied , max_t size , max_t alignment , max_t next_node=INVALID , max_t previous_node=INVALID);
             

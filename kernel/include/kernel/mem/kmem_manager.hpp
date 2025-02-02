@@ -44,8 +44,8 @@ namespace memory {
     
     // pmem (physical memory) allocation
     void pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct LoaderArgument *kargument);
-    vptr_t *pmem_alloc(max_t size , max_t alignment=0);
-    void pmem_free(vptr_t *ptr);
+    void *pmem_alloc(max_t size , max_t alignment=0);
+    void pmem_free(void *ptr);
     bool pmem_protect(struct Boundary boundary);
 
     max_t pmem_total_size(void);

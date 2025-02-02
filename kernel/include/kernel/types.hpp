@@ -47,7 +47,6 @@ typedef unsigned char  byte;
 typedef signed char    byte_s;
 
 typedef max_t ptr_t;
-typedef void vptr_t;
 
 typedef unsigned int size_t;
 

@@ -50,23 +50,24 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     EFI_MEMORY_DESCRIPTOR *memmap_entry = memory_descriptor;
     UINT64 total_memory_size = 0;
     for(int i = 0; i < memmap_size/memmap_descriptor_size; i++) {
-        // copy to the memory map for kernel
-        kernel_memmap[i].addr_high = (memmap_entry->PhysicalStart >> 32);
-        kernel_memmap[i].addr_low  = memmap_entry->PhysicalStart & 0xffffffff;
-        kernel_memmap[i].length_high = (((UINT64)(memmap_entry->NumberOfPages*4096)) >> 32);
-        kernel_memmap[i].length_low  = ((UINT64)(memmap_entry->NumberOfPages*4096)) & 0xffffffff;
-        kernel_memmap[i].type = convert_efi_mem_type_to_kernel(memmap_entry->Type);
-        
-        if(memmap_entry->Type == EfiReservedMemoryType) {
+        if(memmap_entry->PhysicalStart < 0x10000) {
             memmap_entry = (EFI_MEMORY_DESCRIPTOR *)((UINT8*)memmap_entry+memmap_descriptor_size);
             continue;
         }
-        total_memory_size += (memmap_entry->NumberOfPages*4096);
-        if(memmap_entry->Type == EfiBootServicesCode||memmap_entry->Type == EfiBootServicesData) {
+        if(memmap_entry->Type == EfiConventionalMemory) { 
+            // copy to the memory map for kernel
+            kernel_memmap[i].addr_high = (memmap_entry->PhysicalStart >> 32);
+            kernel_memmap[i].addr_low  = memmap_entry->PhysicalStart & 0xffffffff;
+            kernel_memmap[i].length_high = (((UINT64)(memmap_entry->NumberOfPages*4096)) >> 32);
+            kernel_memmap[i].length_low  = ((UINT64)(memmap_entry->NumberOfPages*4096)) & 0xffffffff;
+            kernel_memmap[i].type = convert_efi_mem_type_to_kernel(memmap_entry->Type);
+            total_memory_size += (memmap_entry->NumberOfPages*4096);
+        }
+        if(memmap_entry->Type == EfiReservedMemoryType||memmap_entry->Type == EfiBootServicesCode||memmap_entry->Type == EfiBootServicesData) {
             memmap_entry = (EFI_MEMORY_DESCRIPTOR *)((UINT8*)memmap_entry+memmap_descriptor_size);
             continue;
         }
-        Print(L"phys: 0x%llX ~ 0x%llX, pages: %d(%dkiB), type: %s\n" , 
+        Print(L"phys: 0x%llX ~ 0x%llX, pages: %d(%dKiB), type: %s\n" , 
             memmap_entry->PhysicalStart , 
             memmap_entry->PhysicalStart+(memmap_entry->NumberOfPages*4096) , 
             memmap_entry->NumberOfPages , 
@@ -74,8 +75,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
             get_efi_memory_type_str(memmap_entry->Type));
         memmap_entry = (EFI_MEMORY_DESCRIPTOR *)((UINT8*)memmap_entry+memmap_descriptor_size);
     }
-    Print(L"Total amount of memory : %dMB\n" , total_memory_size/1024/1024);
-
+    Print(L"Total usuable amount of memory : %dMiB\n" , total_memory_size/1024/1024);
     EFI_FILE_HANDLE kernel_file_handle;
     EFI_FILE_INFO *kernel_file_info;
     EFI_FILE_HANDLE volume;

@@ -16,6 +16,7 @@
 
 #include <kernel/section.hpp>
 
+#include <kernel/driver/pci.hpp>
 #include <kernel/vfs/file_system_driver.hpp>
 #include <kernel/vfs/virtual_file_system.hpp>
 #include <ramdisk/ramdisk.hpp>
@@ -47,8 +48,9 @@ extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_arg
     }
     memory::kstruct_init({loader_argument->kstruct_mem_location , loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size});
     debug::init(loader_argument);
+    
     debug::out::clear_screen(0x00);
-    debug::out::printf("Hello, world!\n");
+    debug::out::printf("Hello world from the kernel!\n");
     
     memory::pmem_init(loader_argument->memmap_count , (struct MemoryMap *)((max_t)loader_argument->memmap_location) , loader_argument);
 
@@ -65,15 +67,16 @@ extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_arg
     fsdev::init();
     debug::out::printf(DEBUG_INFO , "----- Initializing character device driver..\n");
     chardev::init();
+    register_file_system_drivers();
     register_kernel_drivers();
 
     interrupt::hardware::enable();
 
     debug::out::printf(DEBUG_INFO , "----- Initializing vfs..\n");
-    debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , loader_argument->ramdisk_address , loader_argument->ramdisk_address+loader_argument->ramdisk_size);
+    debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , loader_argument->ramdisk_location , loader_argument->ramdisk_location+loader_argument->ramdisk_size);
     // find the ramdisk driver
     if(loader_argument->is_ramdisk_available) {
-        blockdev::block_device *device = ramdisk_driver::create(loader_argument->ramdisk_size/512 , 512 , loader_argument->ramdisk_address);
+        blockdev::block_device *device = ramdisk_driver::create(loader_argument->ramdisk_size/512 , 512 , loader_argument->ramdisk_location);
         blockdev::register_device(device->device_driver->driver_id , device);
         // mount to the root device
         vfs::init(device);
@@ -83,13 +86,20 @@ extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_arg
     }
     debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
 
-    max_t aligned_2M = (max_t)memory::pmem_alloc(2*1024*1024 , 2*1024*1024);
-    debug::out::printf("allocated location : 0x%X\n" , aligned_2M);
+    pci::probe_all_pci_devices();
+    dump_block_devices();
 
-    // this is so cool!!!
-    debug::out::printf("%s, line %d\n" , __FILE__ , __LINE__);
+    blockdev::block_device *device = blockdev::search_device("rd" , 0);
+    int num_of_files = vfs::read_directory(vfs::get_root_directory());
 
-    debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
+    debug::out::printf("Number of files : %d\n" , num_of_files);
+    
+    auto ptr = vfs::get_root_directory()->file_list->get_start_node();
+    for(; ptr != 0x00; ptr = ptr->next) {
+        debug::out::printf("%s  -- " , ptr->object->file_name);
+        debug::out::printf(DEBUG_NONE , "%d\n" , ptr->object->file_type);
+    }
+
     while(1) {
         ;
     }

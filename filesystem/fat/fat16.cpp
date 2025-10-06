@@ -385,5 +385,5 @@ dword fat16::get_data_area_loc(fat16::fat16_vbr_t *vbr) {
 static void init_fat12_fs_driver(void) { fsdev::register_driver(new fat12::fat12_driver , "fat12"); }
 static void init_fat16_fs_driver(void) { fsdev::register_driver(new fat16::fat16_driver , "fat16"); }
 
-REGISTER_DRIVER(init_fat12_fs_driver)
-REGISTER_DRIVER(init_fat16_fs_driver)
+REGISTER_FS_DRIVER(init_fat12_fs_driver)
+REGISTER_FS_DRIVER(init_fat16_fs_driver)

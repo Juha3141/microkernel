@@ -11,10 +11,11 @@
 
 typedef void(*driver_init_func_ptr_t)(void);
 
-#define REGISTER_DRIVER_PRIORITY(init_driver , priority) void __register_driver_init_##priority_##init_driver(void) { init_driver(); } \
-static __attribute__ ((section(".drivers_init."#priority))) driver_init_func_ptr_t __device_driver_init_##priority_##init_driver  = __register_driver_init_##priority_##init_driver; 
+#define REGISTER_FPTR_TO_SECTION(init_driver , section_name) void __register_driver_init_##init_driver(void) { init_driver(); } \
+static __attribute__ ((section(section_name))) driver_init_func_ptr_t __device_driver_init_##init_driver  = __register_driver_init_##init_driver; 
 
-#define REGISTER_DRIVER(init_driver) REGISTER_DRIVER_PRIORITY(init_driver , 0)
+#define REGISTER_DRIVER(init_driver) REGISTER_FPTR_TO_SECTION(init_driver , ".drivers_init")
+#define REGISTER_FS_DRIVER(init_driver) REGISTER_FPTR_TO_SECTION(init_driver , ".fs_drivers_init")
 
 typedef max_t resource_flag_t;
 typedef max_t etc_resource_t;
@@ -77,5 +78,6 @@ template <typename T> void designate_resources_count(T *device , int io_port_cou
 }
 
 void register_kernel_drivers(void);
+void register_file_system_drivers(void);
 
 #endif

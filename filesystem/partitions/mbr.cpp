@@ -64,6 +64,6 @@ bool MBRPartitionDriver::modify_partition(blockdev::block_device *device , block
 	return false;
 }
 
-static void init_mbr_partition_driver(void) { storage_system::register_partition_driver(new MBRPartitionDriver); }
+static void init_mbr_partition_driver(void) { storage_system::register_partition_driver(new MBRPartitionDriver , "mbr"); }
 
-REGISTER_DRIVER(init_mbr_partition_driver)
+REGISTER_FS_DRIVER(init_mbr_partition_driver)

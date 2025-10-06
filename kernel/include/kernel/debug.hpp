@@ -52,16 +52,16 @@ namespace debug {
     };
 
     struct DebugInterfaceContainer {
-        SINGLETON_PATTERN_KSTRUCT(DebugInterfaceContainer);
         void init(int max_obj_count) {
-            int i;
-            count = 0;
-            max_count = max_obj_count;
-            object_container = (struct DebugInterfaceContainer::object_container_s*)memory::kstruct_alloc(sizeof(struct DebugInterfaceContainer::object_container_s)*max_count);
-            for(i = 0; i < max_count; i++) {
+            // this crashes somehow
+            object_container = (struct object_container_s *)memory::kstruct_alloc(sizeof(struct object_container_s)*max_obj_count);
+            for(int i = 0; i < max_obj_count; i++) {
                 object_container[i].occupied = false;
                 object_container[i].object = 0x00;
             }
+
+            max_count = max_obj_count;
+            count = 0;
         }
         max_t register_object(debug_interface *object) { // returns ID
             max_t i;
@@ -105,14 +105,12 @@ namespace debug {
             }
             return INVALID;
         }
-        max_t max_count = 0;
-        max_t count = 0;
-    protected:
+        max_t max_count;
+        max_t count;
         struct object_container_s {
             bool occupied;
-
             debug_interface *object;
-        }*object_container = 0x00;
+        }*object_container;
     };
 
     namespace out {

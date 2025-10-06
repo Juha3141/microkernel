@@ -19,6 +19,8 @@ struct {
     debug::debug_interface *current_debug_interface;
 }debug_info;
 
+debug::DebugInterfaceContainer debug_interface_container;
+
 extern qword __debug_interface_start__;
 extern qword __debug_interface_end__;
 
@@ -37,7 +39,7 @@ void debug::init(LoaderArgument *loader_argument) {
     set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_FIRST_INFO|DEBUG_DISPLAY_INDENTATION , true);
     debug_info.option_flags = 0b11111111;
     
-    GLOBAL_OBJECT(DebugInterfaceContainer)->init(512);
+    debug_interface_container.init(512);
     debug_info.current_debug_interface = 0x00;
     
     init_debug_interface_initializers();
@@ -47,15 +49,15 @@ void debug::init(LoaderArgument *loader_argument) {
     debug::enable();
 }
 
-void debug::register_debug_interface(struct debug::debug_interface *interface , const char *interface_identifier) { strcpy(interface->interface_identifier , interface_identifier); GLOBAL_OBJECT(DebugInterfaceContainer)->register_object(interface); }
-void debug::register_debug_interface(struct debug::debug_interface *interface) { GLOBAL_OBJECT(DebugInterfaceContainer)->register_object(interface); }
+void debug::register_debug_interface(struct debug::debug_interface *interface , const char *interface_identifier) { strcpy(interface->interface_identifier , interface_identifier); debug_interface_container.register_object(interface); }
+void debug::register_debug_interface(struct debug::debug_interface *interface) { debug_interface_container.register_object(interface); }
 
 void debug::set_current_debug_interface(const char *interface_identifier) {
-    max_t id = GLOBAL_OBJECT(DebugInterfaceContainer)->search<const char *>([](debug::debug_interface *data , const char *str) { 
+    max_t id = debug_interface_container.search<const char *>([](debug::debug_interface *data , const char *str) { 
         return (bool)(strcmp(data->interface_identifier , str) == 0);
     } , interface_identifier);
     if(id == INVALID) return;
-    debug_info.current_debug_interface = GLOBAL_OBJECT(DebugInterfaceContainer)->get_object(id);
+    debug_info.current_debug_interface = debug_interface_container.get_object(id);
 }
 
 struct debug::debug_interface *debug::current_debug_interface() { return debug_info.current_debug_interface; }
@@ -133,6 +135,8 @@ void debug::panic(const char *fmt , ...) {
     vsprintf(buffer , fmt , ap);
     debug::out::printf(DEBUG_PANIC , buffer);
     va_end(ap);
+    
+    
     while(1) {
         ;
     }

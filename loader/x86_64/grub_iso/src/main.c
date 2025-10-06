@@ -129,7 +129,7 @@ void Main(struct multiboot_info *multiboot_info) {
 	loader_argument->kernel_physical_location = kernel_addr;
 	loader_argument->kernel_size = kernel_size;
 
-	loader_argument->ramdisk_address = ramdisk_addr;
+	loader_argument->ramdisk_location = ramdisk_addr;
 	loader_argument->ramdisk_size = ramdisk_size;
 
 	kernel_struct_addr += sizeof(struct LoaderArgument);

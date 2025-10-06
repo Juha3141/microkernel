@@ -25,6 +25,7 @@ struct {
 	struct memory::Boundary boundary;
 	max_t current_addr;
 }kstruct_mgr;
+
 bool is_pmem_alloc_available = false;
 
 void memory::get_kstruct_boundary(struct Boundary &boundary) {
@@ -178,6 +179,9 @@ int truncate_protected_areas(struct memory::Boundary *protected_areas , int prot
 void memory::kstruct_init(struct memory::Boundary boundary) {
 	memcpy(&kstruct_mgr.boundary , &boundary , sizeof(struct Boundary));
 	kstruct_mgr.current_addr = boundary.start_address;
+
+	// initialize the memory
+	memset((void *)boundary.start_address , (boundary.end_address-boundary.start_address) , 0);
 }
 
 void *memory::kstruct_alloc(max_t size , max_t alignment) {
@@ -193,10 +197,14 @@ max_t memory::kstruct_get_current_addr(void) { return kstruct_mgr.current_addr; 
 void memory::kstruct_rollback_addr(max_t prev_addr) { if(kstruct_mgr.boundary.start_address <= prev_addr && prev_addr <= kstruct_mgr.boundary.end_address) { kstruct_mgr.current_addr = prev_addr; } }
 
 void memory::SegmentsManager::init(int segment_count , struct Boundary *usable_segments) {
+	debug::out::printf("debug --> %s:%d\n" , __FILE__ , __LINE__);
+	debug::out::printf("&managers_count = 0x%x\n" , &managers_count);
 	managers_count = segment_count;
 	total_memory = 0;
 	// allocate space for all managers
 	node_managers = (NodesManager *)kstruct_alloc(managers_count*sizeof(NodesManager));
+	debug::out::printf("managers count : %d\n" , managers_count);
+	debug::out::printf("node_managers : 0x%X\n" , node_managers);
 	for(int i = 0; i < managers_count; i++) {
 		node_managers[i].init(usable_segments[i].start_address , usable_segments[i].end_address);
 		total_memory += (usable_segments[i].end_address-usable_segments[i].start_address);
@@ -237,16 +245,21 @@ void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct Lo
 
 	// determine physical memory address
 	memset(pmem_boundary , 0 , sizeof(pmem_boundary));
+	debug::disable();
 	int merged_protected_areas_count = merge_boundaries_list(protected_areas , 5 , merged_protected_areas);
 	
 	int pmem_boundary_entry_count = truncate_protected_areas(merged_protected_areas , merged_protected_areas_count , 
 		pmem_boundary , memmap , memmap_count);
+
 	debug::out::printf("Available memory area : \n");
 	for(int i = 0; i < pmem_boundary_entry_count; i++) {
 		debug::out::printf("0x%lx ~ 0x%lx\n" , pmem_boundary[i].start_address , pmem_boundary[i].end_address);
 	}
+	debug::enable();
 	// allocate node manager for each segment
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
+	debug::out::printf("segments_mgr = 0x%X\n" , segments_mgr);
+	debug::out::printf("Initializing all the segments...\n");
 	segments_mgr->init(pmem_boundary_entry_count , pmem_boundary);
 	is_pmem_alloc_available = true;
 	

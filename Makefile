@@ -53,3 +53,5 @@ run:
 
 debugrun:
 	make -C $(LOADERFOLDER)/$(ARCH)/$(LOADER) debug_run_os $(MAKE_ARGUMENTS) TARGET_DIR=$(ROOTDIR)/$(FINALIMAGEFOLDER)/$(ARCH)/$(LOADER) 
+
+.PHONY: clean

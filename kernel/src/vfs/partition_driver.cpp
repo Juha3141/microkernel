@@ -1,7 +1,8 @@
 #include <kernel/vfs/partition_driver.hpp>
 
-max_t storage_system::register_partition_driver(storage_system::PartitionDriver *partition_driver) {
+max_t storage_system::register_partition_driver(storage_system::PartitionDriver *partition_driver , const char *driver_name) {
     PartitionDriverContainer *partitiondrv_container = PartitionDriverContainer::get_self();
+    strcpy(partition_driver->driver_name , driver_name);
     return partitiondrv_container->register_object(partition_driver);
 }
 

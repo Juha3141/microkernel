@@ -9,6 +9,8 @@ bool GPTPartitionDriver::identify(blockdev::block_device *device) {
     
     gpt_header *header = (gpt_header *)buffer;
     if(device->device_driver->read(device , 1 , 1 , buffer) != 512) return false;
+
+    // Signature of Primary GPT Header
     if(memcmp(header->signature , "EFI PART" , 8) != 0) {
         return false;
     }
@@ -23,7 +25,7 @@ int GPTPartitionDriver::get_partitions_count(blockdev::block_device *device) {
     gpt_header *header = (gpt_header *)buffer;
     gpt_partition_table_entry *partition_entry;
     
-    if(device->device_driver->read(device , 1 , 1 , buffer) != 1) return 0;
+    if(device->device_driver->read(device , 1 , 1 , buffer) != 512) return 0;
     table_entry_size = header->partition_table_entry_count*sizeof(gpt_partition_table_entry);
     
     table_entry_size = (table_entry_size%512 == 0) ? ((dword)(table_entry_size/512)+1)*512 : table_entry_size;
@@ -50,7 +52,7 @@ int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
     gpt_header *header = (gpt_header *)buffer;
     gpt_partition_table_entry *partition_entry;
 
-    if(device->device_driver->read(device , 1 , 1 , buffer) != 1) return 0;
+    if(device->device_driver->read(device , 1 , 1 , buffer) != 512) return 0;
     table_entry_size = header->partition_table_entry_count*sizeof(gpt_partition_table_entry);
     
     table_entry_size = (table_entry_size%512 == 0) ? ((dword)(table_entry_size/512)+1)*512 : table_entry_size;
@@ -68,7 +70,6 @@ int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
         node->data.bootable = (partition_entry[i].attribute_flag == GPT_PARTITION_LEGACY_BOOTABLE);
         partition_count++;
     }
-
     memory::pmem_free(partition_entry);
     return partition_count;
 }
@@ -87,8 +88,6 @@ bool GPTPartitionDriver::modify_partition(blockdev::block_device *device , block
     return false;
 }
 
-static void init_gpt_partition_driver(void) {
-    storage_system::register_partition_driver(new GPTPartitionDriver);
-}
+static void init_gpt_partition_driver(void) { storage_system::register_partition_driver(new GPTPartitionDriver , "gpt"); }
 
-REGISTER_DRIVER(init_gpt_partition_driver)
+REGISTER_FS_DRIVER(init_gpt_partition_driver)

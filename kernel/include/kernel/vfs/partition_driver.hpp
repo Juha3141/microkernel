@@ -28,7 +28,7 @@ namespace storage_system {
         virtual bool remove_partition(blockdev::block_device *device , blockdev::partition_info_t partition) = 0;
         virtual bool modify_partition(blockdev::block_device *device , blockdev::partition_info_t old_partition , blockdev::partition_info_t new_partition_info) = 0;
 
-        const char *driver_name;
+        char driver_name[16];
     };
 
     struct PartitionDriverContainer : ObjectManager<PartitionDriver> {
@@ -37,7 +37,7 @@ namespace storage_system {
         friend max_t identify_partition_driver(blockdev::block_device *device);
     };
 
-    max_t register_partition_driver(PartitionDriver *partition_driver);
+    max_t register_partition_driver(PartitionDriver *partition_driver , const char *driver_name);
     max_t identify_partition_driver(blockdev::block_device *device);
     PartitionDriver *get_partition_identifier(blockdev::block_device *device);
     PartitionDriver *get_partition_identifier(max_t identifier_id);

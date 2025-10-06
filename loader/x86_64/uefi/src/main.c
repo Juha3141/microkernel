@@ -1,5 +1,6 @@
 #include <efi.h>
 #include <efilib.h>
+#include <efishellintf.h>
 
 #include <loader/loader_argument.hpp>
 
@@ -26,6 +27,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     UINTN memmap_size = 16384 , memmap_key = 0 , memmap_descriptor_size = 0;
     UINT32 memmap_descriptor_version;
     EFI_MEMORY_DESCRIPTOR *memory_descriptor = AllocatePool(memmap_size);
+    
     status = uefi_call_wrapper(BS->GetMemoryMap , 5 , &memmap_size , memory_descriptor , &memmap_key , &memmap_descriptor_size , &memmap_descriptor_version);
     if(status == EFI_BUFFER_TOO_SMALL) {
         Print(L"Unable to get memory map! EFI_BUFFER_TOO_SMALL\n");
@@ -76,16 +78,32 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
         memmap_entry = (EFI_MEMORY_DESCRIPTOR *)((UINT8*)memmap_entry+memmap_descriptor_size);
     }
     Print(L"Total usuable amount of memory : %dMiB\n" , total_memory_size/1024/1024);
-    EFI_FILE_HANDLE kernel_file_handle;
-    EFI_FILE_INFO *kernel_file_info;
+    EFI_FILE_HANDLE kernel_file_handle , ramdisk_file_handle;
+    EFI_FILE_INFO *kernel_file_info , *ramdisk_file_info;
     EFI_FILE_HANDLE volume;
     volume = get_volume(image_handle);
     Print(L"volume = 0x%llX\n" , volume);
     status = uefi_call_wrapper(volume->Open , 5 , volume , &kernel_file_handle , L"Kernel.krn" , EFI_FILE_MODE_READ , EFI_FILE_READ_ONLY|EFI_FILE_HIDDEN|EFI_FILE_SYSTEM);
+    if(EFI_ERROR(status)) {
+        Print(L"Kernel.krn not found!\n");
+        while(1) {
+            ;
+        }
+    }
+    status = uefi_call_wrapper(volume->Open , 5 , volume , &ramdisk_file_handle , L"ramdisk.img" , EFI_FILE_MODE_READ , EFI_FILE_READ_ONLY|EFI_FILE_HIDDEN|EFI_FILE_SYSTEM);
+    if(EFI_ERROR(status)) {
+        Print(L"RAM disk image not found!\n");
+        while(1) {
+            ;
+        }
+    }
     kernel_file_info = LibFileInfo(kernel_file_handle);
+    ramdisk_file_info = LibFileInfo(ramdisk_file_handle);
     Print(L"kernel file size : %d\n" , kernel_file_info->FileSize);
+    Print(L"RAM disk file size : %d\n" , ramdisk_file_info->FileSize);
+    UINT64 ramdisk_file_size = ramdisk_file_info->FileSize;
     UINT64 kernel_file_size = kernel_file_info->FileSize;
-    UINT64 kernel_misc_area_size = kernel_memmap_size+KSTRUCT_MEM_SIZE+KERNEL_STACK_SIZE+LOADER_ARGUMENT_LENGTH;
+    UINT64 kernel_misc_area_size = kernel_memmap_size+KSTRUCT_MEM_SIZE+KERNEL_STACK_SIZE+LOADER_ARGUMENT_LENGTH+ramdisk_file_size;
 
     // align kernel file size to 4096
     kernel_file_size = ALIGN_SIZE(kernel_file_size , 4096);
@@ -97,31 +115,37 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
            kernel_stack_location = 0x00 , 
            kstruct_mem_location = 0x00 , 
            loader_argument_location = 0x00 , 
-           kernel_memmap_location = 0x00;
+           kernel_memmap_location = 0x00 ,  
+           kernel_ramdisk_location = 0x00;
 
     // Find the location for kernel in the memory map
     EFI_MEMORY_DESCRIPTOR *kernel_stack_memory_chunk;
     EFI_MEMORY_DESCRIPTOR *kernel_memory_chunk = 
-        find_available_memory_entry(memory_descriptor , memmap_size , memmap_descriptor_size , MINIMUM_KERNEL_RELOCATE_LOCATION , kernel_file_size , 0x00);
-    kernel_location = kernel_memory_chunk->PhysicalStart;
+        find_available_memory_entry(memory_descriptor , memmap_size , memmap_descriptor_size , minimum_kernel_location , kernel_file_size , 0x00);
+    kernel_location = (kernel_memory_chunk->PhysicalStart > minimum_kernel_location) ? kernel_memory_chunk->PhysicalStart : minimum_kernel_location;
     // is_kernel_area_monolitic : Indicates whether the total kernel area(kernel+stack+loader argument) is continuous or not
-    char is_kernel_area_monolithic = 0; // 1 : true, 0 : false
-    // if the selected chunk is big enough to also encompass the kernel's stack, locate the kernel's stack next to the kernel
+    
+    for(UINT64 k_addr = kernel_location; k_addr < kernel_location+kernel_file_size; k_addr += 8) {
+        ((UINT64 *)k_addr)[0] = 0x00;
+    }
+    // if the selected chunk is big enough to also encompass the kernel's miscellaneous area, locate the miscellaneous area right next to the kernel
     if((kernel_memory_chunk->NumberOfPages*4096) >= kernel_file_size+kernel_misc_area_size) {
         kernel_memmap_location   = kernel_location+kernel_file_size;
-        loader_argument_location = kernel_location+kernel_file_size+kernel_memmap_size;
-        kstruct_mem_location     = kernel_location+kernel_file_size+kernel_memmap_size+LOADER_ARGUMENT_LENGTH;
-        kernel_stack_location    = kernel_location+kernel_file_size+kernel_memmap_size+LOADER_ARGUMENT_LENGTH+KSTRUCT_MEM_SIZE;
-        is_kernel_area_monolithic = 1;
+        loader_argument_location = kernel_memmap_location+kernel_memmap_size;
+        kstruct_mem_location     = loader_argument_location+LOADER_ARGUMENT_LENGTH;
+        kernel_stack_location    = kstruct_mem_location+KSTRUCT_MEM_SIZE;
+        kernel_ramdisk_location  = kernel_stack_location+KERNEL_STACK_SIZE;
+        Print(L"Miscellaneous area next to the kernel\n");
     }
     else {
         kernel_stack_memory_chunk = find_available_memory_entry(memory_descriptor , memmap_size , memmap_descriptor_size , kernel_memory_chunk->PhysicalStart+kernel_file_size , kernel_misc_area_size , kernel_memory_chunk);
         kernel_memmap_location   = kernel_stack_memory_chunk->PhysicalStart;
-        loader_argument_location = kernel_stack_memory_chunk->PhysicalStart+kernel_memmap_size;
-        kstruct_mem_location     = kernel_stack_memory_chunk->PhysicalStart+kernel_memmap_size+LOADER_ARGUMENT_LENGTH;
-        kernel_stack_location    = kernel_stack_memory_chunk->PhysicalStart+kernel_memmap_size+LOADER_ARGUMENT_LENGTH+KSTRUCT_MEM_SIZE;
+        loader_argument_location = kernel_memmap_location+kernel_memmap_size;
+        kstruct_mem_location     = loader_argument_location+LOADER_ARGUMENT_LENGTH;
+        kernel_stack_location    = kstruct_mem_location+KSTRUCT_MEM_SIZE;
+        kernel_ramdisk_location  = kernel_stack_location+KERNEL_STACK_SIZE;
     }
-
+    
     memcpy(kernel_memmap_location , kernel_memmap , kernel_memmap_size);
     struct LoaderArgument *loader_argument = (struct LoaderArgument *)loader_argument_location;
     ZeroMem(loader_argument , sizeof(struct LoaderArgument));
@@ -129,15 +153,17 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     loader_argument->kernel_physical_location = kernel_location;
     loader_argument->kernel_linear_location   = kernel_location; // no higher-half kernel
     loader_argument->kernel_size              = kernel_file_size;
-    loader_argument->kernel_stack_location = kernel_stack_location;
-    loader_argument->kernel_stack_size     = KERNEL_STACK_SIZE;
+    loader_argument->kernel_stack_location    = kernel_stack_location;
+    loader_argument->kernel_stack_size        = KERNEL_STACK_SIZE;
     loader_argument->loader_argument_location = loader_argument;
     loader_argument->loader_argument_size     = LOADER_ARGUMENT_LENGTH;
     loader_argument->kstruct_mem_location     = kstruct_mem_location;
     loader_argument->kstruct_mem_size         = KSTRUCT_MEM_SIZE;
+    loader_argument->ramdisk_location          = kernel_ramdisk_location;
+    loader_argument->ramdisk_size             = ramdisk_file_size;
+    loader_argument->is_ramdisk_available     = 1;
 
     loader_argument->video_mode = LOADER_ARGUMENT_VIDEOMODE_GRAPHIC;
-    loader_argument->is_ramdisk_available = 0;
 
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
     EFI_GUID gop_guid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
@@ -165,11 +191,14 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     
     UINT64 file_size = kernel_file_info->FileSize;
     uefi_call_wrapper(kernel_file_handle->Read , 3 , kernel_file_handle , &file_size , (void *)loader_argument->kernel_physical_location);
-    Print(L"kernel_location       = 0x%X~0x%X\n" , loader_argument->kernel_physical_location , loader_argument->kernel_physical_location+loader_argument->kernel_size);
-    Print(L"kernel_stack_location = 0x%X~0x%X\n" , loader_argument->kernel_stack_location , loader_argument->kernel_stack_location+loader_argument->kernel_stack_size);
-    Print(L"loader_argument = 0x%X~0x%X\n" , loader_argument , loader_argument->loader_argument_location+loader_argument->loader_argument_size);
-    Print(L"kernel_memmap   = 0x%X~0x%X\n" , loader_argument->memmap_location , loader_argument->memmap_location+(loader_argument->memmap_count*sizeof(struct MemoryMap)));
+    file_size = ramdisk_file_info->FileSize;
+    uefi_call_wrapper(ramdisk_file_handle->Read , 3 , ramdisk_file_handle , &file_size , (void *)loader_argument->ramdisk_location);
     
+    Print(L"kernel_memmap_location   = 0x%X~0x%X\n" , kernel_memmap_location , kernel_memmap_location+kernel_memmap_size);
+    Print(L"loader_argument_location = 0x%X~0x%X\n" , loader_argument_location , loader_argument_location+LOADER_ARGUMENT_LENGTH);
+    Print(L"kstruct_mem_location     = 0x%X~0x%X\n" , kstruct_mem_location , kstruct_mem_location+KSTRUCT_MEM_SIZE);
+    Print(L"kernel_stack_location    = 0x%X~0x%X\n" , kernel_stack_location , kernel_stack_location+KERNEL_STACK_SIZE);
+    Print(L"kernel_ramdisk_location  = 0x%X~0x%X\n" , kernel_ramdisk_location , kernel_ramdisk_location+ramdisk_file_size);
     memmap_size = 16384;
     Print(L"Jumping to location of kernel : 0x%X...\n" , loader_argument->kernel_physical_location);
     status = uefi_call_wrapper(BS->GetMemoryMap , 5 , &memmap_size , memory_descriptor , &memmap_key , &memmap_descriptor_size , &memmap_descriptor_version);
@@ -187,8 +216,11 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
         }
     }
     
+    for(UINT64 s_addr = kernel_stack_location; s_addr < kernel_stack_location+KERNEL_STACK_SIZE; s_addr += 8) {
+        ((UINT64 *)s_addr)[0] = 0x00;
+    }
     jump_to_kernel(loader_argument , loader_argument->kernel_physical_location , loader_argument->kernel_stack_location+loader_argument->kernel_stack_size);
-
+    
     while(1) {
         ;
     }    

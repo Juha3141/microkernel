@@ -38,12 +38,15 @@ build_final_image: build_efi_executable
 	parted $(TARGET) -s -a minimal mkpart EFI FAT16 2048s 93716s
 	parted $(TARGET) -s -a minimal toggle 1 boot
 
+	touch $(ROOTDIR)/memmap.txt
 	dd if=/dev/zero of=$(BINARYFOLDER)/part.img bs=512 count=91669
 	mformat -i $(BINARYFOLDER)/part.img -h 32 -t 32 -n 64 -c 1
 	mmd -i $(BINARYFOLDER)/part.img ::/EFI
 	mmd -i $(BINARYFOLDER)/part.img ::/EFI/BOOT
 	mcopy -i $(BINARYFOLDER)/part.img $(EFI_TARGET) ::/EFI/BOOT
 	mcopy -i $(BINARYFOLDER)/part.img $(ROOTDIR)/$(KERNEL_IMG_LOCATION)/$(KERNEL_IMG) ::/$(KERNEL_IMG) 
+	mcopy -i $(BINARYFOLDER)/part.img $(ROOTDIR)/$(RAMDISK_IMG) ::/$(RAMDISK_IMG)
+	
 
 	dd if=$(BINARYFOLDER)/part.img of=$(TARGET) bs=512 count=91669 seek=2048 conv=notrunc
 
@@ -53,7 +56,7 @@ build_final_image: build_efi_executable
 	VBoxManage internalcommands sethduuid $(subst .img,.vdi,$(TARGET)) {b64a9a6a-279f-42e3-bc5c-8d298037c5e5}
 
 run_os:
-	qemu-system-x86_64 -cpu qemu64 -m 2048 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio
+	qemu-system-x86_64 -cpu qemu64 -m 2048 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio 
 
 debug_run_os:
 	qemu-system-x86_64 -cpu qemu64 -m 2048 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -S -s

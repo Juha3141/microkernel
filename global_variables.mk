@@ -13,6 +13,7 @@ COMMON_SRCFOLDER  = src
 
 KERNEL_ELF = Kernel.elf
 KERNEL_IMG = Kernel.krn 
+RAMDISK_IMG = ramdisk.img
 KERNEL_IMG_LOCATION = $(ROOTBINARYFOLDER)
 
 BUILD_KERNEL_IMG_MAKEFILE = build_kernel_img.mk

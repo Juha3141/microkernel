@@ -73,7 +73,7 @@ struct __attribute__ ((packed)) LoaderArgument {
 
 	// ramdisk related
     unsigned char is_ramdisk_available; // 0: Not available, 1: Available
-	unsigned int ramdisk_address;
+	unsigned int ramdisk_location;
 	unsigned int ramdisk_size;
 };
 

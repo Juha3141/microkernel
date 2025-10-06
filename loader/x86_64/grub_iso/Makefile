@@ -29,12 +29,13 @@ build_bootloader:
 build_final_image:
 	cp $(LOADER_LD_OUT) $(ISOFOLDER)/boot/
 	cp $(ROOTDIR)/$(KERNEL_IMG_LOCATION)/$(KERNEL_IMG) $(ISOFOLDER)/
+	cp $(ROOTDIR)/$(RAMDISK_IMG) $(ISOFOLDER)/
 	grub-mkrescue --output=$(TARGET) $(ISOFOLDER)/
 
 run_os: $(TARGET)
-	qemu-system-x86_64 -cdrom $(TARGET) -hda rdimg-test.img -boot d -m 2048 -M pc -rtc base=localtime -monitor stdio
+	qemu-system-x86_64 -cdrom $(TARGET) -hda $(ROOTDIR)/rdimg-test.img -boot d -m 2048 -M pc -rtc base=localtime -monitor stdio
 
 debug_run_os: $(TARGET)
-	qemu-system-x86_64 -cdrom $(TARGET) -hda rdimg-test.img -boot d -m 2048 -M pc -rtc base=localtime -monitor stdio -S -s
+	qemu-system-x86_64 -cdrom $(TARGET) -hda $(ROOTDIR)/rdimg-test.img -boot d -m 2048 -M pc -rtc base=localtime -monitor stdio -S -s
 
 include $(ROOTDIR)/build_loader_common.mk

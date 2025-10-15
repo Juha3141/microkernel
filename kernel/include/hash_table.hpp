@@ -29,7 +29,7 @@ template <typename T_OBJ , typename T_KEY> struct HashTable {
         T_OBJ *object;
     };
     struct hash_container_s {
-        ObjectLinkedList<list_object>*objects_container;
+        LinkedList<list_object*>*objects_container;
     }*hash_container;
     bool init(hash_index_t max , void(*op_copy)(T_KEY &dest , T_KEY src) , bool(*op_compare)(T_KEY dest , T_KEY src) , hash_index_t(*op_hash)(T_KEY key)) {
         if(max > 0xFFFFFFF) {
@@ -49,12 +49,12 @@ template <typename T_OBJ , typename T_KEY> struct HashTable {
     bool add(T_KEY key , T_OBJ *object) {
         hash_index_t index = hash_function(key)%max_index;
         if(hash_container[index].objects_container == 0x00) {
-            hash_container[index].objects_container = (ObjectLinkedList<list_object>*)memory::pmem_alloc(sizeof(ObjectLinkedList<list_object>));
+            hash_container[index].objects_container = (LinkedList<list_object*>*)memory::pmem_alloc(sizeof(LinkedList<list_object*>));
             hash_container[index].objects_container->init();
         }
-        ObjectLinkedList<list_object>*lst = hash_container[index].objects_container;
+        LinkedList<list_object*>*lst = hash_container[index].objects_container;
         // Check whether there is an item with same key
-        struct ObjectLinkedList<list_object>::node_s *ptr = lst->get_start_node();
+        auto *ptr = lst->get_start_node();
         while(ptr != 0x00) {
             if(ptr->object == 0x00) {
                 ptr = ptr->next;
@@ -69,7 +69,7 @@ template <typename T_OBJ , typename T_KEY> struct HashTable {
         struct list_object *temp_obj = (list_object *)memory::pmem_alloc(sizeof(list_object));
         temp_obj->object = object;
         key_op_copy(temp_obj->key , key);
-        if(hash_container[index].objects_container->add_object_rear(temp_obj) == INVALID) return false;
+        if((max_t)hash_container[index].objects_container->add_rear(temp_obj) == INVALID) return false;
         
         return true;
     }
@@ -81,8 +81,8 @@ template <typename T_OBJ , typename T_KEY> struct HashTable {
     T_OBJ *search(T_KEY key) {
         hash_index_t index = hash_function(key)%max_index;
         if(hash_container[index].objects_container == 0x00) return 0x00;
-        struct ObjectLinkedList<list_object>::node_s *target = 0x00;
-        struct ObjectLinkedList<list_object>::node_s *ptr = hash_container[index].objects_container->get_start_node();
+        struct LinkedList<list_object*>::node_s *target = 0x00;
+        struct LinkedList<list_object*>::node_s *ptr = hash_container[index].objects_container->get_start_node();
         while(ptr != 0x00) {
             if(ptr->object == 0x00) {
                 ptr = ptr->next;

@@ -129,7 +129,7 @@ namespace fat {
     bool mark_entry_removed(blockdev::block_device *device , dword directory_addr , const char *sfn_name , general_fat_info_t &ginfo);
     bool get_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info_t &ginfo);
     
-    int get_file_list(physical_file_location *dir_location , ObjectLinkedList<file_info> &file_list , general_fat_info_t &ginfo);
+    int get_file_list(physical_file_location *dir_location , LinkedList<file_info*> &file_list , general_fat_info_t &ginfo);
 };
 
 #endif

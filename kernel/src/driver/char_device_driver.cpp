@@ -26,7 +26,7 @@ max_t chardev::register_driver(chardev::char_device_driver *driver , const char 
     strcpy(driver->driver_name , driver_name);
     driver->prepare();
     
-    debug::out::printf_function(DEBUG_TEXT , "bdev::reg_drv" , "Registered character device driver, id : %d name : \"%s\"\n" , driver->driver_id , driver->driver_name);
+    debug::out::printf(DEBUG_TEXT , "Registered character device driver, id : %d name : \"%s\"\n" , driver->driver_id , driver->driver_name);
     return driver->driver_id;
 }
 

@@ -23,7 +23,7 @@ namespace storage_system {
     struct PartitionDriver {
         virtual bool identify(blockdev::block_device *device) = 0;
 	    virtual int get_partitions_count(blockdev::block_device *device) = 0;
-    	virtual int get_partitions_list(blockdev::block_device *device , DataLinkedList<blockdev::partition_info_t> &partition_info_list) = 0;
+    	virtual int get_partitions_list(blockdev::block_device *device , LinkedList<blockdev::partition_info_t> &partition_info_list) = 0;
     	virtual bool create_partition(blockdev::block_device *device , blockdev::partition_info_t partition) = 0;
         virtual bool remove_partition(blockdev::block_device *device , blockdev::partition_info_t partition) = 0;
         virtual bool modify_partition(blockdev::block_device *device , blockdev::partition_info_t old_partition , blockdev::partition_info_t new_partition_info) = 0;

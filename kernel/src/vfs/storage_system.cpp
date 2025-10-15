@@ -10,19 +10,19 @@ bool storage_system::detect_partitions(blockdev::block_device *device) {
     max_t partitiondrv_id = identify_partition_driver(device);
     PartitionDriver *partition_driver = get_partition_identifier(partitiondrv_id);
     int partition_count = 0;
-    DataLinkedList<blockdev::partition_info_t>partition_info_list;
+    LinkedList<blockdev::partition_info_t>partition_info_list;
     
     if(partition_driver == 0x00) return false; // no partition!
-    debug::out::printf_function(DEBUG_TEXT , "detect_part" , "Detecting partition...\n");
+    debug::out::printf(DEBUG_TEXT , "Detecting partition...\n");
     partition_info_list.init();
     partition_count = partition_driver->get_partitions_list(device , partition_info_list);
     
     device->storage_info.partition_driver_id = partitiondrv_id;
     device->storage_info.logical_block_devs = new blockdev::BlockDeviceContainer;
     device->storage_info.logical_block_devs->init(72); // maximum logical storages count
-    DataLinkedList<blockdev::partition_info_t>::node_s *ptr = partition_info_list.get_start_node();
+    LinkedList<blockdev::partition_info_t>::node_s *ptr = partition_info_list.get_start_node();
     while(ptr != 0x00) {
-        add_logical_device(device->device_driver , device , ptr->data);
+        add_logical_device(device->device_driver , device , ptr->object);
         ptr = ptr->next;
     }
     return true; // partition

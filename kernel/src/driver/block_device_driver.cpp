@@ -16,12 +16,10 @@ void blockdev::init(void) {
 /// @param driver_name Name of the driver
 /// @return Return the id of driver
 max_t blockdev::register_driver(blockdev::block_device_driver *driver , const char *driver_name) {
-    debug::push_function("bdev::reg_drv");
-
     BlockDeviceDriverContainer *driver_container = GLOBAL_OBJECT(BlockDeviceDriverContainer);
     max_t id = driver_container->register_object(driver); // register driver to global container
     driver->driver_id = id;
-    if(id == INVALID) { debug::pop_function(); return INVALID; }
+    if(id == INVALID) { return INVALID; }
     driver->device_container = new BlockDeviceContainer;
     driver->device_container->init(256);
     // assign new local device container
@@ -30,7 +28,6 @@ max_t blockdev::register_driver(blockdev::block_device_driver *driver , const ch
     driver->prepare();
     
     debug::out::printf("Registered device driver, id : %d name : \"%s\"\n" , driver->driver_id , driver->driver_name);
-    debug::pop_function();
     return driver->driver_id;
 }
 

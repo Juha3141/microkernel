@@ -49,7 +49,7 @@ namespace fat16 {
         max_t get_cluster_size(file_info *file);
         max_t allocate_new_cluster_to_file(file_info *file);
 
-        int read_directory(file_info *file , ObjectLinkedList<file_info> &file_list);
+        int read_directory(file_info *file , LinkedList<file_info*> &file_list);
 
         bool apply_new_file_info(file_info *file , max_t new_size);
     };

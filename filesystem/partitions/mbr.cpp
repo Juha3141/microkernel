@@ -34,17 +34,20 @@ int MBRPartitionDriver::get_partitions_count(blockdev::block_device *device) {
     return partition_count;
 }
 
-int MBRPartitionDriver::get_partitions_list(blockdev::block_device *device , DataLinkedList<blockdev::partition_info_t> &partition_info_list) {
+int MBRPartitionDriver::get_partitions_list(blockdev::block_device *device , LinkedList<blockdev::partition_info_t> &partition_info_list) {
 	int partition_count = 0;
 	mbr_partition_table partition_table;
 
     if(device->device_driver->read(device , 0 , 1 , &partition_table) != 512) return 0;
     for(int i = 0; i < 4; i++) {
         if(partition_table.entries[i].partition_type != 0x00) {
-			DataLinkedList<blockdev::partition_info_t>::node_s *node = partition_info_list.register_data_rear();
-            node->data.physical_sector_start = partition_table.entries[i].starting_lba;
-            node->data.physical_sector_end = partition_table.entries[i].starting_lba+partition_table.entries[i].size_lba;
-            node->data.bootable = (partition_table.entries[i].bootable_flag == 0x00);
+
+            partition_info_list.add_rear({
+            .physical_sector_start = partition_table.entries[i].starting_lba, 
+            .physical_sector_end = partition_table.entries[i].starting_lba+partition_table.entries[i].size_lba, 
+            .bootable = (partition_table.entries[i].bootable_flag == 0x00), 
+            });
+            
             partition_count++;
         }
     }

@@ -162,26 +162,6 @@ const char *debug::out::debugstr(debug_m mode) {
     return "    ";
 }
 
-void debug::push_function(const char *function) {
-    if(!debug_info.enable_debug) return;
-    if(debug_info.function_stack_index >= DEBUG_FUNCTION_STACK_MAX) {
-        return; // exceeded? just don't add
-    }
-    // skip, probably a recursive function
-    if(strcmp(debug_info.function_stack[debug_info.function_stack_index-1] , function) == 0) {
-        return; 
-    }
-    // different -> add to stack
-    strcpy(debug_info.function_stack[debug_info.function_stack_index] , function);
-    debug_info.function_stack_index++;
-}
-
-void debug::pop_function(void) {
-    if(!debug_info.enable_debug) return;
-    if(debug_info.function_stack_index <= 0) return;
-    debug_info.function_stack_index--;
-}
-
 void debug::set_option(word option , bool flag) {
     if((option & DEBUG_DISPLAY_FIRST_INFO) == DEBUG_DISPLAY_FIRST_INFO) {
         debug_info.info_display = flag;
@@ -230,16 +210,6 @@ void debug::out::printf(debug_m mode , const char *fmt , ...) {
     va_start(ap , fmt);
     debug::out::vprintf(mode , fmt , ap);
     va_end(ap);
-}
-
-void debug::out::printf_function(debug_m mode , const char *function , const char *fmt , ...) {
-    if(debug_info.enable_debug == false) return;
-    va_list ap;
-    debug::push_function(function);
-    va_start(ap , fmt);
-    debug::out::vprintf(mode , fmt , ap);
-    va_end(ap);
-    debug::pop_function();
 }
 
 void debug::out::printf(const char *fmt , ...) {

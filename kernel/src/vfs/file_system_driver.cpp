@@ -6,7 +6,7 @@ void fsdev::init(void) { GLOBAL_OBJECT(FileSystemDriverContainer)->init(512); }
 
 max_t fsdev::register_driver(fsdev::file_system_driver *driver , const char *fs_name) {
     strcpy(driver->fs_string , fs_name);
-    debug::out::printf_function(DEBUG_TEXT , "fsdev::reg_drv" , "Registered file system driver, name : \"%s\"\n" , driver->fs_string);
+    debug::out::printf(DEBUG_TEXT , "Registered file system driver, name : \"%s\"\n" , driver->fs_string);
     return GLOBAL_OBJECT(FileSystemDriverContainer)->register_object(driver);
 }
 

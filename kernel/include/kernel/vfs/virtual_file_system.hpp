@@ -62,7 +62,7 @@ typedef struct open_info_s {
 
     // List for newly created blocks
     // Key value : Logical block location
-    ObjectLinkedList<block_cache_t> *new_cache_linked_list;
+    LinkedList<block_cache_t*> *new_cache_linked_list;
 }open_info_t;
 
 typedef struct file_info_s {
@@ -73,14 +73,14 @@ typedef struct file_info_s {
     /* For tree structure */
     file_info_s *parent_dir;
     // cached
-    ObjectLinkedList<file_info_s> *file_list; /* only for directory */
+    LinkedList<file_info_s*> *file_list; /* only for directory */
     
     /* physical information */
     bool is_mounted; 
     physical_file_location file_loc_info;
     physical_file_location mount_loc_info;
 
-    ObjectLinkedList<open_info_t> *who_open_list;
+    LinkedList<open_info_t*> *who_open_list;
 }file_info;
 
 typedef struct general_file_name_s {

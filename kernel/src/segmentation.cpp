@@ -42,8 +42,6 @@ segment_t segmentation::SegmentsManager::search_segment(const char *segment_name
 #ifdef CONFIG_USE_SEGMENTATION
 
 void segmentation::init(void) {
-    debug::push_function("seg::init");
-
     // default kernel segments
     struct kernel_segments_info kseginfo;
     struct kernel_segments_value ksegvalue;
@@ -69,7 +67,6 @@ void segmentation::init(void) {
 
     set_to_code_segment(SEGMENT_NAME_CODE);
     set_to_data_segment(SEGMENT_NAME_DATA);
-    debug::pop_function();
 }
     
 bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) {

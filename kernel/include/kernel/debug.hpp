@@ -5,6 +5,7 @@
 #include <loader/loader_argument.hpp>
 #include <object_manager.hpp>
 #include <string.hpp>
+#include <linked_list.hpp>
 
 #define DEBUG_FUNCTION_NAME_LEN  40
 #define DEBUG_FUNCTION_STACK_MAX 20
@@ -49,6 +50,17 @@ namespace debug {
         virtual debug_color_t get_foreground_color(void) = 0;
 
         char interface_identifier[24];
+    };
+    struct debug_message_t {
+        int log_level;
+        char *debug_msg;
+    };
+    struct DebugMessageContainer {
+        void init(void) {
+            
+        }
+        
+        LinkedList<debug_message_t>message_list;
     };
 
     struct DebugInterfaceContainer {
@@ -117,7 +129,6 @@ namespace debug {
         void vprintf(debug_m mode , const char *fmt , va_list ap);
 
         void printf(debug_m mode , const char *fmt , ...);
-        void printf_function(debug_m mode , const char *function , const char *fmt , ...);
         void printf(const char *fmt , ...);
 
         void raw_printf(const char *fmt , ...);
@@ -144,9 +155,6 @@ namespace debug {
     debug_interface *current_debug_interface(void);
 
     void dump_memory(max_t address , max_t length , bool debug_string=false);
-
-    void push_function(const char *function);
-    void pop_function(void);
     
     void set_option(word option , bool flag);
 

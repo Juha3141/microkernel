@@ -44,7 +44,7 @@ int GPTPartitionDriver::get_partitions_count(blockdev::block_device *device) {
     return partition_count;
 }
 
-int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , DataLinkedList<blockdev::partition_info_t> &partition_info_list) {
+int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , LinkedList<blockdev::partition_info_t> &partition_info_list) {
     int i;
     unsigned char buffer[512];
     int partition_count = 0;
@@ -64,10 +64,11 @@ int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , Dat
         && (partition_entry[i].partition_type_guid[2] == 0) && (partition_entry[i].partition_type_guid[3] == 0)) {
             continue;
         }
-        DataLinkedList<blockdev::partition_info_t>::node_s *node = partition_info_list.register_data_rear();
-        node->data.physical_sector_start = partition_entry[i].start_address_lba;
-        node->data.physical_sector_end = partition_entry[i].end_address_lba;
-        node->data.bootable = (partition_entry[i].attribute_flag == GPT_PARTITION_LEGACY_BOOTABLE);
+        partition_info_list.add_rear({
+            .physical_sector_start = partition_entry[i].start_address_lba , 
+            .physical_sector_end = partition_entry[i].end_address_lba , 
+            .bootable = (partition_entry[i].attribute_flag == GPT_PARTITION_LEGACY_BOOTABLE)
+        });
         partition_count++;
     }
     memory::pmem_free(partition_entry);

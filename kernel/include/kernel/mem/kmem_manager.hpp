@@ -16,6 +16,9 @@
 #define KERNEL_MEMORY_SEGMENT_THRESHOLD 512*1024  // 512KB
 
 namespace memory {
+    typedef void *(*memory_allocator_func_t)(max_t size, max_t alignment);
+    typedef void(*memory_deallocator_func_t)(void *ptr);
+
     struct Boundary {
         max_t start_address;
         max_t end_address;

@@ -26,7 +26,6 @@
 void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segments_value &ksegvalues) {
     interrupt::hardware::disable();
 
-    debug::push_function("segm::init");
     x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
     gdt_container->init(GDT_ENTRYCOUNT);
 
@@ -41,7 +40,6 @@ void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segment
     debug::out::printf(DEBUG_INFO , "sizeof(LDTEntry) : %d\n" , sizeof(x86_64::LDTEntry));
 
     __asm__ ("lgdt [%0]"::"r"(gdtr_ptr));
-    debug::pop_function();
 }
 
 segment_t segmentation::hardware::register_system_segment(max_t start_address , max_t length , word segment_type) {

@@ -63,6 +63,7 @@ void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary ,
 	return;
 }*/
 
+// Use bubble sort, slow but simple
 static void sort_boundaries_list(struct memory::Boundary *boundaries , int count) {
 	for(int i = 0; i < count-1; i++) {
 		bool swapped = false;
@@ -90,6 +91,7 @@ int merge_boundaries_list(struct memory::Boundary *boundaries , int count , stru
 	memcpy(sorted_boundaries , boundaries , count*sizeof(struct memory::Boundary));
 	sort_boundaries_list(sorted_boundaries , count);
 	
+	// The maximum amount of memory between the memory segments to be considered as one memory boundary
 	int THRESHOLD = 2048; // 2kB
     unsigned long continuous_segment_start = sorted_boundaries[0].start_address;
     int k;
@@ -221,8 +223,6 @@ int memory::SegmentsManager::get_segment_index(max_t address) {
 }
 
 void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct LoaderArgument *loader_argument) {
-	debug::push_function("pmem_init");
-	
 	int usable_seg_count = 0;
 
 	struct Boundary pmem_boundary[memmap_count*2];
@@ -262,8 +262,6 @@ void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct Lo
 	debug::out::printf("Initializing all the segments...\n");
 	segments_mgr->init(pmem_boundary_entry_count , pmem_boundary);
 	is_pmem_alloc_available = true;
-	
-	debug::pop_function();
 }
 
 max_t memory::SegmentsManager::get_currently_using_mem(void) {
@@ -278,8 +276,6 @@ max_t memory::SegmentsManager::get_currently_using_mem(void) {
 void *memory::pmem_alloc(max_t size , max_t alignment) {
 	void *ptr = 0x00;
 	if(!is_pmem_alloc_available) return memory::kstruct_alloc(size , alignment);
-
-	debug::push_function("pmem_alloc");
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	if(size == 0x00) {
 		debug::out::printf(DEBUG_WARNING , "allocation warning : zero allocation size\n");
@@ -294,26 +290,23 @@ void *memory::pmem_alloc(max_t size , max_t alignment) {
 	if(ptr == 0x00) {
 		debug::panic("no available physical memory\n");
 	}
-	debug::pop_function();
 	return ptr;
 }
 
 void memory::pmem_free(void *ptr) {
-	debug::push_function("pmem_free");
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	int index;
 	if((index = segments_mgr->get_segment_index((max_t)ptr)) == -1) {
 		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request out of range(ptr=0x%lX)\n" , (max_t)ptr);
 		// debug here
-		debug::pop_function();
 		return;
 	}
 	if(segments_mgr->node_managers[index].free((max_t)ptr) == false) {
 		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request not allocated(ptr=0x%lX)\n" , (max_t)ptr);
 	}
-	debug::pop_function();
 }
 
+// not implemented
 bool memory::pmem_protect(struct Boundary boundary) {
 	return false;
 }

@@ -86,7 +86,7 @@ void interrupt::hardware::init_ist(void) {
     // Set Segment
     __asm__ ("ltr %0"::"r"((word)gdt_container->tss_segment));
     
-    debug::out::printf_function(DEBUG_TEXT , "init_ist" , "TSS segment : 0x%X\n" , gdt_container->tss_segment);
+    debug::out::printf(DEBUG_TEXT , "TSS segment : 0x%X\n" , gdt_container->tss_segment);
 }
 
 bool interrupt::hardware::discard_interrupt(int number) {

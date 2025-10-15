@@ -109,7 +109,7 @@ void demo_routine(void) {
     file_info *rootdir = vfs::get_root_directory();
     int file_count = vfs::read_directory(rootdir);
     debug::out::printf(DEBUG_INFO , "Number of files in the root directory : %d\n" , file_count);
-    ObjectLinkedList<file_info_s>::node_s *f_ptr_node = rootdir->file_list->get_start_node();
+    LinkedList<file_info_s*>::node_s *f_ptr_node = rootdir->file_list->get_start_node();
     for(int i = 0; i < file_count; i++) {
         if(f_ptr_node == 0x00) break;
         if(f_ptr_node->object->file_type == FILE_TYPE_DIRECTORY) debug::out::printf("%s [DIRECTORY]\n" , f_ptr_node->object->file_name);
@@ -130,7 +130,6 @@ void demo_routine(void) {
 }
 
 void dump_block_devices(void) {
-    debug::push_function("dump_bd");
     for(int a=0;a<79;a++) debug::out::raw_printf("-");
     debug::out::raw_printf("\n");
     blockdev::BlockDeviceDriverContainer *blockdev_container = blockdev::BlockDeviceDriverContainer::get_self();
@@ -166,11 +165,9 @@ void dump_block_devices(void) {
     debug::out::printf(DEBUG_SPECIAL , "Done probing the block device tree!\n");
     for(int a=0;a<79;a++) debug::out::raw_printf("-");
     debug::out::raw_printf("\n");
-    debug::pop_function();
 }
 
 void pmem_alloc_test(int rand_seed) {
-    debug::push_function("pmem_a_t");
     debug::out::printf("Physical memory allocation test\n");
     max_t alloc_size[100] = {0 , };
     debug::out::printf("current usage : %d\n" , memory::pmem_usage());
@@ -191,5 +188,4 @@ void pmem_alloc_test(int rand_seed) {
         memory::pmem_free((void *)ptr_list[i]);
         debug::out::printf("%d : Free 0x%X - usage %d\n" , i , ptr_list[i] , memory::pmem_usage());
     }
-    debug::pop_function();
 }

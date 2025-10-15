@@ -28,7 +28,7 @@ bool ide_driver::prepare(void) {
     };
     blockdev::block_device *devices[4]; // Four devices, Two primary, Two secondary
 
-    debug::out::printf_function(DEBUG_INFO , "ide_driver::prepare" , "Searching every ide drives...\n");
+    debug::out::printf(DEBUG_INFO , "Searching every ide drives...\n");
     for(i = 0; i < 4; i++) {
         devices[i] = create_empty_device<blockdev::block_device>();
         designate_resources_count<blockdev::block_device>(devices[i] , 2 , 0 , 1 , 0);
@@ -38,10 +38,10 @@ bool ide_driver::prepare(void) {
         devices[i]->resources.flags[0] = is_master_info[i];
 
         if(blockdev::register_device(this , devices[i]) == INVALID) {
-            debug::out::printf_function(DEBUG_WARNING , "ide_driver::prepare" , "Device not found in idehd%d\n" , i);
+            debug::out::printf(DEBUG_WARNING , "Device not found in idehd%d\n" , i);
         }
         else {
-            debug::out::printf_function(DEBUG_SPECIAL , "ide_driver::prepare" , "Registered device : idehd%d\n" , i);
+            debug::out::printf(DEBUG_SPECIAL , "Registered device : idehd%d\n" , i);
         }
     }
     return true;
@@ -207,7 +207,7 @@ bool ide_cd_driver::prepare(void) {
     };
     blockdev::block_device *devices[4]; // Four devices, Two primary, Two secondary
 
-    debug::out::printf_function(DEBUG_INFO , "ide_cd_driver::prepare" , "Searching every ide cd drives...\n");
+    debug::out::printf(DEBUG_INFO , "Searching every ide cd drives...\n");
     for(int i = 0; i < 4; i++) {
         devices[i] = create_empty_device<blockdev::block_device>();
         designate_resources_count<blockdev::block_device>(devices[i] , 2 , 0 , 1 , 0);
@@ -217,10 +217,10 @@ bool ide_cd_driver::prepare(void) {
         devices[i]->resources.flags[0] = is_master_info[i];
 
         if(blockdev::register_device(this , devices[i]) == INVALID) {
-            debug::out::printf_function(DEBUG_WARNING , "ide_cd_driver::prepare" , "Device not found in idecd%d\n" , i);
+            debug::out::printf(DEBUG_WARNING , "Device not found in idecd%d\n" , i);
         }
         else {
-            debug::out::printf_function(DEBUG_SPECIAL , "ide_cd_driver::prepare" , "Registered device : idecd%d\n" , i);
+            debug::out::printf(DEBUG_SPECIAL , "Registered device : idecd%d\n" , i);
         }
     }
     return true;
@@ -298,8 +298,8 @@ bool ide_cd_driver::get_cdrom_size(blockdev::block_device *device , blockdev::de
     geometry.block_size = ((received_data[4] << 24)|(received_data[5] << 16)|(received_data[6] << 8)|received_data[7]);
     geometry.lba_total_block_count = ((received_data[0] << 24)|(received_data[1] << 16)|(received_data[2] << 8)|received_data[3]);
     geometry.lba_total_block_count += 1;
-    debug::out::printf_function(DEBUG_TEXT , "ide_cd_drv::get_sz" , "Total sector count : %d\n" , geometry.lba_total_block_count);
-    debug::out::printf_function(DEBUG_TEXT , "ide_cd_drv::get_sz" , "block size         : %d\n" , geometry.block_size);
+    debug::out::printf(DEBUG_TEXT , "Total sector count : %d\n" , geometry.lba_total_block_count);
+    debug::out::printf(DEBUG_TEXT , "block size         : %d\n" , geometry.block_size);
     // ok good now you need to clean this code up
     return true;
 }

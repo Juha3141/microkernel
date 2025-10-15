@@ -32,15 +32,11 @@ bool fat16::fat16_driver::create(const general_file_name file_name , word file_t
     fat::get_vbr(rootdir_file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
     fat16::get_ginfo(ginfo , &vbr);
 
-debug::push_function("fat16::fat16_driver::create");
-
     debug::out::printf("fat area location : %d\n" , ginfo.fat_area_loc);
     debug::out::printf("fat area size     : %d\n" , ginfo.fat_size);
     empty_cluster_loc = fat::find_first_empty_cluster(rootdir_file_loc->block_device , ginfo); // Get the first usable cluster(Empty cluster)
     
     debug::out::printf("empty_cluster_loc : %d\n" , empty_cluster_loc);
-
-debug::pop_function();
 
     fat::write_cluster_info(rootdir_file_loc->block_device , empty_cluster_loc , 0xFFFF , ginfo);
     // Initialize SFN Entry
@@ -221,7 +217,7 @@ bool fat16::fat16_driver::apply_new_file_info(file_info *file , max_t new_size) 
     return true;
 }
 
-int fat16::fat16_driver::read_directory(file_info *file , ObjectLinkedList<file_info> &file_list) {
+int fat16::fat16_driver::read_directory(file_info *file , LinkedList<file_info*> &file_list) {
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
     fat::general_fat_info_t ginfo;
     fat16::fat16_vbr_t vbr;

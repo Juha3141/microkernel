@@ -65,7 +65,7 @@ namespace fsdev {
         /// @param file the directory to read
         /// @param file_list Where the file_info structures are stored
         /// @return Number of files
-        virtual int read_directory(file_info *file , ObjectLinkedList<file_info> &file_list) = 0;
+        virtual int read_directory(file_info *file , LinkedList<file_info*> &file_list) = 0;
 
         /// @brief Apply the change of file_info. Note that this function Cannot change the file name. 
         ///        This function can only change the file size or other things. 

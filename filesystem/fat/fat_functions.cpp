@@ -789,7 +789,7 @@ bool fat::get_sfn_entry(blockdev::block_device *device , dword directory_addr , 
                 offset += sizeof(sfn_entry_t);
                 continue;
             }
-            debug::out::printf_function(DEBUG_INFO , "fat::get_sfn_entr" , "file_name : %s , temp_file_name : %s\n" , file_name , temp_file_name);
+            debug::out::printf(DEBUG_INFO , "file_name : %s , temp_file_name : %s\n" , file_name , temp_file_name);
             if(strcmp(file_name , temp_file_name) == 0) {
                 offset += lfn_entry_count*sizeof(lfn_entry_t);
                 memcpy(destination , (sfn_entry_t *)(directory+offset) , sizeof(sfn_entry_t));
@@ -807,7 +807,7 @@ bool fat::get_sfn_entry(blockdev::block_device *device , dword directory_addr , 
     return false;
 }
 
-int fat::get_file_list(physical_file_location *dir_location , ObjectLinkedList<file_info> &file_list , general_fat_info_t &ginfo) {
+int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_info*> &file_list , general_fat_info_t &ginfo) {
     int i;
     int offset = 0;
     int entry_count;
@@ -851,7 +851,7 @@ int fat::get_file_list(physical_file_location *dir_location , ObjectLinkedList<f
             // copy the entry
             memcpy(&entry , (sfn_entry_t *)(directory+offset) , sizeof(sfn_entry_t));
             file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , entry , ginfo);
-            file_list.add_object_rear(new_file_info);
+            file_list.add_rear(new_file_info);
         }
         else offset += sizeof(sfn_entry_t);
     }

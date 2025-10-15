@@ -16,16 +16,16 @@ void vfs::VirtualFileSystemManager::init(file_info *rdir , blockdev::block_devic
 
 void vfs::VirtualFileSystemManager::add_object(file_info *file , file_info *directory) {
     if(directory->file_list == 0x00) {
-        directory->file_list = new ObjectLinkedList<file_info_s>;
+        directory->file_list = new LinkedList<file_info_s*>;
         directory->file_list->init();
     }
-    directory->file_list->add_object_rear(file);
+    directory->file_list->add_rear(file);
     file->parent_dir = directory;
 }
 
 bool vfs::VirtualFileSystemManager::remove_object(const char *file_name , file_info *directory) {
     if(directory->file_list == 0x00) return false;
-    return directory->file_list->remove_node(
+    return directory->file_list->remove(
         directory->file_list->search<const char *>(
             [](file_info *f , const char *fn) {
                 return strcmp(f->file_name , fn) == 0;
@@ -52,7 +52,7 @@ file_info *vfs::VirtualFileSystemManager::search_object_last(int level_count , f
     for(; i < level_count; i++) {
         last_hit_loc = i;
         if(ptr->file_list == 0x00) return ptr;
-        ObjectLinkedList<file_info_s>::node_s *node = ptr->file_list->search<char*>([](file_info_s *obj , char *str) { return (strcmp(obj->file_name , str) == 0); } , file_links[i]);
+        LinkedList<file_info_s*>::node_s *node = ptr->file_list->search<char*>([](file_info_s *obj , char *str) { return (strcmp(obj->file_name , str) == 0); } , file_links[i]);
         if(node == 0x00) return ptr;
 
         ptr = node->object;
@@ -144,7 +144,7 @@ file_info *vfs::create_file_info_struct(
     new_file->file_type = file_type;
 
     new_file->file_size = file_size;
-    new_file->who_open_list = new ObjectLinkedList<open_info_t>;
+    new_file->who_open_list = new LinkedList<open_info_t*>;
     new_file->who_open_list->init();
 
     new_file->file_list = 0x00;
@@ -213,7 +213,7 @@ static file_info *get_file_by_cache_and_phys(const general_file_name file_path ,
 
         return file;
     }
-    debug::out::printf_function(DEBUG_TEXT , "get_file_by_cache" , "last cash hit : %s(file=0x%lx), hit_loc : %d\n" , file->file_name , file , last_hit_loc);
+    debug::out::printf(DEBUG_TEXT , "last cash hit : %s(file=0x%lx), hit_loc : %d\n" , file->file_name , file , last_hit_loc);
     
     file_info *tree_file = file;
     for(int i = last_hit_loc; i < level_count-levels_to_exclude; i++) {
@@ -261,13 +261,13 @@ file_info *vfs::open(const general_file_name file_path , int option) {
     open_info->open_flag = option;
     open_info->task_id = current_task_id;
     open_info->cache_hash_table = new HashTable<block_cache_t , max_t>;
-    open_info->new_cache_linked_list = new ObjectLinkedList<block_cache_t>;
+    open_info->new_cache_linked_list = new LinkedList<block_cache_t*>;
 
     open_info->new_cache_linked_list->init();
     open_info->cache_hash_table->init(512 , [](max_t&d,max_t s){d=s;} , [](max_t d,max_t s){ return (bool)(d==s); } , 
     [](max_t key) { return (hash_index_t)(key%512); });
     debug::out::printf("who_open_list : 0x%lx\n" , file->who_open_list);
-    file->who_open_list->add_object_rear(open_info);
+    file->who_open_list->add_rear(open_info);
     return file;
 }
 
@@ -283,8 +283,8 @@ static bool flush_preexisting_caches(HashTable<block_cache_t , max_t>*preexist_c
     // circulate all the hash table contents
     for(int i = 0; i < preexist_caches->max_index; i++) {
         if(preexist_caches->hash_container[i].objects_container == 0x00) continue;
-        ObjectLinkedList<HashTable<block_cache_t , max_t>::list_object>*linked_lst = preexist_caches->hash_container[i].objects_container;
-        ObjectLinkedList<HashTable<block_cache_t , max_t>::list_object>::node_s *node_ptr = linked_lst->get_start_node();
+        LinkedList<HashTable<block_cache_t , max_t>::list_object*>*linked_lst = preexist_caches->hash_container[i].objects_container;
+        LinkedList<HashTable<block_cache_t , max_t>::list_object*>::node_s *node_ptr = linked_lst->get_start_node();
         while(node_ptr != 0x00) {
             max_t block_loc = node_ptr->object->key; // key : block_loc
             if(node_ptr->object->object->flushed == true) {
@@ -307,15 +307,15 @@ static bool flush_preexisting_caches(HashTable<block_cache_t , max_t>*preexist_c
 /// @param file file_info structure
 /// @param preexist_caches Hash table for the caches
 /// @return true if succeed, false if failed
-static bool flush_new_caches(ObjectLinkedList<block_cache_t>*new_caches , file_info *file , open_info_t *who_opened , HashTable<block_cache_t , max_t>*preexist_caches) {
+static bool flush_new_caches(LinkedList<block_cache_t*>*new_caches , file_info *file , open_info_t *who_opened , HashTable<block_cache_t , max_t>*preexist_caches) {
     bool succeed = true;
-    max_t new_block_count = new_caches->count;
+    max_t new_block_count = new_caches->size();
     max_t flushed_block_count = 0;
     max_t created_block_count = 0;
 
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
-    ObjectLinkedList<block_cache_t>::node_s *start_node = new_caches->get_start_node();
-    ObjectLinkedList<block_cache_t>::node_s *ptr = start_node;
+    LinkedList<block_cache_t*>::node_s *start_node = new_caches->get_start_node();
+    LinkedList<block_cache_t*>::node_s *ptr = start_node;
 
     max_t blockdev_bs = file_loc->block_device->geometry.block_size;
 
@@ -334,13 +334,13 @@ static bool flush_new_caches(ObjectLinkedList<block_cache_t>*new_caches , file_i
             if(file_loc->block_device->device_driver->write(file_loc->block_device , physical_loc+i , 1 , ptr->object->block) 
                 != blockdev_bs) succeed = false;
             
-            ObjectLinkedList<block_cache_t>::node_s *node_to_remove = ptr;
+            LinkedList<block_cache_t*>::node_s *node_to_remove = ptr;
             ptr = ptr->next;
 
             // Add the flushed node to the pre-existing hash table, remove from new cache list. 
             node_to_remove->object->flushed = true;
             preexist_caches->add(physical_loc+i , node_to_remove->object);
-            new_caches->remove_node(node_to_remove);
+            new_caches->remove(node_to_remove);
             debug::out::printf("writing the cache data to %d\n" , physical_loc+i);
         }
         if(ptr == 0x00) break;
@@ -354,11 +354,11 @@ bool vfs::flush(file_info *file) {
     max_t task_id;
 
     task_id = 0x00; // not implemented yet!
-    ObjectLinkedList<open_info_t>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj,max_t id) {return obj->task_id==id;} , task_id);
+    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj,max_t id) {return obj->task_id==id;} , task_id);
     if(who_opened == 0x00) return false;
 
     HashTable<block_cache_t , max_t>*preexist_cache_hash_table = who_opened->object->cache_hash_table;
-    ObjectLinkedList<block_cache_t>*new_cache_linked_list = who_opened->object->new_cache_linked_list;
+    LinkedList<block_cache_t*>*new_cache_linked_list = who_opened->object->new_cache_linked_list;
     if(flush_preexisting_caches(preexist_cache_hash_table , file) == false) return false;
     if(flush_new_caches(new_cache_linked_list , file , who_opened->object , preexist_cache_hash_table) == false) return false;
 
@@ -370,7 +370,7 @@ bool vfs::close(file_info *file) {
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
     if(vfs::flush(file) == false) return false; // flush the file
 
-    ObjectLinkedList<open_info_t>::node_s *node = file->who_open_list->search<max_t>([](open_info_t *o,max_t id) {return(bool)(o->task_id==id);} , current_task_id);
+    LinkedList<open_info_t*>::node_s *node = file->who_open_list->search<max_t>([](open_info_t *o,max_t id) {return(bool)(o->task_id==id);} , current_task_id);
     if(node->object->maximum_offset > file->file_size) {
         debug::out::printf("applying new file info\n");
         file_loc->fs_driver->apply_new_file_info(file , node->object->maximum_offset);
@@ -379,7 +379,7 @@ bool vfs::close(file_info *file) {
     }
     
     // To-do : Free the hash table and linked list
-    file->who_open_list->remove_node(node);
+    file->who_open_list->remove(node);
     return true;
 }
 
@@ -422,7 +422,7 @@ static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr ,
     max_t cluster_start_phys_location = file_loc->fs_driver->get_cluster_start_address(file , linear_block_addr);
     if(cluster_start_phys_location == INVALID) {
         // Out of the bounds, search from new_cache_linked_list
-        ObjectLinkedList<block_cache_t>::node_s *n = open_info->new_cache_linked_list->search<max_t>([](block_cache_t *o,max_t l){return o->linear_block_addr == l;} , linear_block_addr);
+        LinkedList<block_cache_t*>::node_s *n = open_info->new_cache_linked_list->search<max_t>([](block_cache_t *o,max_t l){return o->linear_block_addr == l;} , linear_block_addr);
         if(n != 0x00) return n->object;
         return 0x00;
     }
@@ -433,7 +433,7 @@ static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr ,
     cache = open_info->cache_hash_table->search(block_phys_location);
     if(cache != 0x00) return cache;
 
-    ObjectLinkedList<block_cache_t>::node_s *n = open_info->new_cache_linked_list->search<max_t>([](block_cache_t *o,max_t l){return o->linear_block_addr == l;} , linear_block_addr);
+    LinkedList<block_cache_t*>::node_s *n = open_info->new_cache_linked_list->search<max_t>([](block_cache_t *o,max_t l){return o->linear_block_addr == l;} , linear_block_addr);
     if(n != 0x00) return n->object;
     // we actually need to create new cache page now..
 
@@ -464,7 +464,6 @@ static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr ,
 }
 
 long vfs::read(file_info *file , max_t size , void *buffer) {
-    debug::push_function("vfs::read");
     max_t current_task_id;
 
     max_t open_offset = 0;
@@ -478,7 +477,7 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
     if(file->who_open_list == 0x00) return 0; // error
     current_task_id = 0x00; // currently not implemented yet!
     
-    ObjectLinkedList<open_info_t>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
+    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
     if(who_opened == 0x00) return 0; // If not opened -- 
 
     file_loc = fsdev::get_physical_loc_info(file);
@@ -516,13 +515,11 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
         read_size += bsize;
     }
     who_opened->object->open_offset += read_size;
-    debug::pop_function();
     debug::out::printf("read_size : %d\n" , read_size);
     return read_size;
 }
 
 long vfs::write(file_info *file , max_t size , const void *buffer) {
-    debug::push_function("vfs::write");
     max_t current_task_id;
 
     max_t open_offset = 0;
@@ -538,7 +535,7 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
     if(file->who_open_list == 0x00) return 0; // error
     current_task_id = 0x00; // currently not implemented yet!
     
-    ObjectLinkedList<open_info_t>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
+    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
     if(who_opened == 0x00) return 0;
 
     file_loc = fsdev::get_physical_loc_info(file);
@@ -581,7 +578,7 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
             cache->flushed = true; // newest
             cache->linear_block_addr = linear_block_addr;
             
-            who_opened->object->new_cache_linked_list->add_object_rear(cache);
+            who_opened->object->new_cache_linked_list->add_rear(cache);
         }
     }
     // Calculate & Copy
@@ -611,7 +608,6 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
     debug::out::printf("write_size : %d\n" , write_size);
     who_opened->object->open_offset += write_size;
     who_opened->object->maximum_offset = MAX(who_opened->object->open_offset , who_opened->object->maximum_offset);
-    debug::pop_function();
     return write_size;
 }
 
@@ -620,9 +616,9 @@ long vfs::lseek(file_info *file , long cursor , int option) {
     max_t current_task_id;
     current_task_id = 0x00; /* Not implemented */
 
-    ObjectLinkedList<open_info_t>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
+    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
     if(who_opened == 0x00) return -1;
-    debug::out::printf_function(DEBUG_TEXT , "vfs::lseek" , "(before) open_offset = %d\n" , who_opened->object->open_offset);
+    debug::out::printf(DEBUG_TEXT , "(before) open_offset = %d\n" , who_opened->object->open_offset);
     switch(option) {
         case LSEEK_SET:
             if(cursor < 0) { who_opened->object->open_offset = 0; break; }
@@ -637,7 +633,7 @@ long vfs::lseek(file_info *file , long cursor , int option) {
             break;
     }
     who_opened->object->open_offset = MIN(who_opened->object->open_offset , who_opened->object->maximum_offset);
-    debug::out::printf_function(DEBUG_TEXT , "vfs::lseek" , "(next) open_offset   = %d\n" , who_opened->object->open_offset);
+    debug::out::printf(DEBUG_TEXT , "(next) open_offset   = %d\n" , who_opened->object->open_offset);
     return who_opened->object->open_offset;
 }
 
@@ -653,29 +649,29 @@ static void discard_file_info(file_info *file) {
 /// @param root_directory file_info of the directory
 /// @return File count
 int vfs::read_directory(file_info *directory) {
-    ObjectLinkedList<file_info> file_info_list;
+    LinkedList<file_info*> file_info_list;
     file_info_list.init();
     physical_file_location *file_loc = fsdev::get_physical_loc_info(directory);
     if(file_loc == 0x00) return -1;
 
     int file_count = file_loc->fs_driver->read_directory(directory , file_info_list);
-    ObjectLinkedList<file_info>::node_s *ptr = file_info_list.get_start_node();
+    auto *ptr = file_info_list.get_start_node();
 
     if(directory->file_list == 0x00) {
-        directory->file_list = new ObjectLinkedList<file_info_s>;
+        directory->file_list = new LinkedList<file_info_s*>;
         directory->file_list->init();
     }
     while(ptr != 0x00) {
         file_info *new_file = ptr->object;
-        ObjectLinkedList<file_info>::node_s *file_node = directory->file_list->search<char *>(
-            [](file_info *o , char *fn) { return (strcmp(o->file_name , fn) == 0); } , 
+        LinkedList<file_info*>::node_s *file_node = directory->file_list->search<const char *>(
+            [](file_info *o , const char *fn) { return (strcmp(o->file_name , fn) == 0); } , 
             new_file->file_name
         );
         
         // does not exist, register new one
         if(file_node == 0x00) {
             new_file->parent_dir = directory;
-            directory->file_list->add_object_rear(new_file);
+            directory->file_list->add_rear(new_file);
         }
         // already exist, just discard
         else {

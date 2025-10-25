@@ -154,6 +154,7 @@ file_info *vfs::create_file_info_struct(
 bool vfs::mount(file_info *file , blockdev::block_device *device) {
     fsdev::file_system_driver *fs_driver = fsdev::detect_fs(device);
     if(fs_driver == 0x00) return false;
+    
     file->mount_loc_info.fs_driver = fs_driver;
     file->mount_loc_info.block_device = device;
     if(fs_driver->get_root_directory(file->mount_loc_info) == false) return false; 
@@ -163,18 +164,18 @@ bool vfs::mount(file_info *file , blockdev::block_device *device) {
 }
 
 static void get_highest_level_file_name(const char *original_name , char *output) {
-    int j = 0;
     int len = strlen(original_name);
-    int last_loc = len-1;
     char identifier = GLOBAL_OBJECT(vfs::VirtualFileSystemManager)->dir_identifier;
     char *str;
-    for(; last_loc >= 0; last_loc--) {
-        if(original_name[last_loc] == identifier) break;
+
+    int i = len-1;
+    for(; i >= 0; i--) {
+        if(original_name[i] == identifier) { break; }
     }
-    last_loc++;
+    i++;
     
-    memcpy(output , original_name+last_loc , len-last_loc);
-    output[len-last_loc] = 0x00;
+    memcpy(output , original_name+i , len-i);
+    output[len-i] = 0x00;
 }
 
 /// @brief Automatically make a space for file names, parse the file name and store it to the allocated space
@@ -237,7 +238,7 @@ static file_info *get_file_by_cache_and_phys(const general_file_name file_path ,
 bool vfs::create(const general_file_name file_path , word file_type) {
     file_info *directory;
     physical_file_location *physical_loc;
-    char top_name[strlen(file_path.file_name)];
+    char top_name[strlen(file_path.file_name)+1];
 
     directory = get_file_by_cache_and_phys(file_path , 1);
     if(directory == 0x00) return false;

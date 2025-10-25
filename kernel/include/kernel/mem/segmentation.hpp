@@ -23,18 +23,18 @@
 
 #define SEGMENT_VALUE_INVALID  0xFFFF
 
-typedef word segment_t;
+typedef max_t segment_t;
 
 namespace segmentation {
     struct segment_info_t {
-        char name[16];
+        char name[32];
         segment_t value;
         word segment_type;
 
         max_t task_id;
     };
-    struct SegmentsManager : public DataManager<segment_info_t> {
-        SINGLETON_PATTERN_KSTRUCT(struct SegmentsManager);
+    struct SegmentationManager : public FixedArray<segment_info_t> {
+        SINGLETON_PATTERN_KSTRUCT(SegmentationManager);
 
         bool register_segment(const char *segment_name , segment_t segment_value , word segment_type , max_t task_id=INVALID);
         segment_t discard_segment(const char *segment_name);

@@ -70,6 +70,17 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 																		// Address after area of node
 }
 
+/// @brief Checks whether the provided address is the address to allocated object
+/// @param address Address of memory chunk
+bool memory::NodesManager::is_allocated(max_t address) {
+	if(address < mem_start_address||address > mem_end_address) return false;
+	struct Node *node = (struct Node *)(((max_t)address)-sizeof(struct Node));  // address of Node : address - Size of the node structure
+	if((node->occupied == 0)||(node->signature != MEMMANAGER_SIGNATURE)) {			// If Node is not using, or not present, print error and leave.
+		return false;
+	}
+	return true;
+}
+
 /// @brief Deallocate physical kernel memory
 /// @param address Address of memory chunk
 bool memory::NodesManager::free(max_t address) {
@@ -79,12 +90,9 @@ bool memory::NodesManager::free(max_t address) {
 	struct Node *current_node;
 	struct Node *node_next;
 	struct Node *node_prev;
-	
-	if(address < mem_start_address||address > mem_end_address) return false;
 	struct Node *node = (struct Node *)(((max_t)address)-sizeof(struct Node));  // address of Node : address - Size of the node structure
-	if((node->occupied == 0)||(node->signature != MEMMANAGER_SIGNATURE)) {			// If Node is not using, or not present, print error and leave.
-		return false;
-	}
+	
+	if(!is_allocated(address)) return false;
 	// Allocated Size : Location of the next node - Location of current node
 	// If next node is usable, and present, the node can be merged.
 	memory_usage -= node->size+sizeof(struct Node);

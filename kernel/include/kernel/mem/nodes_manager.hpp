@@ -29,6 +29,7 @@ namespace memory {
             void init(max_t start_address , max_t end_address);
 
             max_t allocate(max_t size , max_t alignment);
+            bool is_allocated(max_t ptr);
             bool free(max_t ptr);
 
             bool available(void);

@@ -27,6 +27,7 @@ namespace memory {
     
     void kstruct_init(struct Boundary boundary);
     void *kstruct_alloc(max_t size , max_t alignment=0);
+    bool is_kstruct_allocated_obj(void *obj);
 
     max_t kstruct_get_current_addr(void);
     void kstruct_rollback_addr(max_t prev_addr);
@@ -34,8 +35,8 @@ namespace memory {
     // SegmentsManager : Manager of segments, decide what segments to be used next
     // Global class, use singleton pattern
     struct SegmentsManager {
-        void init(int segment_count , struct Boundary *usable_segments);
-        SINGLETON_PATTERN_KSTRUCT(struct SegmentsManager);
+        void init(int segment_count , Boundary *usable_segments);
+        SINGLETON_PATTERN_KSTRUCT(SegmentsManager);
         
         int get_segment_index(max_t address);
         
@@ -48,6 +49,7 @@ namespace memory {
     // pmem (physical memory) allocation
     void pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct LoaderArgument *kargument);
     void *pmem_alloc(max_t size , max_t alignment=0);
+    bool is_pmem_allocated_obj(void *ptr);
     void pmem_free(void *ptr);
     bool pmem_protect(struct Boundary boundary);
 

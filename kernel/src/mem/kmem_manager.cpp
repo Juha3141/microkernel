@@ -195,11 +195,14 @@ void *memory::kstruct_alloc(max_t size , max_t alignment) {
 	return (void *)addr;
 }
 
+bool memory::is_kstruct_allocated_obj(void *obj) {
+	return kstruct_mgr.boundary.start_address <= (max_t)obj && (max_t)obj <= kstruct_mgr.current_addr;
+}
+
 max_t memory::kstruct_get_current_addr(void) { return kstruct_mgr.current_addr; }
 void memory::kstruct_rollback_addr(max_t prev_addr) { if(kstruct_mgr.boundary.start_address <= prev_addr && prev_addr <= kstruct_mgr.boundary.end_address) { kstruct_mgr.current_addr = prev_addr; } }
 
 void memory::SegmentsManager::init(int segment_count , struct Boundary *usable_segments) {
-	debug::out::printf("debug --> %s:%d\n" , __FILE__ , __LINE__);
 	debug::out::printf("&managers_count = 0x%x\n" , &managers_count);
 	managers_count = segment_count;
 	total_memory = 0;
@@ -257,7 +260,7 @@ void memory::pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct Lo
 	}
 	debug::enable();
 	// allocate node manager for each segment
-	SegmentsManager *segments_mgr = SegmentsManager::get_self();
+	SegmentsManager *segments_mgr = GLOBAL_OBJECT(SegmentsManager);
 	debug::out::printf("segments_mgr = 0x%X\n" , segments_mgr);
 	debug::out::printf("Initializing all the segments...\n");
 	segments_mgr->init(pmem_boundary_entry_count , pmem_boundary);
@@ -277,12 +280,11 @@ void *memory::pmem_alloc(max_t size , max_t alignment) {
 	void *ptr = 0x00;
 	if(!is_pmem_alloc_available) return memory::kstruct_alloc(size , alignment);
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
-	if(size == 0x00) {
-		debug::out::printf(DEBUG_WARNING , "allocation warning : zero allocation size\n");
-		return 0x00;
-	}
+	if(size == 0x00) return 0x00;
+	
 	for(int i = 0; i < segments_mgr->managers_count; i++) {
 		if(!segments_mgr->node_managers[i].available()) continue;
+		// debug::out::printf("Segment #%d : 0x%08x ~ 0x%08x\n" , i , segments_mgr->node_managers[i].mem_start_address , segments_mgr->node_managers[i].mem_end_address);
 		if((ptr = (void *)segments_mgr->node_managers[i].allocate(size , alignment)) != 0x00) {
 			break;
 		}
@@ -304,6 +306,15 @@ void memory::pmem_free(void *ptr) {
 	if(segments_mgr->node_managers[index].free((max_t)ptr) == false) {
 		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request not allocated(ptr=0x%lX)\n" , (max_t)ptr);
 	}
+}
+
+bool memory::is_pmem_allocated_obj(void *ptr) {
+	SegmentsManager *segments_mgr = SegmentsManager::get_self();
+	int index;
+	if((index = segments_mgr->get_segment_index((max_t)ptr)) == -1) {
+		return false;
+	}
+	return segments_mgr->node_managers[index].is_allocated((max_t)ptr);
 }
 
 // not implemented

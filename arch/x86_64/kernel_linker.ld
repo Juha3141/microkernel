@@ -35,7 +35,17 @@ SECTIONS {
   }
   .bss ALIGN(4096) : {
     __bss_start__ = .;
-    *(.bss) *(.rodata) *(.bss.*) *(COMMON)
+    *(.bss) *(.rodata) *(.bss.*)
     __bss_end__ = .;
+  }
+  .singleton_obj_ptrs ALIGN(4096) : {
+    __singleton_obj_ptrs_start__ = .;
+    *(.singleton_obj_ptrs) *(.singleton_obj_ptrs.*)
+    __singleton_obj_ptrs_end__ = .;
+  }
+  .gnu.linkonce ALIGN(4096) : {
+    __gnu_linkonce_start__ = .;
+    *(.gnu.linkonce.*) 
+    __gnu_linkonce_end__   = .;
   }
 }

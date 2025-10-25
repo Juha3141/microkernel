@@ -13,28 +13,28 @@
 
 #include <loader/loader_argument.hpp>
 #include <kernel/configurations.hpp>
+#include <kernel/sections.hpp>
 
 namespace debug{ namespace out { void printf(const char *string , ...); }}
 
 #define SINGLETON_FUNCTION get_self
 
 #define SINGLETON_PATTERN_KSTRUCT(type) \
+inline static __singleton_ptr__ type *__singleton_object = 0x00; \
 static type *SINGLETON_FUNCTION(void) {\
-    /* for whatever reason, if you initialize the static variable with zero, the variable somehow gets located in a weird address :/ */ \
-    static type *p;\
-    if(p == 0x00) { \
-        p = (type *)memory::kstruct_alloc(sizeof(type));\
+    if(__singleton_object == 0x00) { \
+        __singleton_object = (type *)memory::kstruct_alloc(sizeof(type));\
     }\
-    return p;\
+    return __singleton_object;\
 }
 
 #define SINGLETON_PATTERN_PMEM(type) \
+inline static __singleton_ptr__ type *__singleton_object = 0x00; \
 static type *SINGLETON_FUNCTION(void) {\
-    static type *p;\
-    if(p == 0x00) { \
-        p = (type *)memory::pmem_alloc(sizeof(type));\
+    if(__singleton_object == 0x00) { \
+        __singleton_object = (type *)memory::pmem_alloc(sizeof(type));\
     } \
-    return p;\
+    return __singleton_object;\
 }
 
 #define GLOBAL_OBJECT(type) type::SINGLETON_FUNCTION() 

@@ -146,7 +146,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
         kernel_ramdisk_location  = kernel_stack_location+KERNEL_STACK_SIZE;
     }
     
-    memcpy(kernel_memmap_location , kernel_memmap , kernel_memmap_size);
+    memcpy(((void *)kernel_memmap_location) , kernel_memmap , kernel_memmap_size);
     struct LoaderArgument *loader_argument = (struct LoaderArgument *)loader_argument_location;
     ZeroMem(loader_argument , sizeof(struct LoaderArgument));
     loader_argument->signature = LOADER_ARGUMENT_SIGNATURE;

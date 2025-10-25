@@ -7,7 +7,7 @@
 namespace blockdev {
     // pre
     struct block_device_driver;
-    class BlockDeviceContainer;
+    struct block_device;
 
     typedef struct partition_info_s {
         max_t physical_sector_start;
@@ -41,7 +41,7 @@ namespace blockdev {
         partition_info_t partition_info; 
 
         /* Common */
-        blockdev::BlockDeviceContainer *logical_block_devs;
+        FixedArray<block_device*> *logical_block_devs;
     };
     struct block_device : general_device<block_device_driver> {
         // Geometry information
@@ -51,7 +51,7 @@ namespace blockdev {
 
         max_t mount_id;
     };
-    struct block_device_driver : general_device_driver<BlockDeviceContainer> {
+    struct block_device_driver : general_device_driver<FixedArray<block_device*>> {
         virtual bool prepare(void) = 0;
         virtual bool open(block_device *device) = 0;
         virtual bool close(block_device *device) = 0;
@@ -63,13 +63,9 @@ namespace blockdev {
         virtual bool io_write(block_device *device , max_t command , max_t argument) = 0;
 
         bool use_auto_partition_detector;
-
-        bdevsched::block_io_scheduler *scheduler;
-        bdevsched::block_io_queue *io_queue;
     };
-    
-    class BlockDeviceContainer : public ObjectManager<block_device> {};
-    struct BlockDeviceDriverContainer : public ObjectManager<block_device_driver> {
+
+    struct BlockDeviceDriverContainer : public FixedArray<block_device_driver*> {
         SINGLETON_PATTERN_PMEM(BlockDeviceDriverContainer);
     };
     void init(void);

@@ -6,13 +6,12 @@
 // https://www.youtube.com/watch?v=kCAv53P1otM&t=5288s
 
 namespace chardev {
-    class CharDeviceContainer;
     struct char_device_driver;
 
     struct char_device : general_device<char_device_driver> {
         // nothing yet..?
     };
-    struct char_device_driver : general_device_driver<CharDeviceContainer> {
+    struct char_device_driver : general_device_driver<FixedArray<char_device*>> {
         virtual bool prepare(void) = 0;
         
         virtual bool open(char_device *device) = 0;
@@ -23,8 +22,7 @@ namespace chardev {
         virtual bool io_write(char_device *device , max_t command , max_t argument) = 0;
     };
 
-    class CharDeviceContainer : public ObjectManager<char_device> {};
-    struct CharDeviceDriverContainer : public ObjectManager<char_device_driver> {
+    struct CharDeviceDriverContainer : FixedArray<char_device_driver*> {
         SINGLETON_PATTERN_PMEM(CharDeviceDriverContainer);
     };
     void init(void);

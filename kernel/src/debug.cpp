@@ -3,9 +3,6 @@
 #define DEBUG_PRINTF_STR_STACK 1024
 
 struct {
-    int function_stack_index;
-    char function_stack[DEBUG_FUNCTION_NAME_LEN][DEBUG_FUNCTION_STACK_MAX];
-
     bool info_display;
     bool function_display;
     bool func_indent;
@@ -19,7 +16,7 @@ struct {
     debug::debug_interface *current_debug_interface;
 }debug_info;
 
-debug::DebugInterfaceContainer debug_interface_container;
+FixedArray<debug::debug_interface *>debug_interface_container;
 
 extern qword __debug_interface_start__;
 extern qword __debug_interface_end__;
@@ -34,13 +31,11 @@ void init_debug_interface_initializers(void) {
 }
 
 void debug::init(LoaderArgument *loader_argument) {
-    debug_info.function_stack_index = 0;
-    memset(debug_info.function_stack , 0 , sizeof(debug_info.function_stack));
     set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_FIRST_INFO|DEBUG_DISPLAY_INDENTATION , true);
     debug_info.option_flags = 0b11111111;
     
-    debug_interface_container.init(512);
     debug_info.current_debug_interface = 0x00;
+    debug_interface_container.init(512 , memory::kstruct_alloc , 0x00);
     
     init_debug_interface_initializers();
     set_current_debug_interface(loader_argument->debug_interface_identifier);
@@ -49,18 +44,21 @@ void debug::init(LoaderArgument *loader_argument) {
     debug::enable();
 }
 
-void debug::register_debug_interface(struct debug::debug_interface *interface , const char *interface_identifier) { strcpy(interface->interface_identifier , interface_identifier); debug_interface_container.register_object(interface); }
-void debug::register_debug_interface(struct debug::debug_interface *interface) { debug_interface_container.register_object(interface); }
+void debug::register_debug_interface(debug::debug_interface *interface , const char *interface_identifier) { strcpy(interface->interface_identifier , interface_identifier); debug_interface_container.add(interface); }
+void debug::register_debug_interface(debug::debug_interface *interface) { debug_interface_container.add(interface); }
 
 void debug::set_current_debug_interface(const char *interface_identifier) {
-    max_t id = debug_interface_container.search<const char *>([](debug::debug_interface *data , const char *str) { 
+    max_t id = debug_interface_container.search<const char *>([](debug::debug_interface*& data , const char *str) { 
         return (bool)(strcmp(data->interface_identifier , str) == 0);
     } , interface_identifier);
+
     if(id == INVALID) return;
-    debug_info.current_debug_interface = debug_interface_container.get_object(id);
+    debug_info.current_debug_interface = debug_interface_container.get(id);
 }
 
 struct debug::debug_interface *debug::current_debug_interface() { return debug_info.current_debug_interface; }
+
+
 
 void debug::dump_memory(max_t address , max_t length , bool debug_string) {
     byte *ptr = (byte *)address;
@@ -185,16 +183,6 @@ void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
     set_foreground_color(color);
     if(debug_info.info_display) {
         interface->print_str(debugstr(mode));
-    }
-    if(debug_info.function_display && debug_info.function_stack_index > 0) {
-        if(debug_info.func_indent) { // indent for debugging the flow of function
-            for(int i = 0; i < debug_info.function_stack_index-1; i++) {
-                interface->print_str(" ");
-            }
-        }
-        interface->print_str("(");
-        interface->print_str(debug_info.function_stack[debug_info.function_stack_index-1]);
-        interface->print_str(") ");
     }
 
     char string[DEBUG_PRINTF_STR_STACK];

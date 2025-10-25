@@ -7,8 +7,7 @@
 #include <string.hpp>
 #include <linked_list.hpp>
 
-#define DEBUG_FUNCTION_NAME_LEN  40
-#define DEBUG_FUNCTION_STACK_MAX 20
+#define DEBUG_MAX_LOG_LEVEL 10
 
 #define DEBUG_NONE      0b0000001
 #define DEBUG_TEXT      0b0000010 // white
@@ -52,77 +51,28 @@ namespace debug {
         char interface_identifier[24];
     };
     struct debug_message_t {
+        unsigned long ms_after_boot;
+
         int log_level;
+        int error_code;
         char *debug_msg;
     };
-    struct DebugMessageContainer {
-        void init(void) {
+    class DebugMessageContainer {
+    public:
+        DebugMessageContainer() {
+            full_debug_list.init();
+            for(int i = 0; i < DEBUG_MAX_LOG_LEVEL; i++) {
+                debug_list_log_lvl[i].init();
+            }
+        }
+        void add_debug_log(const debug_message_t &msg) {
+            debug_message_t *msg_obj = new debug_message_t{msg};
+
             
         }
-        
-        LinkedList<debug_message_t>message_list;
-    };
 
-    struct DebugInterfaceContainer {
-        void init(int max_obj_count) {
-            // this crashes somehow
-            object_container = (struct object_container_s *)memory::kstruct_alloc(sizeof(struct object_container_s)*max_obj_count);
-            for(int i = 0; i < max_obj_count; i++) {
-                object_container[i].occupied = false;
-                object_container[i].object = 0x00;
-            }
-
-            max_count = max_obj_count;
-            count = 0;
-        }
-        max_t register_object(debug_interface *object) { // returns ID
-            max_t i;
-            if(object_container == 0x00) {
-                // debug::out::printf(DEBUG_WARNING , "Error : ObjectContainer yet not initialized\n");
-                return INVALID;
-            }
-            if(count >= max_count) return INVALID;
-            for(i = 0; i < max_count; i++) {
-                if(object_container[i].occupied == false) {
-                    break;
-                }
-            }
-            if(i >= max_count) return INVALID;
-            object_container[i].occupied = true;
-            object_container[i].object = object;
-            count++;
-            return i;
-        }
-        max_t discard_object(debug_interface *object) {
-            max_t i;
-            for(i = 0; i < max_count; i++) {
-                if(object_container[i].object == object) {
-                    count--;
-                    object_container[i].occupied = false;
-                    return i;
-                }
-            }
-            return INVALID;
-        }
-        debug_interface *get_object(max_t id) {
-            if((id >= max_count)||(object_container[id].occupied == false)) return 0x00;
-            return object_container[id].object;
-        }
-        
-        template <typename T2> max_t search(bool (*check)(debug_interface *data , T2 sample_data) , T2 sample_data) {
-            for(max_t i = 0; i < max_count; i++) {
-                if(check(object_container[i].object , sample_data) == true) {
-                    return i;
-                }
-            }
-            return INVALID;
-        }
-        max_t max_count;
-        max_t count;
-        struct object_container_s {
-            bool occupied;
-            debug_interface *object;
-        }*object_container;
+        LinkedList<debug_message_t*>debug_list_log_lvl[DEBUG_MAX_LOG_LEVEL];
+        LinkedList<debug_message_t*>full_debug_list;
     };
 
     namespace out {

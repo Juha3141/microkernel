@@ -200,7 +200,7 @@ bool interrupt::hardware_specified::discard_interrupt(const char *name) {
 void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) { CONFIG_WARNING_NO_INTERRUPT }
 interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) { CONFIG_WARNING_NO_INTERRUPT return 0x00; }
 void interrupt::init(void) { interrupt::hardware::disable(); }
-bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option) { CONFIG_WARNING_NO_INTERRUPT return false; }
+bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option , bool wrapper) { CONFIG_WARNING_NO_INTERRUPT return false; }
 bool interrupt::general::discard_interrupt(int number) { CONFIG_WARNING_NO_INTERRUPT return false; }
 void interrupt::general::set_interrupt_mask(int number , bool masked) { CONFIG_WARNING_NO_INTERRUPT }
 bool interrupt::register_interrupt_by_info(const interrupt::interrupt_info_t int_info , interrupt_handler_t handler , word interrupt_option) { CONFIG_WARNING_NO_INTERRUPT return false; }

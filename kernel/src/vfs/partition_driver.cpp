@@ -3,7 +3,7 @@
 max_t storage_system::register_partition_driver(storage_system::PartitionDriver *partition_driver , const char *driver_name) {
     PartitionDriverContainer *partitiondrv_container = PartitionDriverContainer::get_self();
     strcpy(partition_driver->driver_name , driver_name);
-    return partitiondrv_container->register_object(partition_driver);
+    return partitiondrv_container->add(partition_driver);
 }
 
 /// @brief Identify what partition driver block device uese
@@ -11,10 +11,10 @@ max_t storage_system::register_partition_driver(storage_system::PartitionDriver 
 /// @return id of using partition driver
 max_t storage_system::identify_partition_driver(blockdev::block_device *device) {
     PartitionDriverContainer *partitiondrv_container = PartitionDriverContainer::get_self();
-    for(max_t id = 0; id < partitiondrv_container->max_count; id++) {
-        if(partitiondrv_container->object_container[id].object == 0x00) continue;
+    for(max_t id = 0; id < partitiondrv_container->get_max_size(); id++) {
+        if((*partitiondrv_container->container[id]) == 0x00) continue;
 
-        if(partitiondrv_container->object_container[id].object->identify(device) == true) {
+        if((*partitiondrv_container->container[id])->identify(device) == true) {
             device->storage_info.partition_driver_id = id;
             return id;
         }
@@ -24,10 +24,10 @@ max_t storage_system::identify_partition_driver(blockdev::block_device *device) 
 }
 
 storage_system::PartitionDriver *storage_system::get_partition_identifier(blockdev::block_device *device) {
-    return GLOBAL_OBJECT(PartitionDriverContainer)->get_object(device->storage_info.partition_driver_id);
+    return GLOBAL_OBJECT(PartitionDriverContainer)->get(device->storage_info.partition_driver_id);
 }
 
 storage_system::PartitionDriver *storage_system::get_partition_identifier(max_t identifier_id) {
     if(identifier_id == INVALID) return 0x00;
-    return GLOBAL_OBJECT(PartitionDriverContainer)->get_object(identifier_id);
+    return GLOBAL_OBJECT(PartitionDriverContainer)->get(identifier_id);
 }

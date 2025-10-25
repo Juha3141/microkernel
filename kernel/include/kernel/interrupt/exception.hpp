@@ -34,13 +34,13 @@ namespace exception {
         
         interrupt::interrupt_info_t interrupt_info;
     }exception_info_t;
-    struct ExceptionManager : DataManager<exception_info_t> {
-        SINGLETON_PATTERN_KSTRUCT(struct ExceptionManager);
+    struct ExceptionManager : FixedArray<exception_info_t> {
+        SINGLETON_PATTERN_KSTRUCT(ExceptionManager);
 
         max_t register_general_int(const char *exception_name , int interrupt_number);
         max_t register_hardware_specified(const char *exception_name , const char *interrupt_name);
         max_t register_etc(const char *exception_name);
-        inline void set_handler(int internal_id , ptr_t linked_handler) { data_container[internal_id].data.linked_handler = linked_handler; }
+        inline void set_handler(int internal_id , ptr_t linked_handler) { (*container[internal_id]).linked_handler = linked_handler; }
 
         // friend
         friend void global_exception_handler(int handler_id);

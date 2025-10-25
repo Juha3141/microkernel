@@ -18,8 +18,10 @@ bool storage_system::detect_partitions(blockdev::block_device *device) {
     partition_count = partition_driver->get_partitions_list(device , partition_info_list);
     
     device->storage_info.partition_driver_id = partitiondrv_id;
-    device->storage_info.logical_block_devs = new blockdev::BlockDeviceContainer;
+
+    device->storage_info.logical_block_devs = new FixedArray<blockdev::block_device*>();
     device->storage_info.logical_block_devs->init(72); // maximum logical storages count
+    
     LinkedList<blockdev::partition_info_t>::node_s *ptr = partition_info_list.get_start_node();
     while(ptr != 0x00) {
         add_logical_device(device->device_driver , device , ptr->object);
@@ -38,7 +40,7 @@ void storage_system::add_logical_device(blockdev::block_device_driver *driver , 
     memcpy(&new_logical_device->resources , &device->resources , sizeof(device_resources));
     memcpy(&new_logical_device->storage_info.partition_info , &partition_info , sizeof(blockdev::partition_info_t));
     
-    new_logical_device->storage_info.partition_id = device->storage_info.logical_block_devs->register_object(new_logical_device);
+    new_logical_device->storage_info.partition_id = device->storage_info.logical_block_devs->add(new_logical_device);
 }
 
 blockdev::block_device *storage_system::get_physical_super_device(blockdev::block_device *logical_device) {
@@ -47,5 +49,5 @@ blockdev::block_device *storage_system::get_physical_super_device(blockdev::bloc
     if(driver == 0x00) return 0x00;
     if(driver->super_driver == 0x00) return 0x00;
 
-    return driver->super_driver->device_container->get_object(logical_device->id);
+    return driver->super_driver->device_container->get(logical_device->id);
 }

@@ -77,7 +77,7 @@ namespace fsdev {
         char fs_string[32];
     };
 
-    struct FileSystemDriverContainer : public ObjectManager<file_system_driver> {
+    struct FileSystemDriverContainer : public FixedArray<file_system_driver*> {
         SINGLETON_PATTERN_PMEM(FileSystemDriverContainer);
     };
     void init(void);

@@ -84,8 +84,9 @@ namespace interrupt {
     /* GeneralInterruptManager : Manages interrupts that has "Interrupt Vector Number"
      * These kinds of interrupt is registered by interrupt vector number and the interrupt handler pointer.
      */
-    struct GeneralInterruptManager {
-        SINGLETON_PATTERN_KSTRUCT(struct GeneralInterruptManager);
+    class GeneralInterruptManager {
+    public:
+        SINGLETON_PATTERN_KSTRUCT(GeneralInterruptManager);
         
         void init(void);
         

@@ -40,7 +40,7 @@ void ps2::ps2_interrupt_handler_irq12(struct Registers *regs) {
     StructQueue<struct mouse_data>*queue_2 = (StructQueue<struct mouse_data>*)device->resources.etc_resources[1];
     int *phase = (int *)device->resources.etc_resources[2];
 
-    debug::out::printf("M : %X, phase = %d\n" , data , *phase);
+    // debug::out::printf("M : %X, phase = %d\n" , data , *phase);
     queue_1->enqueue(data);
     *phase += 1;
     if((*phase%3 == 0) && (*phase != 0)) {
@@ -50,7 +50,7 @@ void ps2::ps2_interrupt_handler_irq12(struct Registers *regs) {
         y_movement = queue_1->dequeue();
         queue_2->enqueue({flags , x_movement , y_movement});
 
-        debug::out::printf("f=%X,x=%X,y=%X\n" , flags , x_movement , y_movement);
+        // debug::out::printf("f=%X,x=%X,y=%X\n" , flags , x_movement , y_movement);
     }
 }
 

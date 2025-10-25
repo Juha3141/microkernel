@@ -27,3 +27,4 @@ log.txt
 *.efi
 
 gnu-efi/
+memmap.txt

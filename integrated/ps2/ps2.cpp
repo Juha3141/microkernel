@@ -1,7 +1,6 @@
 #include <ps2.hpp>
 #include <kernel/interrupt/interrupt.hpp>
 #include <x86_64/pic.hpp>
-#include <arch_inline_asm.hpp>
 
 #include <registers.hpp>
 #include <kernel/mem/kmem_manager.hpp>

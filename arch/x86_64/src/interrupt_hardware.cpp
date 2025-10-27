@@ -15,8 +15,6 @@
 #include <x86_64/idt.hpp>
 #include <x86_64/gdt.hpp>
 
-#include <arch_inline_asm.hpp>
-
 #include <string.hpp>
 
 static qword ist_address[7];

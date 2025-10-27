@@ -1,5 +1,4 @@
 #include <kernel/io_port.hpp>
-#include <arch_inline_asm.hpp>
 
 void io_write_byte(io_port port , byte data) {
     __asm__ ("mov dx , %0"::"r"(port));

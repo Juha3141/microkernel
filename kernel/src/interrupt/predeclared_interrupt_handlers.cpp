@@ -1,8 +1,6 @@
 #include <kernel/interrupt/predeclared_interrupt_handlers.hpp>
 #include <kernel/interrupt/interrupt.hpp>
 
-#include <arch_inline_asm.hpp>
-
 #include <kernel/debug.hpp>
 
 #include <arch/interrupt_hardware.hpp>

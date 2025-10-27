@@ -5,8 +5,8 @@ OBJDUMP = objdump
 OBJCOPY = objcopy
 
 KERNEL_COMPILER = x86_64-elf
-KERNEL_CCOPTIONS = -m64 -g -ffreestanding -nostdlib \
--mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 \
+KERNEL_CCOPTIONS = -m64 -g -ffreestanding -nostdlib -std=c++20 \
+-mcmodel=large -mno-mmx -mno-sse -mno-sse2 \
 -fpack-struct=1 -masm=intel \
 -Werror=return-type -fno-stack-protector \
 -fno-use-cxa-atexit -fno-threadsafe-statics \

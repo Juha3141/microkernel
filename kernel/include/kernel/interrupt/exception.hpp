@@ -41,9 +41,6 @@ namespace exception {
         max_t register_hardware_specified(const char *exception_name , const char *interrupt_name);
         max_t register_etc(const char *exception_name);
         inline void set_handler(int internal_id , ptr_t linked_handler) { (*container[internal_id]).linked_handler = linked_handler; }
-
-        // friend
-        friend void global_exception_handler(int handler_id);
     };
     void init(void);
 
@@ -54,7 +51,7 @@ namespace exception {
     // Miscellaneous
     ptr_t register_exception_etc(const char *exception_name);
     
-    void global_exception_handler(int handler_id);
+    extern "C" void archindep_general_exception_handler(int handler_id);
 }
 
 #endif

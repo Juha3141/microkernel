@@ -78,8 +78,6 @@ public:
         return INVALID;
     }
     T &get(max_t id) const {
-        if(id >= max_count) return *((T *)nullptr);
-        
         return *container[id];
     }
     T &operator[](max_t id) const { return *container[id]; }

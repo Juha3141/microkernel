@@ -4,7 +4,6 @@
 #include <kernel/interrupt/interrupt.hpp>
 #include <kernel/io_port.hpp>
 #include <kernel/debug.hpp>
-#include <arch_inline_asm.hpp>
 
 static bool primary_interrupt_flag = false;
 static bool secondary_interrupt_flag = false;
@@ -308,14 +307,14 @@ max_t ide_cd_driver::read(blockdev::block_device *device , max_t block_address ,
     dword transfered_size;
     dword bytes_per_sector = 2048; // temporary!
     byte command[12] = {0xA8 , 0
-                                      , (block_address >> 24) & 0xFF // read
-                                      , (block_address >> 16) & 0xFF
-                                      , (block_address >> 8) & 0xFF
-                                      , block_address & 0xFF
-                                      , (count >> 24) & 0xFF
-                                      , (count >> 16) & 0xFF
-                                      , (count >> 8) & 0xFF
-                                      , count & 0xFF , 0x00 , 0x00};
+                                      , static_cast<byte>((block_address >> 24) & 0xFF) // read
+                                      , static_cast<byte>((block_address >> 16) & 0xFF)
+                                      , static_cast<byte>((block_address >> 8) & 0xFF)
+                                      ,  static_cast<byte>(block_address & 0xFF)
+                                      ,  static_cast<byte>((count >> 24) & 0xFF)
+                                      ,  static_cast<byte>((count >> 16) & 0xFF)
+                                      ,  static_cast<byte>((count >> 8) & 0xFF)
+                                      ,  static_cast<byte>(count & 0xFF) , 0x00 , 0x00};
     io_port base_port = device->resources.io_ports[0];
     if(device->resources.flags[0] == true) io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xE0); // Master : 0xA0
     else io_write_byte(base_port+IDE_PORT_DRIVE_SELECT , 0xF0); // Slave : 0xB0

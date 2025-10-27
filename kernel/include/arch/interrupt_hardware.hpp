@@ -10,7 +10,7 @@ namespace interrupt {
 
         void ARCHDEP init_ist(void);
 
-        extern "C" __attribute__ ((naked)) max_t ARCHDEP get_ist_address(void);
+        extern "C" max_t ARCHDEP get_ist_address(void);
 
         void ARCHDEP enable(void);
         void ARCHDEP disable(void);

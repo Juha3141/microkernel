@@ -1,4 +1,3 @@
-#include <arch_inline_asm.hpp>
 #include <registers.hpp>
 #include <arch/switch_context.hpp>
 #include <kernel/essentials.hpp>
@@ -42,7 +41,7 @@ __attribute__ ((naked)) void switch_context(struct Registers *current_context , 
     __asm__ ("mov [rdi+%0] , rax"::"i"(offsetof(struct Registers , gs)));
 
     __asm__ ("pushfq");          // rflags
-    __asm__ ("pop [rdi+%0]"::"i"(offsetof(struct Registers , rflags)));
+    __asm__ ("pop qword ptr[rdi+%0]"::"i"(offsetof(struct Registers , rflags)));
     __asm__ ("pop rax");         // rip
     __asm__ ("mov [rdi+%0] , rax"::"i"(offsetof(struct Registers , rip)));
     __asm__ ("mov rax , cr3");   // cr3

@@ -164,4 +164,7 @@ namespace interrupt {
     bool discard_interrupt_by_info(const interrupt_info_t int_info);
 }
 
+extern "C" void archindep_general_interrupt_handler(int handler_num , Registers *regs_ptr);
+extern "C" void archindep_hardware_specified_interrupt_handler(int handler_num , Registers *regs_ptr);
+
 #endif

@@ -14,8 +14,6 @@
 #include <kernel/debug.hpp>
 #include <arch/segmentation_hardware.hpp>
 
-#include <arch_inline_asm.hpp>
-
 #include <x86_64/gdt.hpp>
 
 #include <string.hpp>
@@ -91,26 +89,26 @@ void segmentation::hardware::discard_segment(segment_t segment) {
 
 __attribute__ ((naked)) void segmentation::hardware::set_to_code_segment(segment_t segment) {
     __asm__ ("mov rbx , [rsp]"); // Return address of current function (Stored in RSP)
-    __asm__ ("push %0"::"r"((unsigned long)segment));  // Push new code segment
+    __asm__ ("push rdi");  // Push new code segment
     __asm__ ("push rbx");               // Push the return address
 
     __asm__ ("retfq");                  // Set the code segment and go back to return address
 }
 
 __attribute__ ((naked)) void segmentation::hardware::set_to_code_segment(segment_t segment , ptr_t new_point) {
-    __asm__ ("push %0"::"r"(segment));         // Push new code segment
-    __asm__ ("push %0"::"r"((unsigned long)new_point));  // Push new entry point
+    __asm__ ("push rdi");         // Push new code segment
+    __asm__ ("push rsi");  // Push new entry point
 
     __asm__ ("retfq");                  // Set the code segment and jump to the address
 }
 
 __attribute__((naked)) void segmentation::hardware::set_to_data_segment(segment_t segment) {
-    __asm__ ("mov rax , %0"::"r"(segment));
+    __asm__ ("mov rax , rdi");
     __asm__ ("mov ds , ax");
     __asm__ ("mov es , ax");
     __asm__ ("mov fs , ax");
     __asm__ ("mov gs , ax");
     __asm__ ("mov ss , ax");
 
-    IA_RETURN
+    __asm__ ("ret");
 }

@@ -92,38 +92,28 @@ __asm__ ("mov rax , [rsi+%c0]"::"i"((offsetof(struct Registers , ss)))); \
 __asm__ ("mov [rsp+%c0+(8*5)] , rax"::"i"(sizeof(struct Registers)+8));     /* Load SS */ \
 __asm__ ("pop rax"); \
 __asm__ ("add rsp , %c0"::"i"(sizeof(struct Registers)+8)); \
-IA_INTERRUPT_RETURN
+__asm__ ("iretq");
+
+#define EXCEPTION_HANDLER_FUNCTION_DEFINITION(handler_num) \
+__attribute__ ((naked)) void exception::handlers::handler##handler_num(void) {\
+    __asm__ ("mov rdi , %0"::"i"((max_t)handler_num)); \
+    __asm__ ("call %0"::"i"((max_t)archindep_general_interrupt_handler)); \
+    __asm__ ("iretq"); \
+}
 
 #define INTERRUPT_GENERAL_INT_WRAPPER_HANDLER_FUNCTION(handler_num) \
-__attribute__ ((naked)) void interrupt::handler::general_wrapper##handler_num(void) {\
+__attribute__ ((naked)) void interrupt::handler::general_wrapper##handler_num(void) { \
     INTERRUPT_START \
-    interrupt_handler_t handler;\
-    if((handler = interrupt::general::get_interrupt_handler(handler_num)) == 0x00) {\
-        debug::out::printf("Unhandled interrupt %d\n" , handler_num);\
-    }\
-    else { \
-        qword regs_ptr; \
-        __asm__ ("mov %0 , rsi":"=r"(regs_ptr)); \
-        handler((struct Registers *)regs_ptr); \
-    } \
-    interrupt::controller::interrupt_received(handler_num);\
+    __asm__ ("mov rdi , %0"::"i"((max_t)handler_num)); \
+    __asm__ ("call %0"::"i"((max_t)archindep_general_interrupt_handler)); \
     INTERRUPT_END \
 }
 
 #define INTERRUPT_HARDWARE_SPECIFIED_WRAPPER_HANDLER_FUNCTION(handler_num) \
-__attribute__ ((naked)) void interrupt::handler::hardware_specified##handler_num(void) {\
+__attribute__ ((naked)) void interrupt::handler::hardware_specified##handler_num(void) { \
     INTERRUPT_START \
-    interrupt_handler_t handler;\
-    if((handler = interrupt::handler::get_hardware_specified_int_wrapper(handler_num)) == 0x00) {\
-        char *name = GLOBAL_OBJECT(interrupt::HardwareSpecifiedInterruptManager)->interrupt_list[handler_num].name;\
-        debug::panic("Unhandled special interrupt %d(\"%s\")\n" , handler_num , name);\
-    }\
-    else { \
-        qword regs_ptr; \
-        __asm__ ("mov %0 , rsi":"=r"(regs_ptr)); \
-        handler((struct Registers *)regs_ptr); \
-    }\
-    interrupt::controller::interrupt_received(handler_num);\
+    __asm__ ("mov rdi , %0"::"i"((max_t)handler_num)); \
+    __asm__ ("call %0"::"i"((max_t)archindep_hardware_specified_interrupt_handler)); \
     INTERRUPT_END \
 }
 

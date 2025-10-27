@@ -19,13 +19,12 @@
 #include <kernel/vfs/virtual_file_system.hpp>
 #include <ramdisk/ramdisk.hpp>
 
-#include <arch_inline_asm.hpp>
-
 #include <loader/loader_argument.hpp>
 
 // For testing
 #include <random.hpp>
 #include <hash_table.hpp>
+#include <pair.hpp>
 #include <arch/switch_context.hpp>
 
 void pmem_alloc_test(int rand_seed);
@@ -86,27 +85,7 @@ extern "C" __entry_function__ void kernel_main(struct LoaderArgument *loader_arg
     pci::probe_all_pci_devices();
     dump_block_devices();
 
-    blockdev::block_device *device = blockdev::search_device("idehd" , 0);
-
-    if(!vfs::create({"idehd0" , vfs::get_root_directory()} , FILE_TYPE_DIRECTORY)) {
-        debug::out::printf("Failed creating a directory \"idehd0\"!\n");
-        while(1) { ; }
-    }
     
-    int num_of_files = vfs::read_directory(vfs::get_root_directory());
-
-    debug::out::printf("Number of files : %d\n" , num_of_files);
-    
-    auto ptr = vfs::get_root_directory()->file_list->get_start_node();
-    for(; ptr != 0x00; ptr = ptr->next) {
-        debug::out::printf("%s  -- " , ptr->object->file_name);
-        debug::out::printf(DEBUG_NONE , "%d\n" , ptr->object->file_type);
-    }
-    file_info *file = vfs::open({"idehd0" , vfs::get_root_directory()} , FILE_OPEN_READONLY);
-    if(file == 0x00) {
-        debug::out::printf("Failed opening a directory @/idehd0\n");
-        while(1) { ; }
-    }
 
     while(1) {
         ;

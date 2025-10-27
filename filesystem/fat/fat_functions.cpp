@@ -64,7 +64,7 @@ dword fat::read_cluster(blockdev::block_device *device , max_t cluster_number , 
     debug::out::printf("Sector Address : %d\n" , cluster_to_sector(cluster_number , ginfo));
     for(i = 0; i < cluster_count; i++) {
         
-        if(device->device_driver->read(device , cluster_to_sector(next_cluster_addr , ginfo) , c_vbr->sectors_per_cluster , (data+(i*c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector))) != c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector) break;
+        if(device->device_driver->read(device , cluster_to_sector(next_cluster_addr , ginfo) , c_vbr->sectors_per_cluster , (void *)((max_t)data+(i*c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector))) != c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector) break;
         next_cluster_addr = find_next_cluster(device , next_cluster_addr , ginfo);
         
         // not available?
@@ -78,7 +78,7 @@ dword fat::write_cluster(blockdev::block_device *device , max_t cluster_number ,
     max_t next_cluster_addr = cluster_number;
     common_vbr_t *c_vbr = (common_vbr_t *)ginfo.vbr;
     for(i = 0; i < cluster_count; i++) {
-        if(device->device_driver->write(device , cluster_to_sector(next_cluster_addr , ginfo) , c_vbr->sectors_per_cluster , (data+(i*c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector))) != c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector) {
+        if(device->device_driver->write(device , cluster_to_sector(next_cluster_addr , ginfo) , c_vbr->sectors_per_cluster , (void *)((max_t)data+(i*c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector))) != c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector) {
             break;
         }
         next_cluster_addr = find_next_cluster(device , next_cluster_addr , ginfo);

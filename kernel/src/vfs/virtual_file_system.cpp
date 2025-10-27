@@ -510,7 +510,7 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
         debug::out::printf("cache : 0x%X\n" , caches[b-block_start]);
         max_t boff = off%block_size;
         max_t bsize = MIN(end_offset-off , block_size-boff);
-        memcpy(buffer+buffer_offset , caches[b-block_start]->block+boff , bsize);
+        memcpy((void *)((max_t)buffer+buffer_offset) , (void *)((max_t)caches[b-block_start]->block+boff) , bsize);
         buffer_offset += bsize;
         off += bsize;
         read_size += bsize;
@@ -600,7 +600,7 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
         debug::out::printf("cache : 0x%X\n" , caches[b-block_start]);
         debug::out::printf("buffer_offset = %d\n" , buffer_offset);
         debug::out::printf("block_start   = %d\n" , block_start);
-        memcpy(caches[b-block_start]->block+boff , buffer+buffer_offset , bsize);
+        memcpy((void *)(((max_t)caches[b-block_start]->block)+boff) , (void *)((max_t)buffer+buffer_offset) , bsize);
 
         buffer_offset += bsize;
         off += bsize;

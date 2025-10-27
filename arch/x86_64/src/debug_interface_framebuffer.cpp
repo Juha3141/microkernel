@@ -156,7 +156,7 @@ static void process_newline(void) {
     }
     int elev = scrinfo.font_avg_height;
     memmove(((void *)scrinfo.vmem) , 
-            ((void *)scrinfo.vmem+(scrinfo.width*scrinfo.font_avg_height*(scrinfo.depth/8))) , scrinfo.width*(scrinfo.height-elev)*(scrinfo.depth/8));
+            ((void *)(scrinfo.vmem+(scrinfo.width*scrinfo.font_avg_height*(scrinfo.depth/8)))) , scrinfo.width*(scrinfo.height-elev)*(scrinfo.depth/8));
     
     int depth_byte = scrinfo.depth/8;
     if(depth_byte == 1) {

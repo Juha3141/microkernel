@@ -14,4 +14,7 @@
 #include <kernel/types.hpp>
 #include <kernel/configurations.hpp>
 
+#define MIN(X , Y) ((X) >= (Y) ? (Y) : (X))
+#define MAX(X , Y) ((X) >= (Y) ? (X) : (Y))
+
 #endif

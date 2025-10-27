@@ -97,7 +97,7 @@ __asm__ ("iretq");
 #define EXCEPTION_HANDLER_FUNCTION_DEFINITION(handler_num) \
 __attribute__ ((naked)) void exception::handlers::handler##handler_num(void) {\
     __asm__ ("mov rdi , %0"::"i"((max_t)handler_num)); \
-    __asm__ ("call %0"::"i"((max_t)archindep_general_interrupt_handler)); \
+    __asm__ ("call %0"::"i"((max_t)archindep_general_exception_handler)); \
     __asm__ ("iretq"); \
 }
 

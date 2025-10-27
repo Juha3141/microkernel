@@ -3,18 +3,14 @@
 
 #include <kernel/debug.hpp>
 
-#include <arch_inline_asm.hpp>
-
 #include <arch/interrupt_hardware.hpp>
 #include <arch/interrupt_controller.hpp>
 
-#ifdef CONFIG_USE_INTERRUPT
+#include <interrupt_wrapper.hpp>
 
-#define EXCEPTION_HANDLER_FUNCTION_DEFINITION(handler_num) \
-__attribute__ ((naked)) void exception::handlers::handler##handler_num(void) {\
-    exception::global_exception_handler(handler_num); \
-    IA_INTERRUPT_RETURN\
-}
+using namespace exception;
+
+#ifdef CONFIG_USE_INTERRUPT
 
 EXCEPTION_HANDLER_FUNCTION_DEFINITION(0)
 EXCEPTION_HANDLER_FUNCTION_DEFINITION(1)

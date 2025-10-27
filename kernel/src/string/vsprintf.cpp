@@ -87,15 +87,6 @@ char get_type(const char *fmt , int &local_i) {
     return fmt[local_i];
 }
 
-template <typename T> int get_integer_digits(T value) {
-    int c = 0;
-    for(; value != 0; c++) {
-        value /= 10;
-    }
-    return c;
-}
-
-
 void process_added_string_d_i(struct FormatData fd , char *added_string , va_list ap) {
     if(fd.size == NONE) {
         int value = va_arg(ap , int);
@@ -170,7 +161,7 @@ template <typename T> char* itoa_variation(T value, char* result, int base , boo
 }
 
 void process_format(char *buf , struct FormatData fd , int &buf_i , va_list ap) {
-    char temp_buffer[512] = {0 , };
+    char temp_buffer[4096] = {0 , };
 
     char *added_string = temp_buffer;
     char width_fill = ' ';
@@ -187,11 +178,15 @@ void process_format(char *buf , struct FormatData fd , int &buf_i , va_list ap) 
         width_fill = (fd.flag == '0') ? fd.flag : ' ';
     }
     else if(fd.type == 'c') {
-        added_string[0] = va_arg(ap , int);
+        added_string[0] = static_cast<char>(va_arg(ap , int));
         added_string[1] = 0;
     }
     else if(fd.type == 's') {
         added_string = va_arg(ap , char*);
+    }
+    else if(fd.type == 'b') {
+        if(va_arg(ap , int)) added_string = "true";
+        else                  added_string = "false";
     }
 
     if(fd.flag == '-') { // sort to left
@@ -222,6 +217,11 @@ void process_format(char *buf , struct FormatData fd , int &buf_i , va_list ap) 
 
 // %[flags][width][.precision][size]type
 
+/// @brief The standard vsprintf implementation
+/// @param buf 
+/// @param fmt const string of the standard vsprintf format
+/// @param ap 
+/// @return The length of the resultant buffer
 int vsprintf(char *buf , const char *fmt , va_list ap) {
     int buf_i = 0;
     struct FormatData fd = {0 , 0 , 0 , 0 , 0};
@@ -244,6 +244,46 @@ int vsprintf(char *buf , const char *fmt , va_list ap) {
         }
     }
     return buf_i;
+}
+
+/// @brief Performs basic vsprintf, while checking whether the resulting buffer contains the provided character in the "contains" argument
+/// @param buf buffer
+/// @param fmt standard vsprintf format
+/// @param ap 
+/// @param contains the character that the function will look for
+/// @return return the size of resulting buffer and the boolean value indicating whether the given character was found
+Pair<int , bool>vsprintf(char *buf , const char *fmt , va_list ap , char contains) {
+    int buf_i = 0;
+    struct FormatData fd = {0 , 0 , 0 , 0 , 0};
+
+    bool contains_the_character = false;
+    buf[0] = 0;
+    for(int i = 0; fmt[i] != 0; i++) {
+        if(fmt[i] == '%') {
+            int local_i = i+1;
+            
+            fd.flag = get_flag(fmt , local_i);
+            fd.width = get_width(fmt , local_i , ap);
+            fd.precision = get_precision(fmt , local_i , ap);
+            fd.size = get_size(fmt , local_i);
+            fd.type = get_type(fmt , local_i);
+
+            int k = buf_i;
+            process_format(buf , fd , buf_i , ap);
+            if(!contains_the_character) {
+                for(; k <= buf_i; k++) {
+                    if(buf[k] == contains) { contains_the_character = true; break; }
+                }
+            }
+            i = local_i;
+        }
+        else {
+            if(fmt[i] == contains) contains_the_character = true;
+            buf[buf_i++] = fmt[i];
+            buf[buf_i] = 0;
+        }
+    }
+    return make_pair(buf_i , contains_the_character);
 }
 
 int sprintf(char *buf , const char *fmt , ...) {

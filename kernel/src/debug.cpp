@@ -1,4 +1,5 @@
 #include <kernel/debug.hpp>
+#include <pair.hpp>
 
 #define DEBUG_PRINTF_STR_STACK 1024
 
@@ -17,6 +18,7 @@ struct {
 }debug_info;
 
 FixedArray<debug::debug_interface *>debug_interface_container;
+debug::DebugMessageContainer debug_message_container;
 
 extern qword __debug_interface_start__;
 extern qword __debug_interface_end__;
@@ -58,57 +60,19 @@ void debug::set_current_debug_interface(const char *interface_identifier) {
 
 struct debug::debug_interface *debug::current_debug_interface() { return debug_info.current_debug_interface; }
 
-
-
-void debug::dump_memory(max_t address , max_t length , bool debug_string) {
-    byte *ptr = (byte *)address;
-    int margin = 5;
-    int char_per_line = 80;
-    int x = (char_per_line-margin-3)/4; // character 
-    debug::out::printf("dumping memory from 0x%X - 0x%X\n" , address , address+length);
-    int line_count = (length/x)+(length%x != 0);
-    debug::out::printf("x = %d\n" , x);
-
-    // remove for display
-    max_t max = 0;
-    max_t offset = 0;
-    debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , false);
-    for(max_t j = 1; j <= line_count; j++) {
-        debug::out::printf("");
-
-        unsigned char *old_ptr = ptr;
-        max_t count = MIN(x , length-offset);
-        for(max_t i = 1; i <= count; i++) {
-            debug::out::raw_printf("%02X " , *ptr);
-            ptr++;
-        }
-        max = MAX(max , count);
-        if(count < max) {
-            for(max_t i = 0; i < max-count; i++) {
-                debug::out::raw_printf("   ");
-            }
-        }
-        // debug the string
-        debug::out::raw_printf(" | ");
-        for(max_t i = 1; i <= count; i++) {
-            unsigned char c = *old_ptr;
-            switch(c) {
-                case '\n':
-                case '\t':
-                case '\b':
-                case '\r':
-                case 0:
-                    c = '.';
-                    break ;
-            }
-            debug::out::raw_printf("%c" , c);
-            old_ptr++;
-        }
-        debug::out::print_str("\n");
-        offset += x;
+debug::DebugMessageContainer::DebugMessageContainer() {
+    full_debug_list.init();
+    for(int i = 0; i < DEBUG_MAX_LOG_LEVEL; i++) {
+        debug_list_log_lvl[i].init();
     }
+}
 
-    debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , true);
+bool debug::DebugMessageContainer::add_debug_log(const debug_message_t &msg) {
+    debug_message_t *msg_obj = new debug_message_t{msg};
+    if(msg_obj->log_level > DEBUG_MAX_LOG_LEVEL||msg_obj->log_level < 0) return false;
+    debug_list_log_lvl[msg_obj->log_level].add_rear(msg_obj);
+    full_debug_list.add_rear(msg_obj);
+    return true;
 }
 
 void debug::enable(void) { debug_info.enable_debug = true; }
@@ -133,7 +97,6 @@ void debug::panic(const char *fmt , ...) {
     vsprintf(buffer , fmt , ap);
     debug::out::printf(DEBUG_PANIC , buffer);
     va_end(ap);
-    
     
     while(1) {
         ;
@@ -186,7 +149,8 @@ void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
     }
 
     char string[DEBUG_PRINTF_STR_STACK];
-    vsprintf(string , fmt , ap);
+    auto [len , contains_newline] = vsprintf(string , fmt , ap , '\n');
+
     interface->print_str(string);
 
     set_foreground_color(interface->get_color_by_mode(DEBUG_TEXT));
@@ -231,3 +195,58 @@ void debug::out::set_foreground_color(debug_color_t foreground_color) { current_
 
 debug_color_t debug::out::get_background_color(void) { return current_debug_interface()->get_background_color(); }
 debug_color_t debug::out::get_foreground_color(void) { return current_debug_interface()->get_foreground_color(); }
+
+void debug::dump_memory(max_t address , max_t length , bool debug_string) {
+    byte *ptr = (byte *)address;
+    int margin = 5;
+    int char_per_line = 80;
+    int x = (char_per_line-margin-3)/4; // character 
+    debug::out::printf("dumping memory from 0x%X - 0x%X\n" , address , address+length);
+    int line_count = (length/x)+(length%x != 0);
+    debug::out::printf("x = %d\n" , x);
+
+    // remove for display
+    max_t max = 0;
+    max_t offset = 0;
+    debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , false);
+    for(max_t j = 1; j <= line_count; j++) {
+        debug::out::printf("");
+
+        unsigned char *old_ptr = ptr;
+        max_t count = MIN(x , length-offset);
+        for(max_t i = 1; i <= count; i++) {
+            debug::out::raw_printf("%02X " , *ptr);
+            ptr++;
+        }
+        max = MAX(max , count);
+        if(count < max) {
+            for(max_t i = 0; i < max-count; i++) {
+                debug::out::raw_printf("   ");
+            }
+        }
+        // debug the string
+        debug::out::raw_printf(" | ");
+        for(max_t i = 1; i <= count; i++) {
+            unsigned char c = *old_ptr;
+            switch(c) {
+                case '\n':
+                case '\t':
+                case '\b':
+                case '\r':
+                case 0:
+                    c = '.';
+                    break ;
+            }
+            debug::out::raw_printf("%c" , c);
+            old_ptr++;
+        }
+        debug::out::print_str("\n");
+        offset += x;
+    }
+
+    debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , true);
+}
+
+extern "C" void __cxa_pure_virtual() {
+    debug::panic("Runtime Error : __cxa_pure_virtual invoked");
+}

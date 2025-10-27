@@ -59,19 +59,10 @@ namespace debug {
     };
     class DebugMessageContainer {
     public:
-        DebugMessageContainer() {
-            full_debug_list.init();
-            for(int i = 0; i < DEBUG_MAX_LOG_LEVEL; i++) {
-                debug_list_log_lvl[i].init();
-            }
-        }
-        void add_debug_log(const debug_message_t &msg) {
-            debug_message_t *msg_obj = new debug_message_t{msg};
-
-            
-        }
-
-        LinkedList<debug_message_t*>debug_list_log_lvl[DEBUG_MAX_LOG_LEVEL];
+        DebugMessageContainer();
+        bool add_debug_log(const debug_message_t &msg);
+        
+        LinkedList<debug_message_t*>debug_list_log_lvl[DEBUG_MAX_LOG_LEVEL+1];
         LinkedList<debug_message_t*>full_debug_list;
     };
 

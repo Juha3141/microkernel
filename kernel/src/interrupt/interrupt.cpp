@@ -195,6 +195,28 @@ bool interrupt::hardware_specified::discard_interrupt(const char *name) {
     return GLOBAL_OBJECT(HardwareSpecifiedInterruptManager)->discard_interrupt_name(name);
 }
 
+
+extern "C" void archindep_general_interrupt_handler(int handler_num , Registers *regs_ptr) {
+    interrupt_handler_t handler;
+    if((handler = interrupt::general::get_interrupt_handler(handler_num)) == 0x00) {
+        debug::panic("Unhandled interrupt invoked, handler_num = %d\n" , handler_num);
+    }
+
+    handler(regs_ptr);
+    interrupt::controller::interrupt_received(handler_num);
+}
+
+extern "C" void archindep_hardware_specified_interrupt_handler(int handler_num , Registers *regs_ptr) {
+    interrupt_handler_t handler;
+    if((handler = interrupt::handler::get_hardware_specified_int_wrapper(handler_num)) == 0x00) {
+        char *name = GLOBAL_OBJECT(interrupt::HardwareSpecifiedInterruptManager)->interrupt_list[handler_num].name;
+        debug::panic("Unhandled special interrupt invoked, handler_num = %d, name = \"%s\"\n" , handler_num , name);
+    }
+    
+    handler(regs_ptr);
+    interrupt::controller::interrupt_received(handler_num);
+}
+
 #else 
 
 void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) { CONFIG_WARNING_NO_INTERRUPT }

@@ -63,7 +63,7 @@ typedef signed char    int8_t;
 
 typedef max_t ptr_t;
 
-typedef unsigned int size_t;
+typedef unsigned long size_t;
 
 typedef void (*interrupt_handler_t)(struct Registers *regs);
 

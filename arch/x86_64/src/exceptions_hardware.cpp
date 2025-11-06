@@ -32,3 +32,7 @@ void exception::hardware::register_hardware_exceptions(void) {
     }
     exception::register_exception_general_int("Reserved" , 31);
 }
+
+void exception::hardware::archdep_general_exception_handler(int handler_id , Registers *regs) {
+    debug::out::printf(DEBUG_ERROR , "RIP = 0x%08x\n" , regs->rip);
+}

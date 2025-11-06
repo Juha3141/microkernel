@@ -1,53 +1,51 @@
 /**
- * @file page_manager.hpp
+ * @file pages_manager.hpp
  * @author Ian Juha Cho (ianisnumber2027@gmail.com)
- * @brief Kernel page allocator using bitmaps
- * @date 2025-01-29
- *
- * @copyright Copyright (c) 2024 Ian Juha Cho.
- *
+ * @brief Kernel page manager
+ * @date 2025-11-01
+ * 
  */
 
 #ifndef _PAGES_MANAGER_HPP_
 #define _PAGES_MANAGER_HPP_
 
-#include <kernel/mem/kmem_manager.hpp>
+#include <kernel/essentials.hpp>
+#include <kernel/mem/pages_manager.hpp>
+#include <page_table.hpp>
 
-#define PAGES_MANAGER_BITS_PER_PAGE 2
-#define PAGES_MANAGER_BITS_MASK     0b11
-#define PAGES_MANAGER_IDENTIFIER_BLOCK    0b11
+#define PAGE_ENTRY_FLAGS_PRESENT   0x01
+#define PAGE_ENTRY_FLAGS_KERNEL    0x02
+#define PAGE_ENTRY_FLAGS_USER      0x04
+#define PAGE_ENTRY_FLAGS_READ_ONLY 0x08
+#define PAGE_ENTRY_FLAGS_RW        0x10
+#define PAGE_ENTRY_FLAGS_EXD       0x20
 
-namespace memory {
-    class PagesManager {
-        friend class NodesManager;
-        public:
-            void init(max_t bitmap_start_address , max_t end_address , max_t page_size);
-            bool block_pages(max_t page_start_addr , max_t page_end_addr);
-            bool unblock_pages(max_t start_page_number , max_t blocked_page_count);
+namespace page {
+    void init_pt_space_allocator(LoaderArgument *loader_argument);
+    max_t alloc_pt_space(max_t size , max_t alignment);
+    
+    void init_higher_half(MemoryMap *memmap , max_t memmap_count , max_t higherhalf_relocation_addr);
 
-            typedef enum memory_availability {
-                mem_free = 0 , mem_partially_occupied = 1 , mem_occupied = 2
-            }; 
-            memory_availability check_availability(max_t start_address , max_t end_address);
-            
-            max_t allocate(max_t number_of_pages);
-            bool free(max_t ptr , bool free_blocked_area=false , max_t blocked_area_size=0);
-
-            bool available(void);
-
-            max_t currently_using_mem;
-
-            max_t bitmap_start_address;
-            max_t bitmap_end_address;
-
-            max_t mem_start_address;
-            max_t mem_end_address;    
-            max_t page_size;
-
-            max_t memory_usage;
-        private:
-            bool allocation_available;
-    };
-}
+    /// @brief Preemptively calculate the size of the identity page table, given the physical address end
+    ///        Implement this function, so that the kernel can provide you with the page table location that can accomodate the page table size
+    /// @param phys_addr_end 
+    /// @return Size of the identity page table
+    max_t calculate_identity_page_table_size(max_t phys_addr_end);
+    
+    
+    void ARCHDEP archdep_init_paging(void);
+    /// @brief Architecture-dependent, must set up the identity page table in the designated page table location for physical address 0x00 to given phys_addr_end
+    /// @param page_table_data architecture-dependent page table metadata
+    /// @param page_table_location location of the page table
+    /// @param phys_addr_end the end physical memory boundary to map the memory
+    /// @return Size of the page table on the designated location
+    max_t ARCHDEP init_identity_page_table(PageTableData &page_table_data , max_t page_table_location , max_t phys_addr_end);
+    const max_t ARCHDEP page_size();
+    
+    void ARCHDEP set_page_entry_vaddr(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t physical_address , max_t flags);
+    void ARCHDEP set_page_entry(PageTableData &page_table_data , max_t linear_page_number , max_t pages_count , max_t page_size , 
+        max_t physical_address , max_t flags);
+    void ARCHDEP register_page_table(PageTableData &page_table_data);
+};
 
 #endif

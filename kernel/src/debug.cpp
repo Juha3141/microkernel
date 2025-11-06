@@ -138,18 +138,21 @@ void debug::set_option(word option , bool flag) {
 void debug::display_set(word option) { debug_info.option_flags |= option; }
 void debug::display_mask(word option) { debug_info.option_flags &= ~option; }
 
+bool newline = false;
+
 void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
     debug_interface *interface = current_debug_interface();
     if(debug_info.enable_debug == false) return;
     debug_color_t color = interface->get_color_by_mode(mode);
     if((debug_info.option_flags & mode) == 0x00) return; // the mode is set as not to be displayed
     set_foreground_color(color);
-    if(debug_info.info_display) {
+    if(debug_info.info_display && newline) {
         interface->print_str(debugstr(mode));
     }
 
     char string[DEBUG_PRINTF_STR_STACK];
     auto [len , contains_newline] = vsprintf(string , fmt , ap , '\n');
+    newline = contains_newline;
 
     interface->print_str(string);
 
@@ -183,18 +186,31 @@ void debug::out::raw_printf(const char *fmt , ...) {
     va_end(ap);
 }
 
-void debug::out::clear_screen(debug_color_t color) { current_debug_interface()->clear_screen(color); }
+void debug::out::clear_screen(debug_color_t color) {
+    current_debug_interface()->clear_screen(color);
+    debug_info.background_color = color;
+}
 
 void debug::out::print_str(const char *str) { current_debug_interface()->print_str(str); }
-void debug::out::set_cursor_position(int x , int y) { current_debug_interface()->set_cursor_position(x , y); }
-void debug::out::move_cursor_position(int relative_x , int relative_y) { current_debug_interface()->move_cursor_position(relative_x , relative_y); }
-void debug::out::get_position_info(int &x , int &y) { current_debug_interface()->get_position_info(x , y); }
 
-void debug::out::set_background_color(debug_color_t background_color) { current_debug_interface()->set_foreground_color(background_color); }
+void debug::out::set_cursor_position(int x , int y) {
+    debug_info.x = x;
+    debug_info.y = y;
+    current_debug_interface()->set_cursor_position(x , y);
+}
+
+void debug::out::move_cursor_position(int relative_x , int relative_y) {
+    debug_info.x += relative_x;
+    debug_info.y += relative_y;
+    current_debug_interface()->move_cursor_position(relative_x , relative_y);
+}
+
+Pair<int,int>debug::out::get_position_info(void) { return make_pair(debug_info.x , debug_info.y); }
+void debug::out::set_background_color(debug_color_t background_color) { current_debug_interface()->set_background_color(background_color); }
 void debug::out::set_foreground_color(debug_color_t foreground_color) { current_debug_interface()->set_foreground_color(foreground_color); }
 
-debug_color_t debug::out::get_background_color(void) { return current_debug_interface()->get_background_color(); }
-debug_color_t debug::out::get_foreground_color(void) { return current_debug_interface()->get_foreground_color(); }
+debug_color_t debug::out::get_background_color(void) { return debug_info.background_color; }
+debug_color_t debug::out::get_foreground_color(void) { return debug_info.foreground_color; }
 
 void debug::dump_memory(max_t address , max_t length , bool debug_string) {
     byte *ptr = (byte *)address;

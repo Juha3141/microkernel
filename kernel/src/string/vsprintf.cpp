@@ -185,10 +185,13 @@ void process_format(char *buf , struct FormatData fd , int &buf_i , va_list ap) 
         added_string = va_arg(ap , char*);
     }
     else if(fd.type == 'b') {
-        if(va_arg(ap , int)) added_string = "true";
+        if(va_arg(ap , int)) added_string = "true"; // it's fine!
         else                  added_string = "false";
     }
-
+    else if(fd.type == '%') {
+        added_string = "%";
+    }
+ 
     if(fd.flag == '-') { // sort to left
         strcat(buf , added_string);
         if(fd.width != NONE && fd.width > strlen(added_string)) {

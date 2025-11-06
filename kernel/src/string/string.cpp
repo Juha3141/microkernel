@@ -1,6 +1,5 @@
 #include <string.hpp>
-
-#define size_t unsigned int
+#include <kernel/types.hpp>
 
 void *memset(void *dest , int c , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;

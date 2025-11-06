@@ -35,6 +35,7 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 	// Load the node_mgr from the local address
 	if(size == 0) return 0x00;
 	if(!allocation_available) return 0x00; // no available node
+	
 	struct Node *node = (struct Node *)search_first_fit(size); // Search available node
 	struct Node *separated_node;
 	if(node == 0x00) { // If we got to create new node, create new node at the end of the segments
@@ -52,7 +53,10 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 			node = (struct Node *)search_aligned(size , alignment);
 			// if no aligned nodes are available, create new one. 
 			if(node == 0x00) node = create_new_node(size , alignment);
-			if(node == 0x00) return 0x00; // not available for now
+			if(node == 0x00) {
+				debug::panic("memory::NodesMAnager::allocate, size=%d ,alignment=%d\nFailed tro create new node from given alignment and size\n" , size , alignment);
+				return 0x00; // not available for now
+			}
 		}
 		write_node_data(node , 1 , size , 0);
 		// Seperate node and make space

@@ -53,12 +53,12 @@ build_final_image: build_efi_executable
 	rm -rf $(BINARYFOLDER)/part.img
 
 	qemu-img convert -f raw -O vdi $(TARGET) $(subst .img,.vdi,$(TARGET))
-	VBoxManage internalcommands sethduuid $(subst .img,.vdi,$(TARGET)) {b64a9a6a-279f-42e3-bc5c-8d298037c5e5}
+	VBoxManage internalcommands sethduuid $(subst .img,.vdi,$(TARGET)) {156c71ac-fefa-41d8-85e9-c08f458c191e}
 
 run_os:
-	qemu-system-x86_64 -cpu qemu64 -m 2048 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio 
+	qemu-system-x86_64 -m 20000 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -cpu qemu64,+la57,phys-bits=52,host-phys-bits=off 
 
 debug_run_os:
-	qemu-system-x86_64 -cpu qemu64 -m 2048 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -S -s
+	qemu-system-x86_64 -m 16384 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -S -s -cpu qemu64,+la57,phys-bits=52,host-phys-bits=off
 
 include $(ROOTDIR)/build_loader_common.mk

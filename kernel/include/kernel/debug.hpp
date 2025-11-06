@@ -25,7 +25,7 @@
 
 typedef void(*debug_interface_init_func_ptr_t)(void);
 #define REGISTER_DEBUG_INTERFACE(name , interface_class) void register_debug_interface_##interface_class(void) { debug::register_debug_interface(new interface_class , name); } \
-static __attribute__ ((section(".debug_interface"))) debug_interface_init_func_ptr_t __debug_interface_init_##interface_class = register_debug_interface_##interface_class;
+__attribute__ ((__section__(".debug_interface"))) debug_interface_init_func_ptr_t __debug_interface_init_##interface_class = register_debug_interface_##interface_class;
 
 typedef word debug_m;
 
@@ -45,8 +45,6 @@ namespace debug {
         virtual debug_color_t get_color_by_mode(debug_m mode) = 0;
         virtual void set_background_color(debug_color_t background_color) = 0;
         virtual void set_foreground_color(debug_color_t foreground_color) = 0;
-        virtual debug_color_t get_background_color(void) = 0;
-        virtual debug_color_t get_foreground_color(void) = 0;
 
         char interface_identifier[24];
     };
@@ -80,7 +78,7 @@ namespace debug {
         void print_str(const char *str);
         void set_cursor_position(int x , int y);
         void move_cursor_position(int relative_x , int relative_y);
-        void get_position_info(int &x , int &y);
+        Pair<int,int>get_position_info(void);
         
         void set_background_color(debug_color_t background_color);
         void set_foreground_color(debug_color_t foreground_color);

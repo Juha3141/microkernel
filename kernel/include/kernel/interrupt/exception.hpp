@@ -26,6 +26,7 @@ namespace exception {
     namespace hardware {
         /* register_hardware_exceptions : Function for "hardware part," must declare all exceptions */
         void register_hardware_exceptions(void);
+        void archdep_general_exception_handler(int handler_id , Registers *regs);
     }
     typedef struct exception_info_s {
         word type; // interrupt? hardware_specified interrupt? or etc?
@@ -51,7 +52,7 @@ namespace exception {
     // Miscellaneous
     ptr_t register_exception_etc(const char *exception_name);
     
-    extern "C" void archindep_general_exception_handler(int handler_id);
+    extern "C" void archindep_general_exception_handler(int handler_id , Registers *regs);
 }
 
 #endif

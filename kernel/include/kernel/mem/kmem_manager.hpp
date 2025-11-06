@@ -47,7 +47,8 @@ namespace memory {
     };
     
     // pmem (physical memory) allocation
-    void pmem_init(max_t memmap_count , struct MemoryMap *memmap , struct LoaderArgument *kargument);
+    void pmem_init(struct MemoryMap *memmap , max_t memmap_count , struct LoaderArgument *kargument);
+    Boundary determine_kasan_shadow_boundary(Boundary *memmap , max_t memmap_count);
     void *pmem_alloc(max_t size , max_t alignment=0);
     bool is_pmem_allocated_obj(void *ptr);
     void pmem_free(void *ptr);

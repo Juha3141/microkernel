@@ -13,7 +13,7 @@ __attribute__ ((section(".multiboot_header"))) struct multiboot_header multiboot
 
 	.header_addr = 0x00 , 
 	.load_addr     = 0x00 , 
-	.load_end_addr = 0x00 ,
+	.load_end_addr = 0x00 , 
 	.bss_end_addr  = 0x00 , 
 	.entry_addr    = 0x00 , 
 

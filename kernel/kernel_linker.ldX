@@ -1,10 +1,13 @@
 ENTRY(kernel_main)
 
-#include <x86_64/arch_configurations.ld>
+#include <kernel/configurations.hpp>
+#include <arch/configurations.hpp>
 
 SECTIONS {
-  /* temporarily change the kernel load address for debugging purpose */
-  . = 0x100000;
+#ifndef CONFIG_KERNEL_RELOCATABLE
+  . = CONFIG_KERNEL_MINIMUM_ADDRESS;
+#endif
+
   .entry : {
     *(.entry) *(.entry.*)
   }
@@ -50,5 +53,10 @@ SECTIONS {
     __gnu_linkonce_start__ = .;
     *(.gnu.linkonce.*) 
     __gnu_linkonce_end__   = .;
+  }
+  
+  /DISCARD/ : {
+    *(.comment .comment.*)
+    *(.eh_frame)
   }
 }

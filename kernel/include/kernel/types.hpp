@@ -68,6 +68,11 @@ typedef unsigned long size_t;
 typedef void (*interrupt_handler_t)(struct Registers *regs);
 
 #define ARCHDEP // indicates that the function is architecture-dependent
+#define INVALID ARCHITECTURE_LIMIT
+
+// definining the endianness
+#define little 1
+#define big    2
 
 #define offsetof(s, m)   ((max_t)&(((s *)0)->m))
 #define alignto(d , a)   ((d)+((a)-((d)%(a))))

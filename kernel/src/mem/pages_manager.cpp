@@ -7,15 +7,15 @@ __attribute__ ((section(".kernel_setup_stage"))) struct {
     max_t current_addr;
 }kernel_pt_space_manager;
 
-constexpr bool is_inside_boundary(max_t addr , const memory::Boundary &boundary) {
+__no_sanitize_address__ constexpr bool is_inside_boundary(max_t addr , const memory::Boundary &boundary) {
     return (boundary.start_address <= addr && addr < boundary.end_address);
 }
 
 /// @brief Initialize the allocator that governs the space for kernel's page table
-///        The kernel will choose the biggest memory chunk from the provided loader argument's memory map 
-///        and set the start of the allocator's heap to the chunk's start address
+///        The kernel will choose the biggest memory chunk from the provided loader_argument's memory map 
+///        and set the start of the page table allocator's heap to the chunk's start address
 /// @param loader_argument The loader argument from bootloader
-void page::init_pt_space_allocator(LoaderArgument *loader_argument) {
+__no_sanitize_address__ void page::init_pt_space_allocator(LoaderArgument *loader_argument) {
 	memory::Boundary protected_areas[5];
 	// 1. Kernel
 	protected_areas[0].start_address = loader_argument->kernel_physical_location;
@@ -28,16 +28,16 @@ void page::init_pt_space_allocator(LoaderArgument *loader_argument) {
 	protected_areas[2].end_address   = loader_argument->loader_argument_location+loader_argument->loader_argument_size;
 	// 4. Kernel Memory Map
 	protected_areas[3].start_address = loader_argument->memmap_location;
-	protected_areas[3].end_address   = loader_argument->memmap_location+memory::align_address((loader_argument->memmap_count*sizeof(struct MemoryMap)) , 4096);
+	protected_areas[3].end_address   = loader_argument->memmap_location+align_round_up((loader_argument->memmap_count*sizeof(struct LoaderMemoryMap)) , 4096);
 	// 5. kstruct Memory Area
 	protected_areas[4].start_address = loader_argument->kstruct_mem_location;
 	protected_areas[4].end_address   = loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size;
     
-    MemoryMap *memmap = (MemoryMap *)((max_t)loader_argument->memmap_location);
+    LoaderMemoryMap *memmap = (LoaderMemoryMap *)((max_t)loader_argument->memmap_location);
     
     long max_size_chunk_id = -1;
-    max_t pt_space_start;
-    max_t pt_space_end;
+    max_t pt_space_start = 0;
+    max_t pt_space_end = 0;
 
     // Find the memory with the largest contiguous length
     for(long i = (long)loader_argument->memmap_count-1; i >= 0; i--) {
@@ -67,17 +67,28 @@ void page::init_pt_space_allocator(LoaderArgument *loader_argument) {
     kernel_pt_space_manager.start_addr      = pt_space_start;
     kernel_pt_space_manager.end_addr        = pt_space_end;
     kernel_pt_space_manager.current_addr    = pt_space_start;
+    // debug::out::printf("Kernel's page table space : 0x%llx ~ 0x%llx\n" , pt_space_start , pt_space_end);
 }
 
 /// @brief Rudimentary allocator for kernel's page table
-max_t page::alloc_pt_space(max_t size , max_t alignment) {
-	max_t addr = memory::align_address(kernel_pt_space_manager.current_addr , alignment); // Align address
+__no_sanitize_address__ void *page::alloc_pt_space(max_t size , max_t alignment) {
+	max_t addr = align_round_up(kernel_pt_space_manager.current_addr , alignment); // Align address
 	kernel_pt_space_manager.current_addr = addr+size; // increment address
-	if(kernel_pt_space_manager.current_addr >= kernel_pt_space_manager.end_addr) return 0x00;
+	if(kernel_pt_space_manager.current_addr >= kernel_pt_space_manager.end_addr) {
+        return 0x00;
+    }
     
-	return addr;
+	return (void *)addr;
 }
 
-void page::init_higher_half(MemoryMap *memmap , max_t memmap_count , max_t higherhalf_relocation_address) {
-    
+memory::Boundary page::get_pt_space_boundary(void) {
+    return {kernel_pt_space_manager.start_addr , kernel_pt_space_manager.current_addr};
+}
+
+
+__no_sanitize_address__ void page::map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
+     , func_alloc_pt_space_t alloc_func) {
+    for(max_t i = 0; i < page_count; i++) {
+        map_one_page(page_table_data , linear_addr+(i*page_size) , page_size , physical_address+(i*page_size) , flags , alloc_func);
+    }
 }

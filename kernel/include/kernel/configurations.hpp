@@ -15,7 +15,9 @@
 #define WARNING(x) debug::out::printf(DEBUG_WARNING , x);
 #endif
 #define CONFIG_KERNEL_HIGHERHALF yes
-#define CONFIG_KERNEL_RELOCATABLE yes
+#define CONFIG_KERNEL_DEBUG_MAXLVL 10
+#define CONFIG_KERNEL_STACK_SIZE 4194304
+#define CONFIG_KERNEL_KSTRUCT_SIZE 524288
 
 /****************** CONFIG_SEGMENTATION ******************/
 #define CONFIG_USE_SEGMENTATION

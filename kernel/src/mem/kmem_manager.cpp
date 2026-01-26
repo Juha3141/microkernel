@@ -35,10 +35,10 @@ bool is_pmem_alloc_available = false;
 void memory::get_kstruct_boundary(struct Boundary &boundary) {
 	memcpy(&boundary , &kstruct_mgr.boundary , sizeof(struct Boundary));
 }
-/*
+#if 0
 void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , struct LoaderArgument *loader_argument) {
 	debug::push_function("d_kstruct_b");
-	struct MemoryMap *memmap = (struct MemoryMap *)((max_t)loader_argument->memmap_ptr);
+	struct LoaderMemoryMap *memmap = (struct LoaderMemoryMap *)((max_t)loader_argument->memmap_ptr);
 	max_t kernel_end_address = loader_argument->total_kernel_area_end;
 	debug::out::printf("kernel_end_address : 0x%X\n" , kernel_end_address);
 	new_mboundary.start_address = align_address(kernel_end_address , 4096); // padding
@@ -46,6 +46,7 @@ void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary ,
 	 * The kernel makes a space about 1MB large at the rear of kernel image for static structures.
 	 * This code (haha) basically searches what "memmap" entry contains the kernel image and calculates whether
 	 * the kstruct area is available to be created.
+	 */
 	
 	for(int i = 0; i < loader_argument->memmap_count; i++) {
 		max_t address = ((max_t)memmap[i].addr_high << 32)|memmap[i].addr_low;
@@ -65,15 +66,19 @@ void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary ,
 	debug::out::printf(DEBUG_INFO , "def,kstruct_boundary : 0x%X~0x%X\n" , new_mboundary.start_address , new_mboundary.end_address);
 	debug::pop_function();
 	return;
-}*/
+}
+#endif
 
-// Use bubble sort, slow but simple
-static void sort_boundaries_list(struct memory::Boundary *boundaries , int count) {
+#if 0
+/// @brief Use the bubble sort algorithm to sort the boundaries list. 
+/// @param boundaries List of boundaries that is to be sorted (array)
+/// @param count Number of items in the list
+static void sort_boundaries_list(memory::Boundary *boundaries , int count) {
 	for(int i = 0; i < count-1; i++) {
 		bool swapped = false;
 		for(int j = 0; j < count-i-1; j++) {
 			if(boundaries[j].start_address > boundaries[j+1].start_address) {
-				struct memory::Boundary tmp = {boundaries[j].start_address , boundaries[j].end_address};
+				memory::Boundary tmp = {boundaries[j].start_address , boundaries[j].end_address};
 				boundaries[j].start_address = boundaries[j+1].start_address;
 				boundaries[j].end_address   = boundaries[j+1].end_address;
 				boundaries[j+1].start_address = tmp.start_address;
@@ -85,18 +90,13 @@ static void sort_boundaries_list(struct memory::Boundary *boundaries , int count
 	}
 }
 
-/// @brief Merge the continunous boundaries into one
+/// @brief Merge the continunous boundaries into one (only merge boundaries with same type)
 /// @param boundaries 
 /// @param count 
 /// @param merged_continuous_boundaries Merged version of boundaries
 /// @return Numbers of items in new merged one 
-int merge_boundaries_list(struct memory::Boundary *boundaries , int count , struct memory::Boundary *merged_continuous_boundaries) {
-	struct memory::Boundary sorted_boundaries[256];
-	if(count >= 256) {
-		debug::panic("Too many memory boundaries given for merge_bounadries_list() (count >= 256)");
-	}
-	memcpy(sorted_boundaries , boundaries , count*sizeof(struct memory::Boundary));
-	sort_boundaries_list(sorted_boundaries , count);
+int merge_boundaries_list(KernelMemoryMap *boundaries , int count , KernelMemoryMap *merged_continuous_boundaries) {
+	sort_boundaries_list(boundaries , count);
 	
 	// The maximum amount of memory between the memory segments to be considered as one memory boundary
 	int THRESHOLD = 2048; // 2kB
@@ -128,14 +128,14 @@ int merge_boundaries_list(struct memory::Boundary *boundaries , int count , stru
 }
 
 /// @brief Truncate the given protected areas from the memory map and 
-//         create new boundary list(new_msegment_list) that completely excludes the protected boundary
+///        create new boundary list(new_msegment_list) that completely excludes the protected boundary
 /// @param protected_areas arrays of protected memory areas
 /// @param protected_areas_count number of items on the array
 /// @param new_msegment_list the list of new memory segment with protected areas removed
 /// @param memmap the original memory map
 /// @param memmap_count number of entries in the memory map
 /// @return number of entries on new memory segment list
-int truncate_protected_areas(struct memory::Boundary *protected_areas , int protected_areas_count , struct memory::Boundary *new_msegment_list , struct MemoryMap *memmap , int memmap_count) {
+int truncate_protected_areas(memory::Boundary *protected_areas , int protected_areas_count , KernelMemoryMap *new_msegment_list , LoaderMemoryMap *memmap , int memmap_count) {
 	int new_msegment_list_count = 0;
     for(int i = 0; i < memmap_count; i++) {
         if(memmap[i].type != MEMORYMAP_USABLE) continue;
@@ -184,8 +184,9 @@ int truncate_protected_areas(struct memory::Boundary *protected_areas , int prot
     }
     return new_msegment_list_count;
 }
+#endif
 
-void memory::kstruct_init(struct memory::Boundary boundary) {
+__no_sanitize_address__ void memory::kstruct_init(struct memory::Boundary boundary) {
 	memcpy(&kstruct_mgr.boundary , &boundary , sizeof(struct Boundary));
 	kstruct_mgr.current_addr = boundary.start_address;
 
@@ -193,8 +194,8 @@ void memory::kstruct_init(struct memory::Boundary boundary) {
 	memset((void *)boundary.start_address , 0 , (boundary.end_address-boundary.start_address));
 }
 
-void *memory::kstruct_alloc(max_t size , max_t alignment) {
-	max_t addr = align_address(kstruct_mgr.current_addr , alignment); // Align address
+__no_sanitize_address__ void *memory::kstruct_alloc(max_t size , max_t alignment) {
+	max_t addr = align_round_up(kstruct_mgr.current_addr , alignment); // Align address
 	kstruct_mgr.current_addr = addr+size; // increment address
 	if(kstruct_mgr.current_addr >= kstruct_mgr.boundary.end_address) {
 		debug::panic("kmem_manager.cpp" , 40 , "kstruct_alloc() : full kernel struct space\n");
@@ -202,7 +203,7 @@ void *memory::kstruct_alloc(max_t size , max_t alignment) {
 	return (void *)addr;
 }
 
-bool memory::is_kstruct_allocated_obj(void *obj) {
+__no_sanitize_address__ bool memory::is_kstruct_allocated_obj(void *obj) {
 	return kstruct_mgr.boundary.start_address <= (max_t)obj && (max_t)obj <= kstruct_mgr.current_addr;
 }
 
@@ -232,81 +233,37 @@ int memory::SegmentsManager::get_segment_index(max_t address) {
 	return -1;
 }
 
-#ifdef CONFIG_USE_KASAN
-
-/// @brief Determines the boundary of the shadow memory for KASan, positions KASan at the end of the memory boundaries given by the memory map
-/// @param memmap 
-/// @param memmap_count 
-/// @return 
-memory::Boundary memory::determine_kasan_shadow_boundary(memory::Boundary *memmap , max_t memmap_count) {
-	max_t total_mem_size = 0;
-	for(max_t i = 0; i < memmap_count; i++) {
-		total_mem_size += memmap[i].end_address-memmap[i].start_address;
-	}
-
-	max_t required_shadow_size = (total_mem_size >> KASAN_SHADOW_SHIFT);
-	debug::out::printf("KASAN shadow memory size : %dMB\n" , required_shadow_size/1024/1024);
-	debug::out::printf("Searching for contiguous memory that fits KASAN shadow memory...\n");
-
-	for(long i = static_cast<long>(memmap_count-1); i >= 0; i--) {
-		max_t sz = memmap[i].end_address-memmap[i].start_address;
-		debug::out::printf("   - Segment #%d : %dKB  --> " , i , sz/1024);
-		if(sz >= required_shadow_size) debug::out::raw_printf("Match (shadow=%d.%d%d%% of the segment)" , ((required_shadow_size*100)/sz) , ((required_shadow_size*1000)/sz)%10 , ((required_shadow_size*10000)/sz)%10);
-		else                           debug::out::raw_printf("No match");
-		debug::out::raw_printf("\n");
-	}
-
-	return {0x00 , 0x00};
-}
-
-#endif
-
-void memory::pmem_init(MemoryMap *memmap , max_t memmap_count , LoaderArgument *loader_argument) {
+void memory::pmem_init(LoaderMemoryMap *memmap , max_t memmap_count , LoaderArgument *loader_argument) {
+	// Temporarily unimplemented
+#if 0
 	int usable_seg_count = 0;
 
 	// temporary allocation
 	Boundary *pmem_boundary = (Boundary *)kstruct_alloc(memmap_count*sizeof(Boundary));
-	Boundary protected_areas[5] , merged_protected_areas[5];
-	// 1. Kernel
-	protected_areas[0].start_address = loader_argument->kernel_physical_location;
-	protected_areas[0].end_address   = loader_argument->kernel_physical_location+loader_argument->kernel_size;
-	// 2. Stack
-	protected_areas[1].start_address = loader_argument->kernel_stack_location;
-	protected_areas[1].end_address   = loader_argument->kernel_stack_location+loader_argument->kernel_stack_size;
-	// 3. Loader Argument Location	
-	protected_areas[2].start_address = loader_argument->loader_argument_location;
-	protected_areas[2].end_address   = loader_argument->loader_argument_location+loader_argument->loader_argument_size;
-	// 4. Kernel Memory Map
-	protected_areas[3].start_address = loader_argument->memmap_location;
-	protected_areas[3].end_address   = loader_argument->memmap_location+align_address((loader_argument->memmap_count*sizeof(struct MemoryMap)) , 4096);
-	// 5. kstruct Memory Area
-	protected_areas[4].start_address = loader_argument->kstruct_mem_location;
-	protected_areas[4].end_address   = loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size;
+	
+	declare_essential_kernel_mem_boundaries
+	constexpr int essential_boundaries_count = sizeof(essential_kernel_mem_boundaries)/sizeof(essential_kernel_mem_boundaries[0]);
+	Boundary merged_protected_areas[essential_boundaries_count];
 
 	// determine physical memory address
 	memset(pmem_boundary , 0 , memmap_count*sizeof(Boundary));
-	// debug::disable();
-	int merged_protected_areas_count = merge_boundaries_list(protected_areas , 5 , merged_protected_areas);
+	int merged_protected_areas_count = merge_boundaries_list(essential_kernel_mem_boundaries , essential_boundaries_count , merged_protected_areas);
 	
 	int pmem_boundary_entry_count = truncate_protected_areas(merged_protected_areas , merged_protected_areas_count , 
 		pmem_boundary , memmap , memmap_count);
 
 	debug::out::printf("Available memory area : \n");
 	for(int i = 0; i < pmem_boundary_entry_count; i++) {
-		debug::out::printf("0x%lx ~ 0x%lx\n" , pmem_boundary[i].start_address , pmem_boundary[i].end_address);
+		debug::out::printf("0x%llx ~ 0x%llx\n" , pmem_boundary[i].start_address , pmem_boundary[i].end_address);
 	}
 	// debug::enable();
-	auto [kasan_addr_start , kasan_addr_end] = determine_kasan_shadow_boundary(pmem_boundary , pmem_boundary_entry_count);
-	
+
 	// allocate node manager for each segment
 	SegmentsManager *segments_mgr = GLOBAL_OBJECT(SegmentsManager);
 	debug::out::printf("segments_mgr = 0x%X\n" , segments_mgr);
 	debug::out::printf("Initializing all the segments...\n");
 	segments_mgr->init(pmem_boundary_entry_count , pmem_boundary);
 	is_pmem_alloc_available = true;
-
-#ifdef CONFIG_USE_KASAN
-	kasan::init(kasan_addr_start , kasan_addr_end-kasan_addr_start , pmem_boundary[0].start_address);
 #endif
 }
 

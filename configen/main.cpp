@@ -51,10 +51,13 @@ int main(int argc , char **argv) {
         // remove all the comments
         std::string trimmed_line = trim_line(remove_comment(line));
         // std::cout << trimmed_line << " \n";
-        if(skip_line(trimmed_line) == true) continue;
+        if(skip_line(trimmed_line) == true) {
+            line_number++;
+            continue;
+        }
         if(interpret_line(trimmed_line , data_list) == false) {
             std::cout << "line " << line_number << " : regex not matched!\n";
-            break;
+            return -1;
         }
 
         std::string macro;

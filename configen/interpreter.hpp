@@ -30,7 +30,7 @@ bool skip_line(std::string line);
 int interpret_line(std::string line , std::vector<parsed_data_t>&parsed_data_list);
 
 void set_global_group(const parsed_data_t &data);
-std::string convert_to_macro(const parsed_data_t &data);
+std::string convert_to_macro(parsed_data_t data);
 
 
 #endif

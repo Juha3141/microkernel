@@ -38,22 +38,23 @@ bool skip_line(std::string line) {
 }
 
 #define REGEX_DEFINITIONS \
-    std::regex *syntax_regex[] = {\
-        new std::regex("\\[([\\w]+)\\][ ]*\\=[ ]*([\\w]+)[ ]*\\{[ ]*") , /* Grouping */\
-        new std::regex("\\[([\\w]+)\\][ ]*\\=[ ]*([\\w]+)[ ]*") , /* Grouping with no contents*/\
-        new std::regex("([\\w]+)[ ]*\\=[ ]*(.+)[ ]*") , /* Normal */\
-        new std::regex("\\@([\\w]+)[ ]*\\=[ ]*(.+)[ ]*") , /* Raw Normal */\
-        new std::regex("\\@\\@([\\w]+)[ ]*\\=[ ]*(.+)[ ]*") , /* Raw Normal Complete */\
-        new std::regex("\\}[ ]*WARNING[ ]*\\=[ ]*(.+)") , /* Warning */\
-        new std::regex("\\}") , /* End */\
-        new std::regex("\\[([\\w]+)\\][ ]*\\=[ ]*([\\w]+)[ ]*\\{[ ]*\\}[ ]*WARNING[ ]*\\=[ ]*(.+)") , /* Grouping with warning*/\
+    std::string syntax_regex[] = {\
+        "\\[([\\w]+)\\][ ]*\\=[ ]*([\\w]+)[ ]*\\{[ ]*" , /* Grouping */\
+        "\\[([\\w]+)\\][ ]*\\=[ ]*([\\w]+)[ ]*" , /* Grouping with no contents*/\
+        "([\\w]+)[ ]*\\=[ ]*(.+)[ ]*" , /* Normal */\
+        "\\@([\\w]+)[ ]*\\=[ ]*(.+)[ ]*" , /* Raw Normal */\
+        "\\@\\@([\\w]+)[ ]*\\=[ ]*(.+)[ ]*" , /* Raw Normal Complete */\
+        "\\}[ ]*WARNING[ ]*\\=[ ]*(.+)" , /* Warning */\
+        "\\}" , /* End */\
+        "\\[([\\w]+)\\][ ]*\\=[ ]*([\\w]+)[ ]*\\{[ ]*\\}[ ]*WARNING[ ]*\\=[ ]*(.+)" , /* Grouping with warning*/\
+        "\\[([\\w]+)\\][ ]*\\=[ ]*\\{[ ]*" , /* Grouping without CONFIG_USE header(pure namespace) */\
     };
 
 int interpret_line(std::string one_line , std::vector<parsed_data_t>&parsed_data_list) {
     REGEX_DEFINITIONS
     int match_result = -1;
     for(int i = 0; i < sizeof(syntax_regex)/sizeof(std::regex *); i++) {
-        if(std::regex_match(one_line , *syntax_regex[i]) == true) {
+        if(std::regex_match(one_line , std::regex(syntax_regex[i])) == true) {
             match_result = i;
             break;
         }
@@ -61,7 +62,7 @@ int interpret_line(std::string one_line , std::vector<parsed_data_t>&parsed_data
     if(match_result == -1) return 0;
     std::smatch match;
 
-    if(std::regex_search(one_line , match , *syntax_regex[match_result]) == false) return false;
+    if(std::regex_search(one_line , match , std::regex(syntax_regex[match_result])) == false) return false;
     /*
     for(int i = 0; i < match.size(); i++) {
         std::cout << "match : " << match[i].str() << "\n";
@@ -129,6 +130,13 @@ int interpret_line(std::string one_line , std::vector<parsed_data_t>&parsed_data
                 .value = match[3].str() , 
             });
             break;
+        case 8: 
+            parsed_data_list.push_back({
+                .type = VARIABLE_TYPE_GROUP , 
+                .name = match[1].str() , 
+                .value = "enabled_no_use" , 
+            });
+            break;
     }
     return parsed_data_list.size();
 }
@@ -149,28 +157,82 @@ void set_global_group(const parsed_data_t &data) {
     }
 }
 
-std::string convert_to_macro(const parsed_data_t &data) {
+using ull = unsigned long long;
+
+void translate_metric(std::string &value) {
+    std::pair<std::regex,ull> metric_regex[] = {
+        std::make_pair(std::regex("[ ]*([0-9]+)KB?[ ]*") , ((ull)1<<10)) , /* KB */
+        std::make_pair(std::regex("[ ]*([0-9]+)MB?[ ]*") , ((ull)1<<20)) , /* MB */
+        std::make_pair(std::regex("[ ]*([0-9]+)GB?[ ]*") , ((ull)1<<30)) , /* GB */
+        std::make_pair(std::regex("[ ]*([0-9]+)TB?[ ]*") , ((ull)1<<40)) , /* TB */
+        std::make_pair(std::regex("[ ]*([0-9]+)PB?[ ]*") , ((ull)1<<50)) , /* PB */
+        std::make_pair(std::regex("[ ]*([0-9]+)EB?[ ]*") , ((ull)1<<60)) , /* EB */
+    };
+    bool found = false;
+    int match_id = -1;
+    for(int i = 0; i < sizeof(metric_regex)/sizeof(std::pair<std::regex,ull>); i++) {
+        if(std::regex_match(value , metric_regex[i].first) == true) {
+            match_id = i;
+            break;
+        }
+    }
+    if(match_id == -1) return;
+
+    std::smatch match;
+    if(std::regex_search(value , match , metric_regex[match_id].first) == false) return;
+
+    value = std::to_string(std::stoull(match[1].str())*metric_regex[match_id].second);
+}
+
+void translate_metric_in_list_items(std::string &value) {
+    if(value[0] != '{') return;
+
+    int val_len = value.size();
+    value = value.substr(1 , val_len-2);
+
+    std::string new_str = "{";
+    size_t prev_off = 0;
+    size_t sub_off = 0;
+    while((sub_off = value.find("," , sub_off)) != std::string::npos) {
+        std::string item = trim_line(value.substr(prev_off , sub_off-prev_off));
+        translate_metric(item);
+        new_str += item+",";
+        
+        sub_off++;
+        prev_off = sub_off;
+    }
+    std::string last_item = trim_line(value.substr(prev_off , val_len-2-prev_off));
+    translate_metric(last_item);
+    new_str += last_item+"}";
+    
+    value = new_str;
+}
+
+std::string convert_to_macro(parsed_data_t data) {
     // std::cout << "type : " << data.type << "\n";
     // std::cout << "current group : " << global_group << "(" << global_group_value << ")\n";
     std::string macro = "";
+
+    translate_metric(data.value);
+    translate_metric_in_list_items(data.value);
     switch(data.type) {
         case VARIABLE_TYPE_GROUP:
             macro += "\n/****************** CONFIG_"+data.name+" ******************/\n";
-            if(data.value.compare("disabled") == 0) macro += "// ";
-            if(data.value.compare("disabled_full") == 0) macro += "// ";
-            macro += ("#define CONFIG_USE_"+data.name);
+            if(data.value == "disabled")      macro += "// ";
+            if(data.value == "disabled_full") macro += "// ";
+            if(data.value == "enabled")       macro += ("#define CONFIG_USE_"+data.name);
             break;
-        case VARIABLE_TYPE_NORMAL:
-            if(global_group_value.compare("disabled_full") == 0) macro = "// ";
+        case VARIABLE_TYPE_NORMAL: 
+            if(global_group_value == "disabled_full") macro = "// ";
             if(global_group != "") macro += ("#define CONFIG_"+global_group+"_"+data.name+" "+data.value);
             else                   macro += ("#define CONFIG_"+data.name+" "+data.value);
             break;
         case VARIABLE_TYPE_NORMAL_RAW:
-            if(global_group_value.compare("disabled_full") == 0) macro = "// ";
+            if(global_group_value == "disabled_full") macro = "// ";
             macro += ("#define CONFIG_"+data.name+" "+data.value);
             break;
         case VARIABLE_TYPE_NORMAL_COMPLETE_RAW:
-            if(global_group_value.compare("disabled_full") == 0) macro = "// ";
+            if(global_group_value == "disabled_full") macro = "// ";
             macro += ("#define "+data.name+" "+data.value);
             break;
         case VARIABLE_TYPE_WARNING:

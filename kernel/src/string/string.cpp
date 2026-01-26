@@ -3,7 +3,7 @@
 
 void *memset(void *dest , int c , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
-    max_t aligned_dest = alignto((max_t)dest , WORD_SIZE);
+    max_t aligned_dest = align_round_up((max_t)dest , WORD_SIZE);
     
     if(n <= WORD_SIZE) { // no optimization
         for(size_t i = 0; i < n; i++) { *dest_ptr_char++ = (unsigned char)c; }
@@ -41,7 +41,7 @@ void *memset(void *dest , int c , size_t n) {
 void *memcpy(void *dest , const void *src , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
     unsigned char *src_ptr_char  = (unsigned char *)src;
-    max_t aligned_dest = alignto((max_t)dest , WORD_SIZE);
+    max_t aligned_dest = align_round_up((max_t)dest , WORD_SIZE);
     
     if(n <= WORD_SIZE) { // no optimization
         for(size_t i = 0; i < n; i++) { *dest_ptr_char++ = *src_ptr_char++; }
@@ -77,7 +77,7 @@ void *memcpy(void *dest , const void *src , size_t n) {
 static void *memcpy_reverse(void *dest , const void *src , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
     unsigned char *src_ptr_char  = (unsigned char *)src;
-    max_t aligned_dest = alignto((max_t)dest , WORD_SIZE);
+    max_t aligned_dest = align_round_up((max_t)dest , WORD_SIZE);
     
     if(n <= WORD_SIZE) { // no optimization
         for(size_t i = 0; i < n; i++) { *dest_ptr_char++ = *src_ptr_char++; }

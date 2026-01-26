@@ -182,7 +182,7 @@ struct memory::Node *memory::NodesManager::search_aligned(max_t size , max_t ali
 	while(node->signature == MEMMANAGER_SIGNATURE) { // going forward until we meet invalid node
 		if(node->occupied == 0) { // If node is usable
 			// Check whether this node is aligned, or if aligned in future, fits the required size.
-			aligned_addr = align_address(((max_t)node)+sizeof(struct Node) , alignment);
+			aligned_addr = align_round_up(((max_t)node)+sizeof(struct Node) , alignment);
 			// Get the aligned address of the node
 			if(((aligned_addr+size+sizeof(struct Node)) <= (max_t)node->next)) { // If address of aligned node is above the region of the node -> Skip.
 				return (struct Node *)(aligned_addr-sizeof(struct Node));
@@ -286,13 +286,8 @@ struct memory::Node *memory::NodesManager::align(struct memory::Node *node , max
 	struct Node *original = node;
 	if(alignment == 0) return node; // no need to align
 	
-	aligned = align_address((((max_t)node)+sizeof(struct Node)) , alignment);  // Get the aligned address
+	aligned = align_round_up((((max_t)node)+sizeof(struct Node)) , alignment);  // Get the aligned address
 	((struct Node *)(aligned-sizeof(struct Node)))->previous = node->previous; // Write previous node information to new aligned node
 	
 	return (struct Node *)(aligned-sizeof(struct Node)); // Return the aligned node
-}
-
-max_t memory::align_address(max_t address , max_t alignment) {
-	if(alignment == 0) return address;
-	return alignto(address , alignment);
 }

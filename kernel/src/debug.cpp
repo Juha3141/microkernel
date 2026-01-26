@@ -25,14 +25,14 @@ extern qword __debug_interface_end__;
 
 typedef void debug_interface_init_func_t(void);
 
-void init_debug_interface_initializers(void) {
+__no_sanitize_address__ void init_debug_interface_initializers(void) {
     for(qword func_ptr_ptr = (qword)&__debug_interface_start__; func_ptr_ptr < (qword)&__debug_interface_end__; func_ptr_ptr += sizeof(debug_interface_init_func_ptr_t)) {
         qword func_ptr = *((qword *)func_ptr_ptr);
         ((void(*)(void))func_ptr)();
     }
 }
 
-void debug::init(LoaderArgument *loader_argument) {
+__no_sanitize_address__ void debug::init(LoaderArgument *loader_argument) {
     set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_FIRST_INFO|DEBUG_DISPLAY_INDENTATION , true);
     debug_info.option_flags = 0b11111111;
     
@@ -46,10 +46,10 @@ void debug::init(LoaderArgument *loader_argument) {
     debug::enable();
 }
 
-void debug::register_debug_interface(debug::debug_interface *interface , const char *interface_identifier) { strcpy(interface->interface_identifier , interface_identifier); debug_interface_container.add(interface); }
-void debug::register_debug_interface(debug::debug_interface *interface) { debug_interface_container.add(interface); }
+__no_sanitize_address__ void debug::register_debug_interface(debug::debug_interface *interface , const char *interface_identifier) { strcpy(interface->interface_identifier , interface_identifier); debug_interface_container.add(interface); }
+__no_sanitize_address__ void debug::register_debug_interface(debug::debug_interface *interface) { debug_interface_container.add(interface); }
 
-void debug::set_current_debug_interface(const char *interface_identifier) {
+__no_sanitize_address__ void debug::set_current_debug_interface(const char *interface_identifier) {
     max_t id = debug_interface_container.search<const char *>([](debug::debug_interface*& data , const char *str) { 
         return (bool)(strcmp(data->interface_identifier , str) == 0);
     } , interface_identifier);
@@ -58,7 +58,7 @@ void debug::set_current_debug_interface(const char *interface_identifier) {
     debug_info.current_debug_interface = debug_interface_container.get(id);
 }
 
-struct debug::debug_interface *debug::current_debug_interface() { return debug_info.current_debug_interface; }
+__no_sanitize_address__ struct debug::debug_interface *debug::current_debug_interface() { return debug_info.current_debug_interface; }
 
 debug::DebugMessageContainer::DebugMessageContainer() {
     full_debug_list.init();
@@ -140,7 +140,7 @@ void debug::display_mask(word option) { debug_info.option_flags &= ~option; }
 
 bool newline = false;
 
-void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
+__no_sanitize_address__ void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
     debug_interface *interface = current_debug_interface();
     if(debug_info.enable_debug == false) return;
     debug_color_t color = interface->get_color_by_mode(mode);
@@ -159,7 +159,7 @@ void debug::out::vprintf(debug_m mode , const char *fmt , va_list ap) {
     set_foreground_color(interface->get_color_by_mode(DEBUG_TEXT));
 }
 
-void debug::out::printf(debug_m mode , const char *fmt , ...) {
+__no_sanitize_address__ void debug::out::printf(debug_m mode , const char *fmt , ...) {
     if(debug_info.enable_debug == false) return;
     va_list ap;
     va_start(ap , fmt);
@@ -167,7 +167,7 @@ void debug::out::printf(debug_m mode , const char *fmt , ...) {
     va_end(ap);
 }
 
-void debug::out::printf(const char *fmt , ...) {
+__no_sanitize_address__ void debug::out::printf(const char *fmt , ...) {
     if(debug_info.enable_debug == false) return;
     va_list ap;
     va_start(ap , fmt);
@@ -175,7 +175,7 @@ void debug::out::printf(const char *fmt , ...) {
     va_end(ap);
 }
 
-void debug::out::raw_printf(const char *fmt , ...) {
+__no_sanitize_address__ void debug::out::raw_printf(const char *fmt , ...) {
     if(debug_info.enable_debug == false) return;
     va_list ap;
     va_start(ap , fmt);
@@ -186,45 +186,42 @@ void debug::out::raw_printf(const char *fmt , ...) {
     va_end(ap);
 }
 
-void debug::out::clear_screen(debug_color_t color) {
+__no_sanitize_address__ void debug::out::clear_screen(debug_color_t color) {
     current_debug_interface()->clear_screen(color);
     debug_info.background_color = color;
 }
 
-void debug::out::print_str(const char *str) { current_debug_interface()->print_str(str); }
+__no_sanitize_address__ void debug::out::print_str(const char *str) { current_debug_interface()->print_str(str); }
 
-void debug::out::set_cursor_position(int x , int y) {
+__no_sanitize_address__ void debug::out::set_cursor_position(int x , int y) {
     debug_info.x = x;
     debug_info.y = y;
     current_debug_interface()->set_cursor_position(x , y);
 }
 
-void debug::out::move_cursor_position(int relative_x , int relative_y) {
+__no_sanitize_address__ void debug::out::move_cursor_position(int relative_x , int relative_y) {
     debug_info.x += relative_x;
     debug_info.y += relative_y;
     current_debug_interface()->move_cursor_position(relative_x , relative_y);
 }
 
-Pair<int,int>debug::out::get_position_info(void) { return make_pair(debug_info.x , debug_info.y); }
-void debug::out::set_background_color(debug_color_t background_color) { current_debug_interface()->set_background_color(background_color); }
-void debug::out::set_foreground_color(debug_color_t foreground_color) { current_debug_interface()->set_foreground_color(foreground_color); }
+__no_sanitize_address__ Pair<int,int>debug::out::get_position_info(void) { return make_pair(debug_info.x , debug_info.y); }
+__no_sanitize_address__ void debug::out::set_background_color(debug_color_t background_color) { current_debug_interface()->set_background_color(background_color); }
+__no_sanitize_address__ void debug::out::set_foreground_color(debug_color_t foreground_color) { current_debug_interface()->set_foreground_color(foreground_color); }
 
 debug_color_t debug::out::get_background_color(void) { return debug_info.background_color; }
 debug_color_t debug::out::get_foreground_color(void) { return debug_info.foreground_color; }
 
 void debug::dump_memory(max_t address , max_t length , bool debug_string) {
     byte *ptr = (byte *)address;
-    int margin = 5;
-    int char_per_line = 80;
-    int x = (char_per_line-margin-3)/4; // character 
-    debug::out::printf("dumping memory from 0x%X - 0x%X\n" , address , address+length);
-    int line_count = (length/x)+(length%x != 0);
-    debug::out::printf("x = %d\n" , x);
+    max_t margin = 5;
+    max_t char_per_line = 120;
+    max_t x = (char_per_line-margin-3)/4; // character 
+    debug::out::printf("dumping memory from 0x%llx - 0x%llx\n" , address , address+length);
+    max_t line_count = (length/x)+(length%x != 0);
 
-    // remove for display
     max_t max = 0;
     max_t offset = 0;
-    debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , false);
     for(max_t j = 1; j <= line_count; j++) {
         debug::out::printf("");
 
@@ -259,10 +256,8 @@ void debug::dump_memory(max_t address , max_t length , bool debug_string) {
         debug::out::print_str("\n");
         offset += x;
     }
-
-    debug::set_option(DEBUG_DISPLAY_FUNCTION|DEBUG_DISPLAY_INDENTATION , true);
 }
 
 extern "C" void __cxa_pure_virtual() {
-    debug::panic("Runtime Error : __cxa_pure_virtual invoked");
+    debug::panic("Runtime Error : __cxa_pure_virtual() invoked");
 }

@@ -48,7 +48,7 @@ struct PageEntry {
 };
 
 void SetPageEntry(struct PageEntry *PageEntry , unsigned int BaseAddressLow , unsigned int BaseAddressHigh , unsigned short Flags);
-unsigned int SetupPML4_custom(unsigned int start_address , struct MemoryMap *memmap);
+unsigned int SetupPML4_custom(unsigned int start_address , struct LoaderMemoryMap *memmap);
 void ModifyPML4Entry(unsigned int entry_addr , unsigned int pml4_entry , unsigned int base_low , unsigned int base_high , unsigned short flags);
 void ModifyPDPTEntry(unsigned int entry_addr , unsigned int pml4_entry , unsigned int pdpt_entry , unsigned int base_low , unsigned int base_high , unsigned short flags);
 void ModifyPDEntry(unsigned int entry_addr , unsigned int pml4_entry , unsigned int pdpt_entry , unsigned int pd_entry , unsigned int base_low , unsigned int base_high , unsigned short flags);

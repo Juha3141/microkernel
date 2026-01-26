@@ -4,20 +4,23 @@ ENTRY(kernel_main)
 #include <arch/configurations.hpp>
 
 SECTIONS {
-#ifndef CONFIG_KERNEL_RELOCATABLE
-  . = CONFIG_KERNEL_MINIMUM_ADDRESS;
-#endif
+  . = CONFIG_KERNEL_ADDRESS;
 
+  __kernel_start__ = .;
   .entry : {
     *(.entry) *(.entry.*)
+    . = ALIGN(4096);
   }
   .kernel_setup_stage : {
     *(.kernel_setup_stage) *(.kernel_setup_stage.*)
+    . = ALIGN(4096);
   }
+
   .text : {
     __text_start__ = .;
     *(.text) *(.text.*)
     __text_end__ = .;
+    . = ALIGN(4096);
   }
   .debug_interface ALIGN(8) : {
     __debug_interface_start__ = .;
@@ -59,4 +62,5 @@ SECTIONS {
     *(.comment .comment.*)
     *(.eh_frame)
   }
+  __kernel_end__ = .;
 }

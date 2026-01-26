@@ -3,6 +3,8 @@
 #include <stdarg.h>
 
 #include <intel_paging.h>
+#include <../../../../kernel/include/loader/loader_argument.hpp>
+#include <../../../../kernel/include/kernel/configurations.hpp>
 
 #define MULTIBOOT_HEADER_FLAG_VALUE  MULTIBOOT_PAGE_ALIGN
 
@@ -23,9 +25,6 @@ __attribute__ ((section(".multiboot_header"))) struct multiboot_header multiboot
 	.depth     = 32
 };
 
-#define KERNEL_STRUCTURE_STACKSIZE 8*1024*1024
-#define KERNEL_NEW_HIGHER_HALF     0xC0000000
-
 unsigned int align(address , alignment) { return ((((unsigned int)(address/alignment))+1)*alignment); }
 
 typedef struct m_mmap_x32 {
@@ -35,7 +34,7 @@ typedef struct m_mmap_x32 {
 	unsigned int type;
 }multiboot_memory_map_x32_t;
 
-int DetectMemory(struct MemoryMap *mmap , struct multiboot_info *MultibootInfo) {
+int DetectMemory(struct LoaderMemoryMap *mmap , struct multiboot_info *MultibootInfo) {
 	unsigned int start = MultibootInfo->mmap_addr;
 	unsigned int end = MultibootInfo->mmap_addr+MultibootInfo->mmap_length;
 	multiboot_memory_map_x32_t *entry = (multiboot_memory_map_x32_t *)start;
@@ -135,17 +134,17 @@ void Main(struct multiboot_info *multiboot_info) {
 	kernel_struct_addr += sizeof(struct LoaderArgument);
 	
 	// Global memory map
-	struct MemoryMap *memmap = (struct MemoryMap *)kernel_struct_addr;
-	loader_argument->memmap_location = (struct MemoryMap *)kernel_struct_addr;
+	struct LoaderMemoryMap *memmap = (struct LoaderMemoryMap *)kernel_struct_addr;
+	loader_argument->memmap_location = (struct LoaderMemoryMap *)kernel_struct_addr;
 	// initialize memory map area
-	memset(memmap , 0 , sizeof(struct MemoryMap)*32);
-	kernel_struct_addr += sizeof(struct MemoryMap)*32; // maximum 32
+	memset(memmap , 0 , sizeof(struct LoaderMemoryMap)*32);
+	kernel_struct_addr += sizeof(struct LoaderMemoryMap)*32; // maximum 32
 	
 	PrintString(0x07 , "memmap location : 0x%X\n" , memmap);
 	loader_argument->memmap_count = DetectMemory(memmap , multiboot_info);
 
 	loader_argument->kernel_stack_location = kernel_struct_addr;
-	loader_argument->kernel_stack_size = KERNEL_STRUCTURE_STACKSIZE;
+	loader_argument->kernel_stack_size = CONFIG_KERNEL_STACK_SIZE;
 	memset((unsigned char *)loader_argument->kernel_stack_location , 0 , loader_argument->kernel_stack_size);
 	kernel_struct_addr += loader_argument->kernel_stack_size; // 128kb kernel stack
 	
@@ -156,13 +155,8 @@ void Main(struct multiboot_info *multiboot_info) {
 	unsigned int pml4t_entry_end = SetupPML4_custom(kernel_struct_addr , memmap);
 	pml4t_entry_size = pml4t_entry_end-pml4t_entry_location;
 
-	// address should be aligned to 2MB
-	loader_argument->kernel_linear_location = KERNEL_NEW_HIGHER_HALF;
 	PrintString(0x07 , "kernel_page_size : %d\n" , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)));
-	RelocatePage(loader_argument->kernel_physical_location , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)) , loader_argument->kernel_linear_location , pml4t_entry_location , PAGE_PDENTRY_FLAGS_P|PAGE_PDENTRY_FLAGS_RW|PAGE_PDENTRY_FLAGS_PS);
-	// Make original kernel not present
-	// RelocatePage(loader_argument->kernel_address , ((loader_argument->kernel_size)/PAGE_SIZE)+((loader_argument->kernel_size%PAGE_SIZE != 0)) , loader_argument->kernel_address , loader_argument->pml4t_entry_location , PAGE_PDENTRY_FLAGS_PS);
-
+	
 	// graphic system!
 	loader_argument->video_mode                  = LOADER_ARGUMENT_VIDEOMODE_TEXTMODE;
 	loader_argument->dbg_text_framebuffer_addr   = 0xB8000;

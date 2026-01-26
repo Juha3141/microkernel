@@ -52,7 +52,7 @@ void debug_interface_0xb8000::set_background_color(debug_color_t color) { scrinf
 void debug_interface_0xb8000::set_foreground_color(debug_color_t color) { scrinfo.foreground_color = color; }
 
 void debug_interface_0xb8000::init(LoaderArgument *loader_argument) {
-    scrinfo.vmem = (unsigned char *)loader_argument->dbg_text_framebuffer_addr;
+    scrinfo.vmem = (unsigned char *)loader_argument->dbg_text_framebuffer_start;
     scrinfo.width = loader_argument->dbg_text_framebuffer_width;
     scrinfo.height = loader_argument->dbg_text_framebuffer_height;
 }

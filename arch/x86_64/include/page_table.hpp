@@ -17,27 +17,17 @@
 
 #define PML4_FLAGS_EXD      0x8000000000000000
 
-typedef unsigned long pml4_entry_t , pdpt_entry_t , pdentry_t , ptentry_t;
+typedef unsigned long x86_page_entry_t;
 
 struct PageTableData ARCHDEP {
-    max_t base_location;
-    
-    max_t pml4_entry_max_offset = 0;
-    pml4_entry_t *pml4_entry = nullptr;
-    
-    max_t pdpt_entry_max_offset = 0;
-    pdpt_entry_t *pdpt_entry = nullptr;
-    
-    max_t pd_entry_max_offset = 0;
-    pdentry_t    *pd_entry = nullptr;
-    
-    max_t pt_entry_max_offset = 0;
-    ptentry_t    *pt_entry = nullptr;
+    x86_page_entry_t *cr3_base = nullptr;
+    bool pml5_enabled = false;
 };
 
 extern "C" void enable_5_level_paging(void);
 
-qword set_pml4_entry(qword physical_address , dword flags);
+__attribute__ ((naked)) void  set_cr3_reg(qword cr3);
+__attribute__ ((naked)) qword  fetch_cr3_reg();
 __attribute__ ((naked)) void  set_cr4_reg(qword cr4);
 __attribute__ ((naked)) qword fetch_cr4_reg();
 

@@ -56,9 +56,9 @@ build_final_image: build_efi_executable
 	VBoxManage internalcommands sethduuid $(subst .img,.vdi,$(TARGET)) {156c71ac-fefa-41d8-85e9-c08f458c191e}
 
 run_os:
-	qemu-system-x86_64 -m 20000 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -cpu qemu64,+la57,phys-bits=52,host-phys-bits=off 
+	qemu-system-x86_64 -m 20000 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -cpu qemu64,+la57,phys-bits=52,host-phys-bits=off -no-reboot -no-shutdown
 
 debug_run_os:
-	qemu-system-x86_64 -m 16384 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -S -s -cpu qemu64,+la57,phys-bits=52,host-phys-bits=off
+	qemu-system-x86_64 -m 16384 -drive if=pflash,format=raw,unit=0,file=/usr/share/ovmf/OVMF.fd,readonly=on -drive file=$(TARGET),if=ide -monitor stdio -S -s -cpu qemu64,+la57,phys-bits=52,host-phys-bits=off -no-reboot -no-shutdown
 
 include $(ROOTDIR)/build_loader_common.mk

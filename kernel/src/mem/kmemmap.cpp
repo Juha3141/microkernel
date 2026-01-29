@@ -210,6 +210,16 @@ __no_sanitize_address__ static bool check_overwriting_allowed(const KernelMemory
 	return true;
 }
 
+__no_sanitize_address__ bool memory::add_kmemmap_entry(const LoaderMemoryMap& entry) {
+	max_t addr = ((max_t)entry.addr_high << 32)|entry.addr_low;
+	max_t length = ((max_t)entry.length_high << 32)|entry.length_low;
+	return add_kmemmap_entry((KernelMemoryMap) {
+		.start_address = addr , 
+		.end_address   = addr+length , 
+		.type = entry.type
+	});
+}
+
 /// @brief Add the entry into the kmemmap linked list. The add_kmemmap_entry() will ONLY overwrite the already existing 
 ///        entry if and ONLY if the entry that will be overwritten has MEMORYMAP_USABLE type.
 ///        No overwritting will be occurred if the area that will be overwritten has the same type as the 
@@ -251,21 +261,21 @@ __no_sanitize_address__ bool memory::add_kmemmap_entry(const KernelMemoryMap &en
 
 const char *memory::memmap_type_to_str(unsigned int type) {
     switch(type) {
-        case MEMORYMAP_USABLE: return "Usable";
-        case MEMORYMAP_RESERVED: return "Reserved";
-        case MEMORYMAP_ACPI_RECLAIM: return "ACPI Reclaimable";
-        case MEMORYMAP_ACPI_NVS: return "ACPI NVS";
-        case MEMORYMAP_UNUSABLE: return "Unusable";
-        case MEMORYMAP_EFI_LOADER: return "EFI Loader";
-        case MEMORYMAP_EFI_RUNTIME: return "EFI Runtime";
+        case MEMORYMAP_USABLE:           return "Usable";
+        case MEMORYMAP_RESERVED:         return "Reserved";
+        case MEMORYMAP_ACPI_RECLAIM:     return "ACPI Reclaimable";
+        case MEMORYMAP_ACPI_NVS:         return "ACPI NVS";
+        case MEMORYMAP_UNUSABLE:         return "Unusable";
+        case MEMORYMAP_EFI_LOADER:       return "EFI Loader";
+        case MEMORYMAP_EFI_RUNTIME:      return "EFI Runtime";
         case MEMORYMAP_EFI_BOOT_SERVICE: return "EFI Boot Service";
-        case MEMORYMAP_VIDEOMEM: return "Video Memory";
-        case MEMORYMAP_KERNEL_IMAGE: return "Kernel Image";
-        case MEMORYMAP_KERNEL_STACK: return "Kernel Stack";
-        case MEMORYMAP_LOADER_ARGUMENT: return "Loader Argument";
-        case MEMORYMAP_KSTRUCT_POOL: return "Kstruct Pool";
-        case MEMORYMAP_PT_SPACE: return "PT Space";
-        case MEMORYMAP_MISCELLANEOUS: return "Miscellaneous";
+        case MEMORYMAP_VIDEOMEM:         return "Video Memory";
+        case MEMORYMAP_KERNEL_IMAGE:     return "Kernel Image";
+        case MEMORYMAP_KERNEL_STACK:     return "Kernel Stack";
+        case MEMORYMAP_LOADER_ARGUMENT:  return "Loader Argument";
+        case MEMORYMAP_KSTRUCT_POOL:     return "Kstruct Pool";
+        case MEMORYMAP_KERNEL_PT_SPACE:  return "PT Space";
+        case MEMORYMAP_MISCELLANEOUS:    return "Miscellaneous";
     }
     return "Miscellaneous";
 }

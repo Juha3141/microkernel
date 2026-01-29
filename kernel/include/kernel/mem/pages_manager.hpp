@@ -22,7 +22,7 @@
 
 namespace page {
     typedef void* (* func_alloc_pt_space_t)(max_t size , max_t alignment);
-    void init_pt_space_allocator(LoaderArgument *loader_argument);
+    void init_pt_space_allocator();
     void *alloc_pt_space(max_t size , max_t alignment);
     memory::Boundary get_pt_space_boundary(void);
     

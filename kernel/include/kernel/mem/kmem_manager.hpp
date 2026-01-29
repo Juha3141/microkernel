@@ -107,8 +107,6 @@ namespace memory {
     /// @brief global_kmemmap(from KernelMemmapManager) : Linked-list style global kernel memory map
     /// @return returns global kmemmap
     __no_sanitize_address__ KernelMemoryMap *&global_kmemmap();
-    __no_sanitize_address__ void add_kmemmap_entry_overwrite(const KernelMemoryMap &entry);
-    __no_sanitize_address__ void add_kmemmap_entry_overwrite(const LoaderMemoryMap &entry);
     __no_sanitize_address__ bool add_kmemmap_entry(const KernelMemoryMap& entry);
     __no_sanitize_address__ bool add_kmemmap_entry(const LoaderMemoryMap& entry);
 

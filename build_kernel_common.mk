@@ -29,10 +29,10 @@ endif
 all: prepare $(MAINTARGETS) $(ASMTARGETS)
 
 prepare:
-	mkdir $(MAINBINARYFOLDER)
+	mkdir -p $(MAINBINARYFOLDER)
 
 ifneq "$(SUBDIRECTORIES)" ""
-	mkdir $(subst .,$(MAINBINARYFOLDER),$(SUBDIRECTORIES))
+	mkdir -p $(subst .,$(MAINBINARYFOLDER),$(SUBDIRECTORIES))
 	mkdir -p $(SUBDIRECTORIES)
 endif
 

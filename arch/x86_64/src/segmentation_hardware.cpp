@@ -88,7 +88,7 @@ void segmentation::hardware::discard_segment(segment_t segment) {
 }
 
 __attribute__ ((naked)) void segmentation::hardware::set_to_code_segment(segment_t segment) {
-    __asm__ ("mov rbx , [rsp]"); // Return address of current function (Stored in RSP)
+    __asm__ ("pop rbx");   // Return address of current function (Stored in RSP)
     __asm__ ("push rdi");  // Push new code segment
     __asm__ ("push rbx");               // Push the return address
 
@@ -96,7 +96,8 @@ __attribute__ ((naked)) void segmentation::hardware::set_to_code_segment(segment
 }
 
 __attribute__ ((naked)) void segmentation::hardware::set_to_code_segment(segment_t segment , ptr_t new_point) {
-    __asm__ ("push rdi");         // Push new code segment
+    __asm__ ("add rsp , 8"); // throw out the return address 
+    __asm__ ("push rdi");  // Push new code segment
     __asm__ ("push rsi");  // Push new entry point
 
     __asm__ ("retfq");                  // Set the code segment and jump to the address

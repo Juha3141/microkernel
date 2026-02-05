@@ -15,7 +15,11 @@
 #include <kernel/configurations.hpp>
 #include <kernel/sections.hpp>
 
-namespace debug{ namespace out { void printf(const char *string , ...); }}
+#define WORD_SIZE          (sizeof(void *))
+#define WORD_BITS          (WORD_SIZE*__CHAR_BIT__)
+#define ARCHITECTURE_LIMIT (((((unsigned long long)1)<<(WORD_BITS-1))-1)+(((unsigned long long)1)<<(WORD_BITS-1)))
+
+namespace debug  { namespace out { void printf(const char *string , ...); }}
 
 #define SINGLETON_FUNCTION get_self
 
@@ -40,13 +44,12 @@ static type *SINGLETON_FUNCTION(void) {\
 #define GLOBAL_OBJECT(type) type::SINGLETON_FUNCTION() 
 
 // Maximum calculatable data size, corresponds to architecture(16-bit,32-bit, ...)
-typedef unsigned long  max_t;
-typedef signed long    max_s_t;
+typedef unsigned long long  max_t;
 
-typedef unsigned long  qword;
-typedef unsigned long  uint64_t;
-typedef signed long    qword_s;
-typedef signed long    int64_t;
+typedef unsigned long long  qword;
+typedef unsigned long long  uint64_t;
+typedef signed long long    qword_s;
+typedef signed long long    int64_t;
 
 typedef unsigned int   dword;
 typedef unsigned int   uint32_t;
@@ -63,13 +66,19 @@ typedef signed char    int8_t;
 
 typedef max_t ptr_t;
 
-typedef unsigned int size_t;
+typedef unsigned long size_t;
 
 typedef void (*interrupt_handler_t)(struct Registers *regs);
 
 #define ARCHDEP // indicates that the function is architecture-dependent
+#define INVALID ARCHITECTURE_LIMIT
 
-#define offsetof(s, m)   ((max_t)&(((s *)0)->m))
-#define alignto(d , a)   ((d)+((a)-((d)%(a))))
+// definining the endianness
+#define little 1
+#define big    2
+
+#define offsetof(s, m)      ((max_t)&(((s *)0)->m))
+#define align_round_up(val , step)   ((step) == 0 ? (val) : ((val)%(step) == 0 ? (val) : ((val)+(step - (val)%(step)))))
+#define align_round_down(val , step) ((step) == 0 ? (val) : ((val)%(step) == 0 ? (val) : (val)-((val)%(step))))
 
 #endif

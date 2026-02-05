@@ -96,16 +96,17 @@ __asm__ ("iretq");
 
 #define EXCEPTION_HANDLER_FUNCTION_DEFINITION(handler_num) \
 __attribute__ ((naked)) void exception::handlers::handler##handler_num(void) {\
+    INTERRUPT_START \
     __asm__ ("mov rdi , %0"::"i"((max_t)handler_num)); \
-    __asm__ ("call %0"::"i"((max_t)archindep_general_exception_handler)); \
-    __asm__ ("iretq"); \
+    __asm__ ("call archindep_general_exception_handler"); \
+    INTERRUPT_END \
 }
 
 #define INTERRUPT_GENERAL_INT_WRAPPER_HANDLER_FUNCTION(handler_num) \
 __attribute__ ((naked)) void interrupt::handler::general_wrapper##handler_num(void) { \
     INTERRUPT_START \
     __asm__ ("mov rdi , %0"::"i"((max_t)handler_num)); \
-    __asm__ ("call %0"::"i"((max_t)archindep_general_interrupt_handler)); \
+    __asm__ ("call archindep_general_interrupt_handler"); \
     INTERRUPT_END \
 }
 
@@ -113,7 +114,7 @@ __attribute__ ((naked)) void interrupt::handler::general_wrapper##handler_num(vo
 __attribute__ ((naked)) void interrupt::handler::hardware_specified##handler_num(void) { \
     INTERRUPT_START \
     __asm__ ("mov rdi , %0"::"i"((max_t)handler_num)); \
-    __asm__ ("call %0"::"i"((max_t)archindep_hardware_specified_interrupt_handler)); \
+    __asm__ ("call archindep_hardware_specified_interrupt_handler"); \
     INTERRUPT_END \
 }
 

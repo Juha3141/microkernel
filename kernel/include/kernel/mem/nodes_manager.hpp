@@ -22,7 +22,6 @@ namespace memory {
         byte occupied:1;
         word signature:15;
     };
-    max_t align_address(max_t address , max_t alignment);
     // NodeManager : Manager of one big continuous segment
     class NodesManager {
         public:

@@ -35,8 +35,6 @@ struct debug_interface_framebuffer : debug::debug_interface {
     debug_color_t get_color_by_mode(debug_m mode) override;
     void set_background_color(debug_color_t background_color) override;
     void set_foreground_color(debug_color_t foreground_color) override;
-    debug_color_t get_background_color(void) override;
-    debug_color_t get_foreground_color(void) override;
 
     char interface_identifier[24];
 };
@@ -116,7 +114,7 @@ static void draw_character(int x , int y , debug_color_t background_color , debu
 }
 
 void debug_interface_framebuffer::init(struct LoaderArgument *loader_argument) {
-    scrinfo.vmem = (max_t)loader_argument->dbg_graphic_framebuffer_addr;
+    scrinfo.vmem = (max_t)loader_argument->dbg_graphic_framebuffer_start;
     scrinfo.width = loader_argument->dbg_graphic_framebuffer_width;
     scrinfo.height = loader_argument->dbg_graphic_framebuffer_height;
     scrinfo.depth = loader_argument->dbg_graphic_framebuffer_depth;
@@ -243,7 +241,5 @@ void debug_interface_framebuffer::move_cursor_position(int x , int y) {
 
 void debug_interface_framebuffer::set_background_color(debug_color_t color) { scrinfo.color_background = color; }
 void debug_interface_framebuffer::set_foreground_color(debug_color_t color) { scrinfo.color_foreground = color; }
-debug_color_t debug_interface_framebuffer::get_background_color(void) { return scrinfo.color_background; }
-debug_color_t debug_interface_framebuffer::get_foreground_color(void) { return scrinfo.color_foreground; }
 
 REGISTER_DEBUG_INTERFACE("framebuffer" , debug_interface_framebuffer)

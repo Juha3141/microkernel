@@ -1,4 +1,4 @@
-TARGET = config2hpp
+TARGET = configen
 
 OBJ = $(subst .cpp,.obj,$(wildcard *.cpp))
 

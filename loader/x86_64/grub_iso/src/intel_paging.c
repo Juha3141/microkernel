@@ -5,7 +5,7 @@ void SetPageEntry(struct PageEntry *PageEntry , unsigned int BaseAddressLow , un
     PageEntry->BaseAddressHigh = BaseAddressHigh;
 }
 
-unsigned int SetupPML4_custom(unsigned int start_address , struct MemoryMap *memmap) {
+unsigned int SetupPML4_custom(unsigned int start_address , struct LoaderMemoryMap *memmap) {
     // The entries exist linearly (adjacent to each other)
     // PML4 -> PDPT -> PD, 512 entries each
     // one PML4 consists 512 PDPT entry, one PDPT entry consists 512 PD entry

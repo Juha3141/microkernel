@@ -1,19 +1,28 @@
 ENTRY(kernel_main)
 
-INCLUDE arch_configurations.ld
+#include <kernel/configurations.hpp>
+#include <arch/configurations.hpp>
 
 SECTIONS {
-  /* temporarily change the kernel load address for debugging purpose */
-  . = 0x100000;
-  .entry 0x100000 : {
+  . = CONFIG_KERNEL_ADDRESS;
+
+  __kernel_start__ = .;
+  .entry : {
     *(.entry) *(.entry.*)
+    . = ALIGN(4096);
   }
-  .text ALIGN(4096) : {
+  .kernel_setup_stage : {
+    *(.kernel_setup_stage) *(.kernel_setup_stage.*)
+    . = ALIGN(4096);
+  }
+
+  .text : {
     __text_start__ = .;
     *(.text) *(.text.*)
     __text_end__ = .;
+    . = ALIGN(4096);
   }
-  .debug_interface ALIGN(4096) : {
+  .debug_interface ALIGN(8) : {
     __debug_interface_start__ = .;
     *(.debug_interface .debug_interface.*)
     __debug_interface_end__ = .;
@@ -28,24 +37,30 @@ SECTIONS {
     *(.fs_drivers_init) *(.fs_drivers_init.fs.*)
     __fs_drivers_init_end__ = .;
   }
-  .data ALIGN(4096) : {
+  .data ALIGN(8) : {
     __data_start__ = .;
     *(.data)
     __data_end__ = .;
   }
-  .bss ALIGN(4096) : {
+  .bss ALIGN(8) : {
     __bss_start__ = .;
     *(.bss) *(.rodata) *(.bss.*)
     __bss_end__ = .;
   }
-  .singleton_obj_ptrs ALIGN(4096) : {
+  .singleton_obj_ptrs ALIGN(8) : {
     __singleton_obj_ptrs_start__ = .;
     *(.singleton_obj_ptrs) *(.singleton_obj_ptrs.*)
     __singleton_obj_ptrs_end__ = .;
   }
-  .gnu.linkonce ALIGN(4096) : {
+  .gnu.linkonce ALIGN(8) : {
     __gnu_linkonce_start__ = .;
     *(.gnu.linkonce.*) 
     __gnu_linkonce_end__   = .;
   }
+  
+  /DISCARD/ : {
+    *(.comment .comment.*)
+    *(.eh_frame)
+  }
+  __kernel_end__ = .;
 }

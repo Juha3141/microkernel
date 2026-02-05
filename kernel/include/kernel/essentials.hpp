@@ -17,4 +17,6 @@
 #define MIN(X , Y) ((X) >= (Y) ? (Y) : (X))
 #define MAX(X , Y) ((X) >= (Y) ? (X) : (Y))
 
+#define __no_sanitize_address__ __attribute__((no_sanitize("address")))
+
 #endif

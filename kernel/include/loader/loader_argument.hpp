@@ -6,21 +6,29 @@
 #define MEMORYMAP_ACPI_RECLAIM 	3
 #define MEMORYMAP_ACPI_NVS     	4
 #define MEMORYMAP_UNUSABLE      5
-#define MEMORYMAP_MISCELLANEOUS 6
 // EFI dedicated
-#define MEMORYMAP_EFI_LOADER       7
-#define MEMORYMAP_EFI_RUNTIME      8
-#define MEMORYMAP_EFI_BOOT_SERVICE 9
+#define MEMORYMAP_EFI_LOADER       6
+#define MEMORYMAP_EFI_RUNTIME      7
+#define MEMORYMAP_EFI_BOOT_SERVICE 8
+// Video memory
+#define MEMORYMAP_VIDEOMEM         9
+#define MEMORYMAP_KERNEL_IMAGE     10
+#define MEMORYMAP_KERNEL_STACK     11
+#define MEMORYMAP_LOADER_ARGUMENT  12
+#define MEMORYMAP_KSTRUCT_POOL     13
+#define MEMORYMAP_KERNEL_PT_SPACE  14
+#define MEMORYMAP_MISCELLANEOUS    15
 
-#define LOADER_ARGUMENT_SIGNATURE 0xC001D00D
+#define LOADER_ARGUMENT_SIGNATURE 0x31415926
 #define LOADER_ARGUMENT_LENGTH    (((unsigned long long)(sizeof(struct LoaderArgument)/4096)+(sizeof(struct LoaderArgument)%4096 ? 1 : 0))*4096)    // 500kB
 
 #define LOADER_ARGUMENT_VIDEOMODE_NA       0x00 // hmm...
 #define LOADER_ARGUMENT_VIDEOMODE_TEXTMODE 0x01
 #define LOADER_ARGUMENT_VIDEOMODE_GRAPHIC  0x02
-#define LOADER_ARGUMENT_VIDEOMODE_MIXED    0x03 // Text mode + Graphic
+#define LOADER_ARGUMENT_VIDEOMODE_MIXED    \
+	(LOADER_ARGUMENT_VIDEOMODE_TEXTMODE|LOADER_ARGUMENT_VIDEOMODE_GRAPHIC) // Text mode + Graphic
 
-struct MemoryMap {
+struct LoaderMemoryMap {
 	unsigned int addr_low , addr_high;     // For 32-bit compatibility
 	unsigned int length_low , length_high;
 	unsigned int type;
@@ -33,6 +41,7 @@ struct __attribute__ ((packed)) LoaderArgument {
     unsigned int kernel_size;              /* 8 */
 	
     unsigned int memmap_count;             /* 12 */
+	// memory map passed by loader argument is an array of LoaderMemoryMap
 	unsigned int memmap_location;          /* 16 */
 
 	unsigned int kernel_stack_location;    /* 20 */
@@ -46,18 +55,18 @@ struct __attribute__ ((packed)) LoaderArgument {
 	unsigned int loader_argument_location; /* 36 */
 	unsigned int loader_argument_size;     /* 40 */
 
-	unsigned int kernel_linear_location;   /* 44 */
-
     unsigned char video_mode;              // LOADER_ARGUMENT_VIDEOMODE
 
     // text framebuffer(if available)
-	unsigned int dbg_text_framebuffer_addr;
+	unsigned int dbg_text_framebuffer_start;
+	unsigned int dbg_text_framebuffer_end;
 	unsigned int dbg_text_framebuffer_width;
 	unsigned int dbg_text_framebuffer_height;
     unsigned int dbg_text_framebuffer_depth;
 
     // graphic framebuffer(if available)
-    unsigned int dbg_graphic_framebuffer_addr;
+	unsigned int dbg_graphic_framebuffer_start;
+	unsigned int dbg_graphic_framebuffer_end;
     unsigned int dbg_graphic_framebuffer_width;
     unsigned int dbg_graphic_framebuffer_height;
     unsigned int dbg_graphic_framebuffer_depth;

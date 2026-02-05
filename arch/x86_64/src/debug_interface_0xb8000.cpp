@@ -24,8 +24,6 @@ struct debug_interface_0xb8000 : debug::debug_interface {
     debug_color_t get_color_by_mode(debug_m mode) override;
     void set_background_color(debug_color_t background_color) override;
     void set_foreground_color(debug_color_t foreground_color) override;
-    debug_color_t get_background_color(void) override;
-    debug_color_t get_foreground_color(void) override;
 
     char interface_identifier[24];
 };
@@ -52,11 +50,9 @@ void debug_interface_0xb8000::move_cursor_position(int x , int y) {
 
 void debug_interface_0xb8000::set_background_color(debug_color_t color) { scrinfo.background_color = color; }
 void debug_interface_0xb8000::set_foreground_color(debug_color_t color) { scrinfo.foreground_color = color; }
-debug_color_t debug_interface_0xb8000::get_background_color(void) { return scrinfo.background_color; }
-debug_color_t debug_interface_0xb8000::get_foreground_color(void) { return scrinfo.foreground_color; }
 
 void debug_interface_0xb8000::init(LoaderArgument *loader_argument) {
-    scrinfo.vmem = (unsigned char *)loader_argument->dbg_text_framebuffer_addr;
+    scrinfo.vmem = (unsigned char *)loader_argument->dbg_text_framebuffer_start;
     scrinfo.width = loader_argument->dbg_text_framebuffer_width;
     scrinfo.height = loader_argument->dbg_text_framebuffer_height;
 }

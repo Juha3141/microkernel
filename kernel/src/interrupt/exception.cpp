@@ -50,9 +50,11 @@ void exception::init(void) {
     exception::hardware::register_hardware_exceptions();
 }
 
-void exception::archindep_general_exception_handler(int handler_id) {
+void exception::archindep_general_exception_handler(int handler_id , Registers *regs) {
     ExceptionManager *exception_mgr = ExceptionManager::get_self();
     debug::out::printf(DEBUG_ERROR , "Exception, handler_id : %d, name : %s\n" , handler_id , exception_mgr->get(handler_id).name);
+    
+    exception::hardware::archdep_general_exception_handler(handler_id , regs);
     interrupt::hardware::disable();
     while(1) {
         

@@ -28,8 +28,6 @@ log.txt
 *.so
 *.efi
 
-gnu-efi
-gnu-efi/*
 memmap.txt
 memory_layout.meml
 vbox_debug.sh

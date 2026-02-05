@@ -60,6 +60,8 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
     debug::out::printf("Kernel stack size : %dkB\n" , CONFIG_KERNEL_STACK_SIZE/1024);
     debug::out::printf("Kernel stack page count  : %d pages\n" , kernel_stack_page_count);
 #endif
+
+#if 0
     PageTableData page_table_data;
 
     KernelMemoryMap *kmemmap_ptr;
@@ -113,6 +115,7 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
         maximum_memory_addr = MAX(maximum_memory_addr , kmemmap_ptr->end_address);
         addr = align_round_up(addr , page_size);
 
+        // FIXME
         max_t actual_page_count = MIN(mapped_page_count+region_page_count , kasan_page_count)-mapped_page_count;
         mapped_page_count += actual_page_count;
 
@@ -153,15 +156,19 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
     }
 #endif
 
-    for(; i < loader_argument->memmap_count; i++) {
-        max_t len = kernel_memmap[i].end_address - kernel_memmap[i].start_address;
-        max_t addr = kernel_memmap[i].start_address;
+    kmemmap_ptr = memory::global_kmemmap();
+    while(kmemmap_ptr != nullptr) {
+        max_t addr = kmemmap_ptr->start_address;
+        max_t len  = (kmemmap_ptr->end_address - kmemmap_ptr->start_address);
+
         addr = align_round_up(addr , page_size);
         maximum_memory_addr = MAX(maximum_memory_addr , len+addr);
 
         max_t region_page_count = len/page_size;
-        if(region_page_count == 0)             continue;  // skip if the size of the memory region is either zero or smaller than page size
-        if(kernel_memmap[i].type != MEMORYMAP_USABLE) continue;
+        
+        // skip if the size of the memory region is either zero or smaller than page size
+        if(region_page_count == 0)                { kmemmap_ptr = kmemmap_ptr->next; continue; }
+        if(kmemmap_ptr->type != MEMORYMAP_USABLE) { kmemmap_ptr = kmemmap_ptr->next; continue; }
 #ifdef ENABLE_DEBUG_FUNCTIONS
         debug::out::printf("Memory 0x%llX ~ 0x%llX, page count : %d ===> Mapped to 0x%016llX\n" , addr , addr+len , region_page_count , linear_address_mapping_location);
 #endif
@@ -176,6 +183,7 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
         );
 
         linear_address_mapping_location += region_page_count*page_size;
+        kmemmap_ptr = kmemmap_ptr->next;
     }
     max_t kernel_pool_end = linear_address_mapping_location;
 #ifdef ENABLE_DEBUG_FUNCTIONS
@@ -262,6 +270,7 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
     kasan::init(kasan_size , CONFIG_KERNEL_HIGHERHALF_ADDRESS , kernel_pool_end);
 #endif
 
+#endif
     while(1) {
         ;
     }

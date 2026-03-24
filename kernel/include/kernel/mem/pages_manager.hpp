@@ -13,6 +13,15 @@
 #include <kernel/mem/kmem_manager.hpp>
 #include <page_table.hpp>
 
+/// @brief If the kernel is configured to use large page, this value equals to CONFIG_LARGE_PAGE_SIZE.
+///        Otherwise, it's equivalent to CONFIG_PAGE_SIZE.
+constexpr int DEFAULT_PAGE_SIZE = 
+#if CONFIG_USE_LARGE_PAGE == yes
+            CONFIG_LARGE_PAGE_SIZE;
+#else
+            CONFIG_PAGE_SIZE;
+#endif
+
 #define PAGE_ENTRY_FLAGS_PRESENT   0x01
 #define PAGE_ENTRY_FLAGS_KERNEL    0x02
 #define PAGE_ENTRY_FLAGS_USER      0x04

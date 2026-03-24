@@ -36,7 +36,7 @@ void memory::get_kstruct_boundary(struct Boundary &boundary) {
 	memcpy(&boundary , &kstruct_mgr.boundary , sizeof(struct Boundary));
 }
 #if 0
-void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , struct LoaderArgument *loader_argument) {
+void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , LoaderArgument *loader_argument) {
 	debug::push_function("d_kstruct_b");
 	struct LoaderMemoryMap *memmap = (struct LoaderMemoryMap *)((max_t)loader_argument->memmap_ptr);
 	max_t kernel_end_address = loader_argument->total_kernel_area_end;
@@ -56,7 +56,7 @@ void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary ,
 		&& loader_argument->total_kernel_area_start >= address && loader_argument->total_kernel_area_start <= address+length) { // is kernel inside?
 			// determine boundary
 			// If segment cannot hold more than designated size, just use maximum size for the segment
-			new_mboundary.end_address = MIN(address+length , new_mboundary.start_address+LOADER_ARGUMENT_LENGTH);
+			new_mboundary.end_address = min(address+length , new_mboundary.start_address+LOADER_ARGUMENT_LENGTH);
 			debug::out::printf(DEBUG_INFO , "kstruct_boundary : 0x%X~0x%X\n" , new_mboundary.start_address , new_mboundary.end_address);
 			debug::pop_function();
 			return;

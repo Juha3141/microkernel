@@ -486,7 +486,7 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
     // fill out basic informations
     block_size = file_loc->block_device->geometry.block_size;
     open_offset = who_opened->object->open_offset;
-    end_offset = MIN(who_opened->object->maximum_offset , open_offset+size);
+    end_offset = min(who_opened->object->maximum_offset , open_offset+size);
     block_start = open_offset/block_size;
     block_end = (open_offset+size)/block_size;
     block_count = block_end-block_start+1;
@@ -509,7 +509,7 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
         caches[b-block_start] = get_cache_data(file , b , who_opened->object);
         debug::out::printf("cache : 0x%X\n" , caches[b-block_start]);
         max_t boff = off%block_size;
-        max_t bsize = MIN(end_offset-off , block_size-boff);
+        max_t bsize = min(end_offset-off , block_size-boff);
         memcpy((void *)((max_t)buffer+buffer_offset) , (void *)((max_t)caches[b-block_start]->block+boff) , bsize);
         buffer_offset += bsize;
         off += bsize;
@@ -596,7 +596,7 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
         caches[b-block_start]->flushed = false;
 
         max_t boff = off%block_size;
-        max_t bsize = MIN((open_offset+size)-off , block_size-boff);
+        max_t bsize = min((open_offset+size)-off , block_size-boff);
         debug::out::printf("cache : 0x%X\n" , caches[b-block_start]);
         debug::out::printf("buffer_offset = %d\n" , buffer_offset);
         debug::out::printf("block_start   = %d\n" , block_start);
@@ -608,7 +608,7 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
     }
     debug::out::printf("write_size : %d\n" , write_size);
     who_opened->object->open_offset += write_size;
-    who_opened->object->maximum_offset = MAX(who_opened->object->open_offset , who_opened->object->maximum_offset);
+    who_opened->object->maximum_offset = max(who_opened->object->open_offset , who_opened->object->maximum_offset);
     return write_size;
 }
 
@@ -633,7 +633,7 @@ long vfs::lseek(file_info *file , long cursor , int option) {
             who_opened->object->open_offset += cursor;
             break;
     }
-    who_opened->object->open_offset = MIN(who_opened->object->open_offset , who_opened->object->maximum_offset);
+    who_opened->object->open_offset = min(who_opened->object->open_offset , who_opened->object->maximum_offset);
     debug::out::printf(DEBUG_TEXT , "(next) open_offset   = %d\n" , who_opened->object->open_offset);
     return who_opened->object->open_offset;
 }

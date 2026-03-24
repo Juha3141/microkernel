@@ -226,12 +226,12 @@ void debug::dump_memory(max_t address , max_t length , bool debug_string) {
         debug::out::printf("");
 
         unsigned char *old_ptr = ptr;
-        max_t count = MIN(x , length-offset);
+        max_t count = min(x , length-offset);
         for(max_t i = 1; i <= count; i++) {
             debug::out::raw_printf("%02X " , *ptr);
             ptr++;
         }
-        max = MAX(max , count);
+        max = max(max , count);
         if(count < max) {
             for(max_t i = 0; i < max-count; i++) {
                 debug::out::raw_printf("   ");

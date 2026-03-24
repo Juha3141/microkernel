@@ -69,7 +69,7 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 	}
 	memory_usage += size+sizeof(struct Node);
 	// Return the actual available address : Node address + size of the node structure
-	maximum_node_addr = MAX((max_t)maximum_node_addr , (max_t)node);
+	maximum_node_addr = max((max_t)maximum_node_addr , (max_t)node);
 	return (((max_t)node+sizeof(struct Node)));			// Actual address that is going to be used : 
 																		// Address after area of node
 }

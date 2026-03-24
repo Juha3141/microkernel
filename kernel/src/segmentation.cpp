@@ -129,12 +129,12 @@ void segmentation::set_to_data_segment(const char *segment_name) {
 #else
 
 void segmentation::init(void) {}
-bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) { CONFIG_WARNING_NO_SEGMENTATION return false; }
-bool segmentation::get_segment_info(segment_t segment_value , segmentation::segment_info_t &segment_info) { CONFIG_WARNING_NO_SEGMENTATION return false; }
-segment_t segmentation::get_segment_value(const char *segment_name) { CONFIG_WARNING_NO_SEGMENTATION return 0x00; }
-bool segmentation::register_segment(const char *segment_name , max_t start_address , max_t length , word segment_type , max_t task_id) { CONFIG_WARNING_NO_SEGMENTATION return false; }
-bool segmentation::discard_segment(const char *segment_name) { CONFIG_WARNING_NO_SEGMENTATION return false; }
-void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) { CONFIG_WARNING_NO_SEGMENTATION }
-void segmentation::set_to_data_segment(const char *segment_name) { CONFIG_WARNING_NO_SEGMENTATION }
+bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) { debug::out::printf("Unimplemented function called : Segmentation feature is disabled\n"); return false; }
+bool segmentation::get_segment_info(segment_t segment_value , segmentation::segment_info_t &segment_info) { debug::out::printf("Unimplemented function called : Segmentation feature is disabled\n"); return false; }
+segment_t segmentation::get_segment_value(const char *segment_name) { debug::out::printf("Unimplemented function called : Segmentation feature is disabled\n"); return 0x00; }
+bool segmentation::register_segment(const char *segment_name , max_t start_address , max_t length , word segment_type , max_t task_id) { debug::out::printf("Unimplemented function called : Segmentation feature is disabled\n"); return false; }
+bool segmentation::discard_segment(const char *segment_name) { debug::out::printf("Unimplemented function called : Segmentation feature is disabled\n"); return false; }
+void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) { debug::out::printf("Unimplemented function called : Segmentation feature is disabled\n"); }
+void segmentation::set_to_data_segment(const char *segment_name) { debug::out::printf("Unimplemented function called : Segmentation feature is disabled\n"); }
 
 #endif

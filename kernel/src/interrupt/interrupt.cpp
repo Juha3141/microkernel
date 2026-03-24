@@ -219,15 +219,15 @@ extern "C" void archindep_hardware_specified_interrupt_handler(int handler_num ,
 
 #else 
 
-void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) { CONFIG_WARNING_NO_INTERRUPT }
-interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) { CONFIG_WARNING_NO_INTERRUPT return 0x00; }
+void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); }
+interrupt_handler_t interrupt::HardwareSpecifiedInterruptManager::register_interrupt_name(const char *name , interrupt_handler_t handler) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); return 0x00; }
 void interrupt::init(void) { interrupt::hardware::disable(); }
-bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option , bool wrapper) { CONFIG_WARNING_NO_INTERRUPT return false; }
-bool interrupt::general::discard_interrupt(int number) { CONFIG_WARNING_NO_INTERRUPT return false; }
-void interrupt::general::set_interrupt_mask(int number , bool masked) { CONFIG_WARNING_NO_INTERRUPT }
-bool interrupt::register_interrupt_by_info(const interrupt::interrupt_info_t int_info , interrupt_handler_t handler , word interrupt_option) { CONFIG_WARNING_NO_INTERRUPT return false; }
-bool interrupt::discard_interrupt_by_info(const interrupt::interrupt_info_t int_info) { CONFIG_WARNING_NO_INTERRUPT return false; }
-interrupt_handler_t interrupt::hardware_specified::allocate_handler(const char *name) { CONFIG_WARNING_NO_INTERRUPT return 0x00; }
-bool interrupt::hardware_specified::discard_interrupt(const char *name) { CONFIG_WARNING_NO_INTERRUPT return false; }
+bool interrupt::general::register_interrupt(int number , interrupt_handler_t handler , word interrupt_option , bool wrapper) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); return false; }
+bool interrupt::general::discard_interrupt(int number) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); return false; }
+void interrupt::general::set_interrupt_mask(int number , bool masked) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); }
+bool interrupt::register_interrupt_by_info(const interrupt::interrupt_info_t int_info , interrupt_handler_t handler , word interrupt_option) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); return false; }
+bool interrupt::discard_interrupt_by_info(const interrupt::interrupt_info_t int_info) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); return false; }
+interrupt_handler_t interrupt::hardware_specified::allocate_handler(const char *name) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); return 0x00; }
+bool interrupt::hardware_specified::discard_interrupt(const char *name) { debug::out::printf(DEBUG_WARNING , "Unimplemented function called : interrupt feature is disabled\n"); return false; }
 
 #endif

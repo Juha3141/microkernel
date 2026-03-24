@@ -23,19 +23,17 @@
 #define CONFIG_USE_SEGMENTATION
 #define CONFIG_SEGMENTATION_SEGMENT_MAXCOUNT 64
 #define CONFIG_SEGMENTATION_TASKSEG_MODE yes
-#define CONFIG_WARNING_NO_SEGMENTATION WARNING("Unused function called : segmentation is disabled\n");
+
 
 /****************** CONFIG_INTERRUPT ******************/
 #define CONFIG_USE_INTERRUPT
 #define CONFIG_INTERRUPT_GENERAL_MAXCOUNT 256
-#define CONFIG_WARNING_NO_INTERRUPT WARNING("Unused function called : interrupt is disabled\n");
+
 
 /****************** CONFIG_KASAN ******************/
 #define CONFIG_USE_KASAN
-#define CONFIG_WARNING_NO_KASAN WARNING("Unused function called: KASan is disabled\n");
 
 /****************** CONFIG_PAGING ******************/
 #define CONFIG_USE_PAGING
-#define CONFIG_WARNING_NO_PAGING WARNING("Unused function called : paging is disabled\n");
 
 #endif

@@ -24,7 +24,7 @@ struct FormatData {
 /// @param local_i local_i 
 /// @return flag
 char get_flag(const char *fmt , int &local_i) {
-    char flag_list[] = {'-' , '+' , '#' , '0'};
+    char flag_list[] = {'-' , '+' , '#' , '0' , ' '};
     for(size_t i = 0; i < sizeof(flag_list); i++) {
         if(fmt[local_i] == flag_list[i]) {
             return fmt[local_i++];

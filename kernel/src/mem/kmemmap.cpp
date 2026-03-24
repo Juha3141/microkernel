@@ -222,7 +222,7 @@ __no_sanitize_address__ bool memory::add_kmemmap_entry(const LoaderMemoryMap& en
 
 /// @brief Add the entry into the kmemmap linked list. The add_kmemmap_entry() will ONLY overwrite the already existing 
 ///        entry if and ONLY if the entry that will be overwritten has MEMORYMAP_USABLE type.
-///        No overwritting will be occurred if the area that will be overwritten has the same type as the 
+///        No overwritting will occurr if the area that will be overwritten has the same type as the 
 ///        entry given in the argument.
 /// @param entry 
 /// @return Return true if it successfully added(or overwritten) the entry, false if failed
@@ -275,6 +275,7 @@ const char *memory::memmap_type_to_str(unsigned int type) {
         case MEMORYMAP_LOADER_ARGUMENT:  return "Loader Argument";
         case MEMORYMAP_KSTRUCT_POOL:     return "Kstruct Pool";
         case MEMORYMAP_KERNEL_PT_SPACE:  return "PT Space";
+        case MEMORYMAP_KASAN_SHADOWMEM:  return "KASan Shadow Memory";
         case MEMORYMAP_MISCELLANEOUS:    return "Miscellaneous";
     }
     return "Miscellaneous";

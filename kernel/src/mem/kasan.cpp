@@ -63,7 +63,7 @@ struct kasan_global_vars {
 
 // 'globals' is an array of structures describing 'n' globals
 KASAN_INTERNALS_INTERFACE void __asan_register_globals(struct kasan_global_info *globals , kasan::uptr n) {
-
+    
 }
 
 KASAN_INTERNALS_INTERFACE void __asan_unregister_globals(struct kasan_global_info *globals) {
@@ -81,24 +81,48 @@ KASAN_INTERNALS_INTERFACE void __asan_after_dynamic_init() {
 // We don't have to care about handling no return function, because we have -Werror=return-type
 KASAN_INTERNALS_INTERFACE void __asan_handle_no_return() {}
 
-void kasan::posion_address(max_t linear_address , max_t size) {
+void kasan::poison_address(max_t linear_address , max_t size , byte value) {
+    max_t shadow_start = KASAN_LADDR_TO_SHADOW(linear_address);
+    max_t shadow_end   = KASAN_LADDR_TO_SHADOW(linear_address+size-1)+1;
+    max_t shadow_len = shadow_end-shadow_start;
 
+    memset((void *)shadow_start , value , shadow_len);
 }
 
 void kasan::unpoison_address(max_t linear_address , max_t size) {
+    poison_address(linear_address , size , KASAN_SHADOW_MAGIC_UNPOISONED);
 
+    
 }
 
-// Sets of bytes of the given range of the shadow memory into specific value
-void kasan::set_shadow_with_value(kasan::uptr addr , kasan::uptr size , byte value) {
+unsigned long get_poisoned_shadow_address(max_t linear_address , max_t size) {
+    max_t shadow_start_addr = KASAN_LADDR_TO_SHADOW(linear_address);
+    max_t shadow_end_addr   = KASAN_LADDR_TO_SHADOW(linear_address+size-1)+1;
+    max_t nonzero_shadow_addr = 0;
 
+    for(max_t addr = shadow_start_addr; addr < shadow_end_addr; addr++) {
+        if(*(byte*)addr != 0x00) {
+            nonzero_shadow_addr = addr;
+            break;
+        }
+    }
+    if(nonzero_shadow_addr) {
+        
+    }
+    return 0;
 }
 
 bool kasan::check_address_validity(max_t linear_address , max_t size) {
     if(!is_enabled()) return true;
     if(size == 0)     return true;
-    // FIXME : I might cause an issue in the future
-    if(linear_address > KASAN_NULLPTR_PROTECTION && linear_address < kasan_vma_start) return true;
+    if(linear_address < KASAN_NULLPTR_PROTECTION) return false;
+    
+    // To-do : out of boundary?
+    if(linear_address < kasan_vma_start) {
+        return true;
+    }
+    
+    
 
     return true;
 }
@@ -116,6 +140,14 @@ KASAN_INTERNALS_INTERFACE void __asan_poison_memory_region(void const volatile *
 }
 
 KASAN_INTERNALS_INTERFACE void __asan_unpoison_memory_region(void const volatile *addr , kasan::uptr size) {
+    
+}
+
+KASAN_INTERNALS_INTERFACE void __asan_alloca_poison(void *addr , kasan::uptr size) {
+
+}
+
+KASAN_INTERNALS_INTERFACE void __asan_allocas_unpoison(void *stack_top , kasan::uptr stack_bottom) {
     
 }
 
@@ -170,7 +202,7 @@ KASAN_INTERNALS_INTERFACE void *__asan_memmove(void *dest , const void * src , k
 
 #define DECLARE_ASAN_SET_SHADOW(value) \
 KASAN_INTERNALS_INTERFACE void __asan_set_shadow_##value(kasan::uptr addr , kasan::uptr size) { \
-    kasan::set_shadow_with_value(addr , size , 0x##value); }
+    memset((void *)addr , 0x##value , size); }
 
 DECLARE_ASAN_SET_SHADOW(00)
 DECLARE_ASAN_SET_SHADOW(f1)

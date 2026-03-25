@@ -143,11 +143,13 @@ inline static bool overwrite_applicable(KernelMemoryMap *ptr , const KernelMemor
 /// @param entry 
 /// @return 
 __no_sanitize_address__ static bool kmemmap_entry_overwrite(KernelMemoryMap *ptr , const KernelMemoryMap &entry) {
-	bool overlap_front = (entry.start_address > ptr->start_address && entry.start_address < ptr->end_address);
-	bool overlap_back  = (entry.end_address   > ptr->start_address && entry.end_address   < ptr->end_address);
-	if(!overlap_front && !overlap_back) return false;
+	bool overlap_front = (entry.start_address >= ptr->start_address && entry.start_address <= ptr->end_address);
+	bool overlap_back  = (entry.end_address   >= ptr->start_address && entry.end_address   <= ptr->end_address);
+	if(!overlap_front && !overlap_back) {
+		return false;
+	}
 	if(!overwrite_applicable(ptr , entry)) {
-		debug::out::printf("(kmemmap_entry_overwrite) Warning : unsable to overwrite to kmemmap entry [0x%llx - 0x%llx, %d], which is not a free pool\n" , ptr->start_address , ptr->end_address , ptr->type);
+		// debug::out::printf("(kmemmap_entry_overwrite) Warning : unsable to overwrite to kmemmap entry [0x%llx - 0x%llx, %s], which is not a free pool\n" , ptr->start_address , ptr->end_address , memory::memmap_type_to_str(ptr->type));
 		return false;
 	}
 
@@ -231,6 +233,7 @@ __no_sanitize_address__ bool memory::add_kmemmap_entry(const KernelMemoryMap &en
 	 * (That is because contents in RAM is random in real life, not initialized to nullptr)
 	 * Thus, for that reason, we use is_kstruct_allocated_obj to determine whether it's valid or not. 
 	 */
+	if(entry.end_address == entry.start_address) return false;
 	if(!is_kstruct_allocated_obj(kmemmap)) {
 		kmemmap = kmemmap_entry_alloc(entry);
 		kmemmap->next = nullptr;

@@ -74,6 +74,8 @@ memory::Boundary page::get_pt_space_boundary(void) {
 }
 
 
+// To-do : create something similar to kmemmap_manager that manages what memory is mapped to which
+// Maybe it would be a good idea to store it in the page_table_data? or centralized system?
 __no_sanitize_address__ void page::map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
      , func_alloc_pt_space_t alloc_func) {
     for(max_t i = 0; i < page_count; i++) {

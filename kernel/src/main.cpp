@@ -17,7 +17,7 @@
 #include <pair.hpp>
 #include <arch/switch_context.hpp>
 
-extern "C" void kernel_main(struct LoaderArgument *loader_argument) {
+extern "C" void kernel_main(LoaderArgument *loader_argument) {
     if(loader_argument->signature != LOADER_ARGUMENT_SIGNATURE) {
         while(1) { ; }
     }

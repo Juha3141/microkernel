@@ -16,17 +16,17 @@
 #include <random.hpp>
 #include <hash_table.hpp>
 #include <pair.hpp>
-#include <arch/switch_context.hpp>
 
 // The page count threshold of using CONFIG_LARGE_PAGE_SIZE instead of CONFIG_PAGE_SIZE
-#define PAGE_COUNT_THRESHOLD 128
+// 
+#define PAGE_COUNT_THRESHOLD (CONFIG_LARGE_PAGE_SIZE/CONFIG_PAGE_SIZE)*4
 #define ENABLE_DEBUG_FUNCTIONS
 
 extern "C" void kernel_main(LoaderArgument *loader_argument);
-max_t get_kernel_memory_pool_size(KernelMemoryMap *memmap , max_t memmap_count , max_t page_size);
-void  map_loader_argument_video_memory(LoaderArgument *loader_argument , KernelMemoryMap *memmap , max_t memmap_count , PageTableData &page_table_data , max_t page_size);
+__no_sanitize_address__ max_t get_kernel_memory_pool_size();
+__no_sanitize_address__ max_t setup_kasan_shadowmem(LoaderArgument *loader_argument , PageTableData &page_table_data);
 
-extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct LoaderArgument *loader_argument) {
+extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(LoaderArgument *loader_argument) {
     if(loader_argument->signature != LOADER_ARGUMENT_SIGNATURE) {
         while(1) { ; }
     }
@@ -41,18 +41,12 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
     page::init_pt_space_allocator();
 
     // determine page size, use large page if applicable
-    max_t page_size = 
-#if CONFIG_USE_LARGE_PAGE == yes
-            CONFIG_LARGE_PAGE_SIZE;
-#else
-            CONFIG_PAGE_SIZE;
-#endif
 
     extern char __kernel_start__, __kernel_end__;
     max_t kernel_size = (&__kernel_end__-&__kernel_start__);
-    max_t kernel_page_count = align_round_up(kernel_size , page_size)/page_size;
+    max_t kernel_page_count = align_round_up(kernel_size , DEFAULT_PAGE_SIZE)/DEFAULT_PAGE_SIZE;
 
-    max_t kernel_stack_page_count = align_round_up(loader_argument->kernel_stack_size , page_size)/page_size;
+    max_t kernel_stack_page_count = align_round_up(loader_argument->kernel_stack_size , DEFAULT_PAGE_SIZE)/DEFAULT_PAGE_SIZE;
 
 #ifdef ENABLE_DEBUG_FUNCTIONS
     debug::out::printf("Kernel size       : %dkB\n" , kernel_size/1024);
@@ -61,7 +55,6 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
     debug::out::printf("Kernel stack page count  : %d pages\n" , kernel_stack_page_count);
 #endif
 
-#if 0
     PageTableData page_table_data;
 
     KernelMemoryMap *kmemmap_ptr;
@@ -70,142 +63,85 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
     max_t maximum_memory_addr = 0;
     max_t linear_address_mapping_location 
         = CONFIG_KERNEL_HIGHERHALF_ADDRESS+
-        loader_argument->kernel_physical_location+(kernel_page_count*page_size)+
+        loader_argument->kernel_physical_location+(kernel_page_count*DEFAULT_PAGE_SIZE)+
         CONFIG_KERNEL_STACK_SIZE;
     max_t kernel_pool_start = linear_address_mapping_location;
 
-    max_t kernel_memory_pool_size = get_kernel_memory_pool_size();
-#ifdef CONFIG_USE_KASAN
-    // Get a space for KASan first
-    max_t kasan_linear_addr_start = CONFIG_KERNEL_KASAN_VMA;
-    max_t kasan_size = align_round_up(kernel_memory_pool_size/(KASAN_GRANUL_SIZE+1) , page_size);
-    kernel_memory_pool_size -= kasan_size;
-#endif
-
-
-#ifdef ENABLE_DEBUG_FUNCTIONS
-    debug::out::printf("KASan shadow memory size  : %lldMB\n" , kasan_size/1024/1024);
-    debug::out::printf("KASan linear address      : 0x%llx\n" , kasan_linear_addr_start);
-#endif
-
     max_t mapped_page_count = 0;
     size_t i = 0;
+
 #ifdef CONFIG_USE_KASAN 
-#ifdef ENABLE_DEBUG_FUNCTIONS
-    debug::out::printf("memmap count : %d\n" , loader_argument->memmap_count);
+    max_t kasan_shadowmem_size = setup_kasan_shadowmem(loader_argument , page_table_data);
 #endif
-
+    // update the kernel memory pool size
     kmemmap_ptr = memory::global_kmemmap();
+
+#ifdef ENABLE_DEBUG_FUNCTIONS
+    debug::out::printf("========================== New revised kernel memory map ==========================\n");
     while(kmemmap_ptr != nullptr) {
-        max_t len = (kmemmap_ptr->end_address-kmemmap_ptr->start_address);
-        max_t addr = kmemmap_ptr->start_address;
-        // skip if the size of the memory region is smaller than page size
-        if(len < CONFIG_PAGE_SIZE||kmemmap_ptr->type != MEMORYMAP_USABLE) {
-            kmemmap_ptr = kmemmap_ptr->next;
-            continue;
-        }
-        max_t page_size = CONFIG_PAGE_SIZE;
-        max_t region_page_count = (len/page_size);
-        if(region_page_count >= PAGE_COUNT_THRESHOLD) {
-            page_size = CONFIG_LARGE_PAGE_SIZE;
-            region_page_count = len/page_size;
-        }
-        
-        // variable that'll be used for identity-mapping the entire memory space
-        maximum_memory_addr = MAX(maximum_memory_addr , kmemmap_ptr->end_address);
-        addr = align_round_up(addr , page_size);
-
-        // FIXME
-        max_t actual_page_count = MIN(mapped_page_count+region_page_count , kasan_page_count)-mapped_page_count;
-        mapped_page_count += actual_page_count;
-
-        page::map_pages(
-            page_table_data , 
-            kasan_linear_addr_start , 
-            page_size , actual_page_count , 
-            addr , 
-            PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
-            page::alloc_pt_space
-        );
-        debug::out::printf("KASan shadow memory mapping : 0x%llx ~ 0x%llx  -->  0x%llx ~ 0x%llx (%d pages)\n" , 
-            addr , addr+actual_page_count*(page_size) , 
-            kasan_linear_addr_start , kasan_linear_addr_start+actual_page_count*(page_size) , actual_page_count);
-        
-        kasan_linear_addr_start += actual_page_count*page_size;
-
-        // Mapped all the necessary KASan Address space
-        if(mapped_page_count >= kasan_page_count) {
-            page::map_pages(
-                page_table_data , 
-                linear_address_mapping_location , 
-                page_size , region_page_count-actual_page_count , 
-                addr + (actual_page_count*page_size) , 
-                PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
-                page::alloc_pt_space
-            );
-            i++;
-            debug::out::printf("(KASAN residual) Memory 0x%llX ~ 0x%llX, page count : %d ===> Mapped to 0x%016llX\n" , 
-                addr+(actual_page_count*page_size) , 
-                addr+(region_page_count*page_size) , 
-                region_page_count-actual_page_count , 
-                linear_address_mapping_location);
-            
-            linear_address_mapping_location += (region_page_count-actual_page_count)*page_size;
-            break;
-        }
+        debug::out::printf("0x%-16llx ~ 0x%-16llx % 13lldkB (%s)\n" , kmemmap_ptr->start_address , kmemmap_ptr->end_address , (kmemmap_ptr->end_address-kmemmap_ptr->start_address)/1024 , memory::memmap_type_to_str(kmemmap_ptr->type));
+        kmemmap_ptr = kmemmap_ptr->next;
     }
 #endif
 
     kmemmap_ptr = memory::global_kmemmap();
     while(kmemmap_ptr != nullptr) {
-        max_t addr = kmemmap_ptr->start_address;
-        max_t len  = (kmemmap_ptr->end_address - kmemmap_ptr->start_address);
-
-        addr = align_round_up(addr , page_size);
-        maximum_memory_addr = MAX(maximum_memory_addr , len+addr);
-
-        max_t region_page_count = len/page_size;
-        
-        // skip if the size of the memory region is either zero or smaller than page size
-        if(region_page_count == 0)                { kmemmap_ptr = kmemmap_ptr->next; continue; }
+        max_t addr_start = kmemmap_ptr->start_address;
+        max_t addr_end   = kmemmap_ptr->end_address;
         if(kmemmap_ptr->type != MEMORYMAP_USABLE) { kmemmap_ptr = kmemmap_ptr->next; continue; }
+
+        /* Determine the page size
+         * If the memory chunk(kmemmap_ptr) has more than PAGE_COUNT_THRESHOLD number of page with the size of CONFIG_PAGE_SIZE,
+         * it will use the CONFIG_LARGE_PAGE_SIZE as the default page size.
+        */
+        max_t page_size = CONFIG_PAGE_SIZE;
+        if((addr_end-addr_start)/page_size >= PAGE_COUNT_THRESHOLD)  page_size = CONFIG_LARGE_PAGE_SIZE;
+
+        addr_end = align_round_down(addr_end , page_size);
+
+        addr_start = align_round_up(addr_start , page_size);
+        maximum_memory_addr = max(maximum_memory_addr , addr_end);
+
+        // skip if the size of the memory region is either zero or smaller than page size
+        if(addr_start == addr_end) { kmemmap_ptr = kmemmap_ptr->next; continue; }
 #ifdef ENABLE_DEBUG_FUNCTIONS
-        debug::out::printf("Memory 0x%llX ~ 0x%llX, page count : %d ===> Mapped to 0x%016llX\n" , addr , addr+len , region_page_count , linear_address_mapping_location);
+        debug::out::printf("Memory 0x%-10llx ~ 0x%-10llx page count : %-8d (ps = %-7d) ===> Mapped to 0x%016llx\n" , addr_start , addr_end , (addr_end-addr_start)/page_size , page_size , linear_address_mapping_location);
 #endif
 
         page::map_pages(
             page_table_data , 
-            linear_address_mapping_location , // linear address
-            page_size , region_page_count , // page size and number of pages to be mapped onto the provided addresses
-            addr ,                            // physical address
+            linear_address_mapping_location ,       // linear address
+            page_size , (addr_end-addr_start)/page_size ,  // page size and number of pages to be mapped onto the provided addresses
+            addr_start ,                                  // physical address
             PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
             page::alloc_pt_space
         );
 
-        linear_address_mapping_location += region_page_count*page_size;
+        linear_address_mapping_location += addr_end-addr_start;
         kmemmap_ptr = kmemmap_ptr->next;
     }
     max_t kernel_pool_end = linear_address_mapping_location;
 #ifdef ENABLE_DEBUG_FUNCTIONS
     debug::out::printf("Maximum memory address : 0x%llx\n" , maximum_memory_addr);
-    debug::out::printf("Kernel memory pool size : %dMB\n" , kernel_memory_pool_size/1024/1024);
 #endif
 
     // map the kernel onto the higher-half address
+    max_t kernel_linear_address = CONFIG_KERNEL_HIGHERHALF_ADDRESS+loader_argument->kernel_physical_location;
     page::map_pages(
         page_table_data , 
-        CONFIG_KERNEL_HIGHERHALF_ADDRESS+loader_argument->kernel_physical_location , 
-        page_size , kernel_page_count , 
+        kernel_linear_address , 
+        DEFAULT_PAGE_SIZE , kernel_page_count , 
         loader_argument->kernel_physical_location , 
         PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
         page::alloc_pt_space
     );
 
     // map the kernel stack onto the higher-half address
+    max_t kernel_stack_linear_address = CONFIG_KERNEL_HIGHERHALF_ADDRESS+loader_argument->kernel_physical_location+kernel_page_count*DEFAULT_PAGE_SIZE;
     page::map_pages(
         page_table_data , 
-        CONFIG_KERNEL_HIGHERHALF_ADDRESS+loader_argument->kernel_physical_location+kernel_page_count*page_size , 
-        page_size , kernel_stack_page_count , 
+        kernel_stack_linear_address , 
+        DEFAULT_PAGE_SIZE , kernel_stack_page_count , 
         loader_argument->kernel_stack_location , 
         PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
         page::alloc_pt_space
@@ -215,7 +151,7 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
     page::map_pages(
         page_table_data , 
         0x00 , 
-        page_size , (maximum_memory_addr/(page_size))+1 , 
+        CONFIG_LARGE_PAGE_SIZE , (maximum_memory_addr/(CONFIG_LARGE_PAGE_SIZE))+1 , 
         0x00 , 
         PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
         page::alloc_pt_space
@@ -226,8 +162,8 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
         page::map_pages(
             page_table_data , 
             loader_argument->dbg_graphic_framebuffer_start , 
-            page_size , 
-            align_round_up(loader_argument->dbg_graphic_framebuffer_end-loader_argument->dbg_graphic_framebuffer_start , page_size) , 
+            DEFAULT_PAGE_SIZE , 
+            align_round_up(loader_argument->dbg_graphic_framebuffer_end-loader_argument->dbg_graphic_framebuffer_start , DEFAULT_PAGE_SIZE) , 
             loader_argument->dbg_graphic_framebuffer_end , 
             PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
             page::alloc_pt_space
@@ -238,8 +174,8 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
         page::map_pages(
             page_table_data , 
             loader_argument->dbg_graphic_framebuffer_start , 
-            page_size , 
-            align_round_up(loader_argument->dbg_graphic_framebuffer_end-loader_argument->dbg_graphic_framebuffer_start , page_size) , 
+            DEFAULT_PAGE_SIZE , 
+            align_round_up(loader_argument->dbg_graphic_framebuffer_end-loader_argument->dbg_graphic_framebuffer_start , DEFAULT_PAGE_SIZE) , 
             loader_argument->dbg_graphic_framebuffer_end , 
             PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
             page::alloc_pt_space
@@ -255,45 +191,101 @@ extern "C" __no_sanitize_address__ __entry_function__ void kernel_setup(struct L
     
     debug::out::printf("Linearly mapped free pool : 0x%llx ~ 0x%llx (%d.%d%dGBs)\n" , 
         kernel_pool_start , kernel_pool_end , 
-        (kernel_pool_end-kernel_pool_start)/1000/1000/1000 , 
-        ((kernel_pool_end-kernel_pool_start)/1000/1000/100)%10 , 
-        ((kernel_pool_end-kernel_pool_start)/1000/1000/10)%10);
+        (kernel_pool_end-kernel_pool_start)/1024/1024/1024 , 
+        ((kernel_pool_end-kernel_pool_start)/1024/1024/100)%10 , 
+        ((kernel_pool_end-kernel_pool_start)/1024/1024/10)%10);
 #endif
 
-#if 0
-    // debug::out::printf("Setting up KASan...\n");
-    unsigned char *kvma = (unsigned char *)CONFIG_KERNEL_KASAN_VMA;
-    for(max_t i = 0; i < kasan_size; i++) {
-        kvma[i] = 69;
-    }
-
-    kasan::init(kasan_size , CONFIG_KERNEL_HIGHERHALF_ADDRESS , kernel_pool_end);
-#endif
-
-#endif
     while(1) {
         ;
     }
 }
 
-__no_sanitize_address__ max_t get_kernel_memory_pool_size() {
+/// @brief get_kernel_memory_pool_size() scans the size of the available memory that kernel will use as a free pool from the
+///        kernel's global memory map(global_kmemmap)
+///        The size of the memory pool is in multiple of CONFIG_PAGE_SIZE. That is, each chunks of the memory is rounded down to the
+///        nearest multiple of the CONFIG_PAGE_SIZE. (align_round_down)
+/// @return Size of the available kernel memory (NOT number of pages)
+__no_sanitize_address__ 
+max_t get_kernel_memory_pool_size() {
     max_t kernel_memory_pool_size = 0;
     KernelMemoryMap *ptr = memory::global_kmemmap();
     while(ptr != nullptr) {
         max_t len = (ptr->end_address-ptr->start_address);
         // skip if the size of the memory region is smaller than page size
-        if(len < CONFIG_PAGE_SIZE)        { ptr = ptr->next; continue; }
         if(ptr->type != MEMORYMAP_USABLE) { ptr = ptr->next; continue; }
 
-        max_t page_size = CONFIG_PAGE_SIZE;
-        max_t region_page_count = (len/page_size);
-        if(region_page_count >= PAGE_COUNT_THRESHOLD) {
-            page_size = CONFIG_LARGE_PAGE_SIZE;
-            region_page_count = len/page_size;
-        }
-
-        kernel_memory_pool_size += region_page_count*page_size;
+        kernel_memory_pool_size += align_round_down(len , CONFIG_PAGE_SIZE);
         ptr = ptr->next;
     }
     return kernel_memory_pool_size;
+}
+
+__no_sanitize_address__
+max_t setup_kasan_shadowmem(LoaderArgument *loader_argument , PageTableData &page_table_data) {
+    // Get a space for KASan first
+    max_t kernel_memory_pool_size = get_kernel_memory_pool_size();
+    max_t linear_address_mapping_location = CONFIG_KERNEL_KASAN_VMA;
+    max_t kasan_shadowmem_size = align_round_up(kernel_memory_pool_size/(KASAN_GRANUL_SIZE+1) , DEFAULT_PAGE_SIZE);
+    debug::out::printf("Kernel memory pool size  : %dMB\n" , kernel_memory_pool_size/1024/1024);
+    debug::out::printf("KASan shadow memory size : %dMB\n" , kasan_shadowmem_size/1024/1024);
+
+    // variable tracking how many number of pages the system has mapped
+    max_t mapped_memory_size = 0;
+    KernelMemoryMap *kmemmap_ptr = memory::global_kmemmap();
+    while(kmemmap_ptr != nullptr) {
+        max_t addr_start = kmemmap_ptr->start_address;
+        max_t addr_end   = kmemmap_ptr->end_address;
+        // skip if the size of the memory region is smaller than page size
+        if(kmemmap_ptr->type != MEMORYMAP_USABLE) { kmemmap_ptr = kmemmap_ptr->next; continue; }
+        debug::out::printf("Address change : 0x%-10llx ~ 0x%-10llx" , addr_start , addr_end);
+        /* Determine the page size
+         * If the memory chunk(kmemmap_ptr) has more than PAGE_COUNT_THRESHOLD number of page with the size of CONFIG_PAGE_SIZE,
+         * it will use the CONFIG_LARGE_PAGE_SIZE as the default page size.
+        */
+        max_t page_size = CONFIG_PAGE_SIZE;
+        // number of pages >= PAGE_COUNT_THRESHOLD
+        if((addr_end-addr_start)/page_size >= PAGE_COUNT_THRESHOLD)  page_size = CONFIG_LARGE_PAGE_SIZE;
+        addr_start = align_round_up(addr_start , page_size);
+        addr_end = align_round_down(addr_end , page_size);
+
+        debug::out::printf(" --> 0x%-10llx ~ 0x%-10llx\n" , addr_start , addr_end);
+
+        // the number of pagess that will be mapped for the current memory chunk
+        max_t chunk_map_size = min(mapped_memory_size+addr_end-addr_start , kasan_shadowmem_size)-mapped_memory_size;
+        debug::out::printf("chunk map size  : %lldkB\n" , chunk_map_size/1024);
+        debug::out::printf("how much mapped : %lldkB\n" , mapped_memory_size/1024);
+        mapped_memory_size += chunk_map_size;
+
+        page::map_pages(
+            page_table_data , 
+            linear_address_mapping_location , 
+            page_size , chunk_map_size/page_size , 
+            addr_start , 
+            PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
+            page::alloc_pt_space
+        );
+        
+        if(!memory::add_kmemmap_entry((KernelMemoryMap){addr_start , addr_start+chunk_map_size , MEMORYMAP_KASAN_SHADOWMEM})) {
+            debug::panic_line(__FILE_NAME__ , __LINE__ , "add_kmemmap_entry() failed, arg1: %llx, arg2: %llx, arg3: %d\n" , 
+                addr_start , addr_start+chunk_map_size , MEMORYMAP_KASAN_SHADOWMEM);
+        }
+#ifdef ENABLE_DEBUG_FUNCTIONS
+        debug::out::printf("KASan shadow memory mapping : 0x%llx ~ 0x%llx  -->  0x%llx ~ 0x%llx (%d pages, ps=%d)\n" , 
+            addr_start , addr_start+chunk_map_size , 
+            linear_address_mapping_location , linear_address_mapping_location+chunk_map_size , chunk_map_size/page_size , page_size);
+#endif
+        linear_address_mapping_location += chunk_map_size;
+
+        // If the mapped page count is bigger than the number of pages of the calculated size of shadowmem, 
+        // we have completed mapping all the shadowmem.
+        if(mapped_memory_size >= kasan_shadowmem_size) {
+            break;
+        }
+    }
+#ifdef ENABLE_DEBUG_FUNCTIONS
+    debug::out::printf("Total mapped size           : %dkB (%d.%d%d%%)\n" , mapped_memory_size/1024 , 
+        ((mapped_memory_size*100)/kernel_memory_pool_size) , ((mapped_memory_size*1000)/kernel_memory_pool_size)%10 , ((mapped_memory_size*10000)/kernel_memory_pool_size)%10);
+#endif
+    return kasan_shadowmem_size;
 }

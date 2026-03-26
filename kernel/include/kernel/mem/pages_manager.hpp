@@ -31,24 +31,29 @@ constexpr int DEFAULT_PAGE_SIZE =
 
 namespace page {
     typedef void* (* func_alloc_pt_space_t)(max_t size , max_t alignment);
-    void init_pt_space_allocator();
+    bool init_pt_space_allocator(LoaderArgument *loader_argument);
     void *alloc_pt_space(max_t size , max_t alignment);
     memory::Boundary get_pt_space_boundary(void);
     
-    void init_higher_half(LoaderMemoryMap *memmap , max_t memmap_count , max_t higherhalf_relocation_addr);
-
-    /// @brief Preemptively calculate the size of the identity page table, given the physical address end
-    ///        Implement this function, so that the kernel can provide you with the page table location that can accomodate the page table size
-    /// @param phys_addr_end 
-    /// @return Size of the identity page table
-    max_t calculate_identity_page_table_size(max_t phys_addr_end);
-    
-    void ARCHDEP map_one_page(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t physical_address , max_t flags
+    // In case we need to initialize the page table data before we use it
+    void ARCHDEP init_page_table_data(PageTableData &page_table_data);
+    /// @brief Set one page entry corresponding to the linear address/page size by provided physical address and flags
+    /// @param page_table_data Architecture-dependent page table metadata 
+    /// @param linear_address 
+    /// @param page_size Size of one page
+    /// @param physical_address Physical address that the corresponding page entry will be mapped
+    /// @param flags Flags
+    /// @param alloc_func The allocator that will be used to allocate memory space for page tables
+    /// @return Returns true if successfully mapped, false if the page size is the size that's not supported
+    bool ARCHDEP map_one_page(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t physical_address , max_t flags
      , func_alloc_pt_space_t alloc_func);
+    
+    /// @brief Register the page table into the system.
+    /// @param page_table_data the page table data that will be registered
     void ARCHDEP register_page_table(PageTableData &page_table_data);
 
     // helps things
-    void map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
+    bool map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
      , func_alloc_pt_space_t alloc_func);
 };
 

@@ -20,15 +20,14 @@
 typedef unsigned long x86_page_entry_t;
 
 struct PageTableData ARCHDEP {
-    x86_page_entry_t *cr3_base = nullptr;
-    bool pml5_enabled = false;
+    x86_page_entry_t *cr3_base;
 };
 
 extern "C" void enable_5_level_paging(void);
 
-__attribute__ ((naked)) void  set_cr3_reg(qword cr3);
-__attribute__ ((naked)) qword  fetch_cr3_reg();
-__attribute__ ((naked)) void  set_cr4_reg(qword cr4);
-__attribute__ ((naked)) qword fetch_cr4_reg();
+__attribute__ ((naked)) static inline void  set_cr3_reg(qword cr3);
+__attribute__ ((naked)) static inline qword  fetch_cr3_reg();
+__attribute__ ((naked)) static inline void  set_cr4_reg(qword cr4);
+__attribute__ ((naked)) static inline qword fetch_cr4_reg();
 
 #endif

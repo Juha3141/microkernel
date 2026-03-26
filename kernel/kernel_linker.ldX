@@ -5,54 +5,62 @@ ENTRY(kernel_main)
 
 SECTIONS {
   . = CONFIG_KERNEL_ADDRESS;
+__kernel_setup_start__ = .;
+  .kernel_setup_stage ALIGN(4096) : {
+    /* Prevents from the linker to garbage-collect the objects that seems not used from main kernel source*/
+    KEEP(*(.kernel_setup_stage.text))
+    KEEP(*(.kernel_setup_stage.text.*))
+    KEEP(*(.kernel_setup_stage.data))
+    KEEP(*(.kernel_setup_stage.data.*))
+    KEEP(*(.kernel_setup_stage.bss))
+    KEEP(*(.kernel_setup_stage.bss.*))
+  }
+__kernel_setup_end__ = .;
 
-  __kernel_start__ = .;
-  .entry : {
+  . += CONFIG_KERNEL_VMADDRESS;
+__kernel_start__ = .;
+
+  /* section dedicated to kernel_main function */
+  .entry ALIGN(4096) : AT (ADDR(.entry) - CONFIG_KERNEL_VMADDRESS) {
     *(.entry) *(.entry.*)
-    . = ALIGN(4096);
   }
-  .kernel_setup_stage : {
-    *(.kernel_setup_stage) *(.kernel_setup_stage.*)
-    . = ALIGN(4096);
-  }
-
-  .text : {
+  .text : AT (ADDR(.text) - CONFIG_KERNEL_VMADDRESS) {
     __text_start__ = .;
     *(.text) *(.text.*)
     __text_end__ = .;
-    . = ALIGN(4096);
   }
-  .debug_interface ALIGN(8) : {
+
+  .debug_interface ALIGN(8) : AT (ADDR(.debug_interface) - CONFIG_KERNEL_VMADDRESS) {
     __debug_interface_start__ = .;
     *(.debug_interface .debug_interface.*)
     __debug_interface_end__ = .;
   }
-  .drivers_init ALIGN(8) : {
+  .drivers_init ALIGN(8) : AT (ADDR(.drivers_init) - CONFIG_KERNEL_VMADDRESS) {
     __drivers_init_start__ = .; /* each different levels */
     *(.drivers_init) *(.drivers_init.*) /* ignore the priority for now */
     __drivers_init_end__ = .;
   }
-  .fs_drivers_init ALIGN(8) : {
+  .fs_drivers_init ALIGN(8) : AT (ADDR(.fs_drivers_init) - CONFIG_KERNEL_VMADDRESS) {
     __fs_drivers_init_start__ = .;
     *(.fs_drivers_init) *(.fs_drivers_init.fs.*)
     __fs_drivers_init_end__ = .;
   }
-  .data ALIGN(8) : {
+  .data ALIGN(4096) : AT (ADDR(.data) - CONFIG_KERNEL_VMADDRESS) {
     __data_start__ = .;
-    *(.data)
+    *(.data) *(.data.*)
     __data_end__ = .;
   }
-  .bss ALIGN(8) : {
+  .bss ALIGN(4096) : AT (ADDR(.bss) - CONFIG_KERNEL_VMADDRESS) {
     __bss_start__ = .;
-    *(.bss) *(.rodata) *(.bss.*)
+    *(.bss) *(.bss.*) *(.rodata) *(COMMON)
     __bss_end__ = .;
   }
-  .singleton_obj_ptrs ALIGN(8) : {
+  .singleton_obj_ptrs ALIGN(8) : AT(ADDR(.singleton_obj_ptrs) - CONFIG_KERNEL_VMADDRESS) {
     __singleton_obj_ptrs_start__ = .;
     *(.singleton_obj_ptrs) *(.singleton_obj_ptrs.*)
     __singleton_obj_ptrs_end__ = .;
   }
-  .gnu.linkonce ALIGN(8) : {
+  .gnu.linkonce ALIGN(8) : AT(ADDR(.gnu.linkonce) - CONFIG_KERNEL_VMADDRESS) {
     __gnu_linkonce_start__ = .;
     *(.gnu.linkonce.*) 
     __gnu_linkonce_end__   = .;
@@ -62,5 +70,6 @@ SECTIONS {
     *(.comment .comment.*)
     *(.eh_frame)
   }
-  __kernel_end__ = .;
+
+__kernel_end__ = .;
 }

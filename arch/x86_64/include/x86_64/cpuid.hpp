@@ -3,6 +3,7 @@
 
 #include <kernel/essentials.hpp>
 
+__kernel_setup_text__
 static inline void cpuid(dword req , dword &eax , dword &ebx , dword &ecx , dword &edx) {
     __asm__ (
         "mov eax , %0\n\t"

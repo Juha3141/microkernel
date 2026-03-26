@@ -1,16 +1,16 @@
 #include <kernel/mem/pages_manager.hpp>
 #include <kernel/mem/kmem_manager.hpp>
 
-__attribute__ ((section(".kernel_setup_stage"))) struct {
+__kernel_setup_data__ struct {
     max_t start_addr;
     max_t end_addr;
     max_t current_addr;
 
-    max_t growth_size;
 }kernel_pt_space_manager;
 
-__no_sanitize_address__ constexpr bool is_inside_boundary(max_t addr , const memory::Boundary &boundary) {
-    return (boundary.start_address <= addr && addr < boundary.end_address);
+__kernel_setup_text__ 
+static inline bool is_inside_boundary(max_t addr , const memory::Boundary &boundary) {
+    return (boundary.start_address <= addr && addr <= boundary.end_address);
 }
 
 /// @brief Initialize the allocator that governs the space for kernel's page table
@@ -18,57 +18,54 @@ __no_sanitize_address__ constexpr bool is_inside_boundary(max_t addr , const mem
 ///        and set the start of the page table allocator's heap to the chunk's start address
 ///        The size of this heap will be the size of one large page. If large page is not available, 
 ///        the system uses the default CONFIG_PAGE_SIZE
-__no_sanitize_address__ void page::init_pt_space_allocator() {
-    KernelMemoryMap *ptr = memory::global_kmemmap();
-    KernelMemoryMap *entry_with_max_size = nullptr;
-    while(ptr != nullptr) {
-        // Choose the largest memory region that's available
-        if(ptr->type == MEMORYMAP_USABLE && 
-        (entry_with_max_size->end_address-entry_with_max_size->start_address) < (ptr->end_address-ptr->start_address)) {
-            entry_with_max_size = ptr;
+__kernel_setup_text__ 
+bool page::init_pt_space_allocator(LoaderArgument *loader_argument) {
+    KernelMemoryMap essential_memmap_boundaries[] = essential_kernel_mem_boundaries(loader_argument);
+    LoaderMemoryMap *lmemmap = (LoaderMemoryMap *)((max_t)loader_argument->memmap_location);
+    max_t chunk_start = 0;
+    max_t chunk_end = 0;
+
+    for(unsigned int i = 0; i < loader_argument->memmap_count; i++) {
+        max_t addr = ((max_t)lmemmap[i].addr_high << (sizeof(lmemmap[i].addr_high)*8))|lmemmap[i].addr_low;
+        max_t len  = ((max_t)lmemmap[i].length_high << (sizeof(lmemmap[i].length_high)*8))|lmemmap[i].length_low;
+        if(lmemmap[i].type != MEMORYMAP_USABLE||len == 0) continue;
+
+        bool chunk_not_available = false;
+        for(int j = 0; j < sizeof(essential_memmap_boundaries)/sizeof(KernelMemoryMap); j++) {
+            KernelMemoryMap &chunk = essential_memmap_boundaries[j];
+            if(is_inside_boundary(chunk.start_address , {addr , addr+len})||is_inside_boundary(chunk.end_address , {addr , addr+len})) {
+                chunk_not_available = true;
+                break;
+            }
         }
 
-        ptr = ptr->next;
+        if(len > chunk_end-chunk_start && !chunk_not_available) {
+            chunk_start = addr;
+            chunk_end   = addr+len;
+        }
     }
-    // no available memory, highly unlikely
-    if(entry_with_max_size == nullptr) return;
+    if(chunk_start == 0 && chunk_end == 0) {
+        return false;
+    }
 
-    // the size of the page table space is the size of one page. Use large page size if applicable
-    kernel_pt_space_manager.start_addr      = entry_with_max_size->start_address;
-    kernel_pt_space_manager.growth_size     =
-#ifdef CONFIG_USE_LARGE_PAGE 
-        +CONFIG_LARGE_PAGE_SIZE;
-#else
-        +CONFIG_PAGE_SIZE;
-#endif
-    kernel_pt_space_manager.end_addr        = entry_with_max_size->start_address
-                                            + kernel_pt_space_manager.growth_size;
-    kernel_pt_space_manager.current_addr    = kernel_pt_space_manager.start_addr;
-    // debug::out::printf("Kernel's page table space : 0x%llx ~ 0x%llx\n" , pt_space_start , pt_space_end);
-    memory::add_kmemmap_entry((KernelMemoryMap){
-        kernel_pt_space_manager.start_addr , 
-        kernel_pt_space_manager.end_addr , 
-        MEMORYMAP_KERNEL_PT_SPACE
-    });
+    // Tentative size
+    kernel_pt_space_manager.start_addr = chunk_start;
+    kernel_pt_space_manager.end_addr   = chunk_end;
+    kernel_pt_space_manager.current_addr = chunk_start;
+
+    return true;
 }
 
 /// @brief Rudimentary allocator for kernel's page table
-__no_sanitize_address__ void *page::alloc_pt_space(max_t size , max_t alignment) {
+__kernel_setup_text__
+void *page::alloc_pt_space(max_t size , max_t alignment) {
 	max_t addr = align_round_up(kernel_pt_space_manager.current_addr , alignment); // Align address
 	kernel_pt_space_manager.current_addr = addr+size; // increment address
-    if(kernel_pt_space_manager.current_addr >= kernel_pt_space_manager.end_addr) {
-        // Enlarge the memory area for page table by growth_size in the kernel_pt_space_manager.
-        memory::add_kmemmap_entry((KernelMemoryMap){
-            kernel_pt_space_manager.end_addr , 
-            kernel_pt_space_manager.end_addr+kernel_pt_space_manager.growth_size , 
-            MEMORYMAP_KERNEL_PT_SPACE
-        });
-        kernel_pt_space_manager.end_addr += kernel_pt_space_manager.growth_size;
-    }
+    if(kernel_pt_space_manager.current_addr >= kernel_pt_space_manager.end_addr) return nullptr;
 
 	return (void *)addr;
 }
-
+__kernel_setup_text__
 memory::Boundary page::get_pt_space_boundary(void) {
     return {kernel_pt_space_manager.start_addr , kernel_pt_space_manager.current_addr};
 }
@@ -76,9 +73,10 @@ memory::Boundary page::get_pt_space_boundary(void) {
 
 // To-do : create something similar to kmemmap_manager that manages what memory is mapped to which
 // Maybe it would be a good idea to store it in the page_table_data? or centralized system?
-__no_sanitize_address__ void page::map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
+__kernel_setup_text__ bool page::map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
      , func_alloc_pt_space_t alloc_func) {
     for(max_t i = 0; i < page_count; i++) {
-        map_one_page(page_table_data , linear_addr+(i*page_size) , page_size , physical_address+(i*page_size) , flags , alloc_func);
+        if(!map_one_page(page_table_data , linear_addr+(i*page_size) , page_size , physical_address+(i*page_size) , flags , alloc_func)) return false;
     }
+    return true;
 }

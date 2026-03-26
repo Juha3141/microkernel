@@ -18,14 +18,11 @@
 #include <arch/switch_context.hpp>
 
 extern "C" void kernel_main(LoaderArgument *loader_argument) {
-    if(loader_argument->signature != LOADER_ARGUMENT_SIGNATURE) {
-        while(1) { ; }
-    }
     memory::kstruct_init({loader_argument->kstruct_mem_location , loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size});
     debug::init(loader_argument);
     
     debug::out::clear_screen(0x00);
-    debug::out::printf("Hello world from the kernel!\n");
+    debug::out::printf("Hello world from the higher-half kernel!\n");
     while(1) {
         ;
     }

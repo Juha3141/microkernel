@@ -175,7 +175,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     loader_argument->memmap_location = kernel_memmap_location;
     loader_argument->memmap_count    = memmap_size/memmap_descriptor_size;
 
-    StrCpy(loader_argument->debug_interface_identifier , "comport1");
+    StrCpy(loader_argument->debug_interface_identifier , "framebuffer");
     
     UINT64 file_size = kernel_file_info->FileSize;
     Print(L"Kernel file size : %d\n" , file_size);

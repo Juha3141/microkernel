@@ -78,6 +78,7 @@ __no_sanitize_address__ static void kmemmap_entry_remove(KernelMemoryMap *ptr) {
     ptr->next->prev = ptr->prev;
 
     ptr->prev = 0x00;
+	if(ptr->end_address == ptr->start_address) return;
 
 	// Add the resource into the ear of the kmemmap_discarded
     KernelMemoryMap *discarded_ptr = kmemmap_discarded , *discarded_ptr_prev = 0x00;
@@ -93,7 +94,9 @@ __no_sanitize_address__ static void kmemmap_entry_remove(KernelMemoryMap *ptr) {
 /// @brief insert the new_entry between "A" and "B" in the linked list
 /// @return return the pointer to the newly created (or merged) entry
 __no_sanitize_address__ static KernelMemoryMap *kmemmap_entry_insert_between(KernelMemoryMap *A , KernelMemoryMap *B , const KernelMemoryMap &entry) {
-	if(A == nullptr) { // B is the kmemmap, update kmemmap
+	// invalid
+	if(A == nullptr && B == nullptr) return nullptr;
+	if(A == nullptr && B != nullptr) { // B is the kmemmap, update kmemmap
 		if(B->start_address == entry.end_address && B->type == entry.type) {
 			B->start_address = entry.start_address;
 			return B;
@@ -112,7 +115,7 @@ __no_sanitize_address__ static KernelMemoryMap *kmemmap_entry_insert_between(Ker
 		A->end_address = entry.end_address;
 		return A;
 	}
-	if(B->start_address == entry.end_address && B->type == entry.type) {
+	if(B != nullptr && B->start_address == entry.end_address && B->type == entry.type) {
 		B->start_address = entry.start_address;
 		return B;
 	}
@@ -121,7 +124,8 @@ __no_sanitize_address__ static KernelMemoryMap *kmemmap_entry_insert_between(Ker
 	new_entry->next = A->next;
 	new_entry->prev = A;
 
-	A->next->prev = new_entry;
+	// If A is not the rear node
+	if(A->next  != nullptr) A->next->prev = new_entry;
 	A->next = new_entry;
 	return new_entry;
 }
@@ -245,7 +249,7 @@ __no_sanitize_address__ bool memory::add_kmemmap_entry(const KernelMemoryMap &en
 		return false;
 	}
 	
-	KernelMemoryMap *ptr = kmemmap;
+	KernelMemoryMap *ptr = kmemmap , *ptr_prev = 0x00;
 	while(ptr != nullptr) {
 		// if there's an identical entry in the linked list, only overwrite the entry type 
 		if(ptr->start_address == entry.start_address 
@@ -256,10 +260,19 @@ __no_sanitize_address__ bool memory::add_kmemmap_entry(const KernelMemoryMap &en
 
 		if(kmemmap_entry_overwrite(ptr , entry)) return true;
 		if(entry.end_address <= ptr->start_address) break;
+		ptr_prev = ptr;
 		ptr = ptr->next;
 	}
 	
-	return kmemmap_entry_insert_between(ptr->prev , ptr , entry);
+	KernelMemoryMap *ret = kmemmap_entry_insert_between(ptr_prev , ptr , entry);
+	ptr = kmemmap;
+	while(ptr != nullptr) {
+		if(ptr->end_address == ptr->start_address) {
+			kmemmap_entry_remove(ptr);
+		}
+		ptr = ptr->next;
+	}
+	return ret;
 }
 
 const char *memory::memmap_type_to_str(unsigned int type) {

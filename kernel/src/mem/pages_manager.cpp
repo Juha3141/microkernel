@@ -47,8 +47,6 @@ bool page::init_pt_space_allocator(LoaderArgument *loader_argument) {
     if(chunk_start == 0 && chunk_end == 0) {
         return false;
     }
-
-    // Tentative size
     kernel_pt_space_manager.start_addr = chunk_start;
     kernel_pt_space_manager.end_addr   = chunk_end;
     kernel_pt_space_manager.current_addr = chunk_start;

@@ -35,7 +35,6 @@ struct LoaderMemoryMap {
 	unsigned int type;
 };
 
-// To-do : Remove pml4 entry field
 struct __attribute__ ((packed)) LoaderArgument {
 	unsigned int signature;                /* 0, always 0xC001D00D */
 	unsigned int kernel_physical_location; /* 4 */
@@ -85,6 +84,10 @@ struct __attribute__ ((packed)) LoaderArgument {
     unsigned char is_ramdisk_available; // 0: Not available, 1: Available
 	unsigned int ramdisk_location;
 	unsigned int ramdisk_size;
+
+	////// Area reserved for kernel setup stage
+	unsigned long long pt_space_start;
+	unsigned long long pt_space_end;
 };
 
 #endif

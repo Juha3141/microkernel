@@ -233,38 +233,8 @@ int memory::SegmentsManager::get_segment_index(max_t address) {
 	return -1;
 }
 
-void memory::pmem_init(LoaderMemoryMap *memmap , max_t memmap_count , LoaderArgument *loader_argument) {
-	// Temporarily unimplemented
-#if 0
-	int usable_seg_count = 0;
-
-	// temporary allocation
-	Boundary *pmem_boundary = (Boundary *)kstruct_alloc(memmap_count*sizeof(Boundary));
+void memory::pmem_init() {
 	
-	declare_essential_kernel_mem_boundaries
-	constexpr int essential_boundaries_count = sizeof(essential_kernel_mem_boundaries)/sizeof(essential_kernel_mem_boundaries[0]);
-	Boundary merged_protected_areas[essential_boundaries_count];
-
-	// determine physical memory address
-	memset(pmem_boundary , 0 , memmap_count*sizeof(Boundary));
-	int merged_protected_areas_count = merge_boundaries_list(essential_kernel_mem_boundaries , essential_boundaries_count , merged_protected_areas);
-	
-	int pmem_boundary_entry_count = truncate_protected_areas(merged_protected_areas , merged_protected_areas_count , 
-		pmem_boundary , memmap , memmap_count);
-
-	debug::out::printf("Available memory area : \n");
-	for(int i = 0; i < pmem_boundary_entry_count; i++) {
-		debug::out::printf("0x%llx ~ 0x%llx\n" , pmem_boundary[i].start_address , pmem_boundary[i].end_address);
-	}
-	// debug::enable();
-
-	// allocate node manager for each segment
-	SegmentsManager *segments_mgr = GLOBAL_OBJECT(SegmentsManager);
-	debug::out::printf("segments_mgr = 0x%X\n" , segments_mgr);
-	debug::out::printf("Initializing all the segments...\n");
-	segments_mgr->init(pmem_boundary_entry_count , pmem_boundary);
-	is_pmem_alloc_available = true;
-#endif
 }
 
 max_t memory::SegmentsManager::get_currently_using_mem(void) {

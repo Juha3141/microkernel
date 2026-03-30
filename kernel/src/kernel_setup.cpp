@@ -8,7 +8,6 @@
 #include <kernel/sections.hpp>
 
 #include <loader/loader_argument.hpp>
-#include <loader/kernel_setup_argument.hpp>
 #include <kernel/mem/pages_manager.hpp>
 
 // For testing
@@ -133,7 +132,7 @@ void kernel_setup(LoaderArgument *loader_argument) {
 /// @param va       List of the alignments (type : max_t)
 /// @return The first value from the VA list that divides the address with remainder of 0
 ///         If unable to find, the function returns 0.
-__kernel_setup_text__
+__kernel_setup_text__ __no_sanitize_address__
 max_t check_alignment(max_t address , int va_count , ...) {
     va_list ap;
     va_start(ap , address);

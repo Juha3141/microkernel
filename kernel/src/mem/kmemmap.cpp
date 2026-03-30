@@ -147,8 +147,8 @@ inline static bool overwrite_applicable(KernelMemoryMap *ptr , const KernelMemor
 /// @param entry 
 /// @return 
 __no_sanitize_address__ static bool kmemmap_entry_overwrite(KernelMemoryMap *ptr , const KernelMemoryMap &entry) {
-	bool overlap_front = (entry.start_address >= ptr->start_address && entry.start_address <= ptr->end_address);
-	bool overlap_back  = (entry.end_address   >= ptr->start_address && entry.end_address   <= ptr->end_address);
+	bool overlap_front = (entry.start_address > ptr->start_address && entry.start_address < ptr->end_address);
+	bool overlap_back  = (entry.end_address   > ptr->start_address && entry.end_address   < ptr->end_address);
 	if(!overlap_front && !overlap_back) {
 		return false;
 	}
@@ -264,15 +264,7 @@ __no_sanitize_address__ bool memory::add_kmemmap_entry(const KernelMemoryMap &en
 		ptr = ptr->next;
 	}
 	
-	KernelMemoryMap *ret = kmemmap_entry_insert_between(ptr_prev , ptr , entry);
-	ptr = kmemmap;
-	while(ptr != nullptr) {
-		if(ptr->end_address == ptr->start_address) {
-			kmemmap_entry_remove(ptr);
-		}
-		ptr = ptr->next;
-	}
-	return ret;
+	return kmemmap_entry_insert_between(ptr_prev , ptr , entry);
 }
 
 const char *memory::memmap_type_to_str(unsigned int type) {

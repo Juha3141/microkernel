@@ -9,17 +9,12 @@
 
 boot_drive:              db 0x00
 kernel_loader_location:  dw 0x4000
-kernel_loader_size:      dd 4
+kernel_loader_size:      dd 6
+e820_addr_seg: dw 0x1000
 
 start:
     mov ax , 0x07C0
     mov ds , ax
-
-    ; print "Test"
-    mov ax , 0xB800
-    mov es , ax
-    mov dword[es:0x00] , 0x07650754
-    mov dword[es:0x04] , 0x07740773
 
     xor ax , ax
     mov ss , ax
@@ -47,6 +42,25 @@ start:
 	mov eax , 0x2401
 	int 0x15
 
+    mov ax , [e820_addr_seg]
+    mov es , ax
+    
+    xor di , di
+    xor ebx , ebx
+
+    .e820_loop:
+        ; Use E820 to grab the memory map
+        mov eax , 0xe820
+        mov edx , 0x534d4150
+        mov ecx , 24
+        int 0x15
+
+        add di , 24
+        
+        cmp ebx , 0
+        jne .e820_loop
+    ; DI : memmap entry size
+    
     ; change to protect mode
     lgdt [pmode_gdtr]
     
@@ -56,6 +70,7 @@ start:
     or eax , 0x01
     mov cr0 , eax
 
+    mov si , es
     jmp 0x08:0x4000
 
 failed:

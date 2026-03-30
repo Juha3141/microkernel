@@ -73,6 +73,14 @@ memory::Boundary page::get_pt_space_boundary(void) {
 // Maybe it would be a good idea to store it in the page_table_data? or centralized system?
 __kernel_setup_text__ bool page::map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
      , func_alloc_pt_space_t alloc_func) {
+    if(linear_addr%page_size != 0)      {
+        debug::out::printf("Warning : linear address %013llx is not aligned to ps=%d\n" , linear_addr , page_size);
+        return false;
+    }
+    if(physical_address%page_size != 0) {
+        debug::out::printf("Warning : physical address %013llx is not aligned to ps=%d\n" , physical_address , page_size);
+        return false;
+    }
     for(max_t i = 0; i < page_count; i++) {
         if(!map_one_page(page_table_data , linear_addr+(i*page_size) , page_size , physical_address+(i*page_size) , flags , alloc_func)) return false;
     }

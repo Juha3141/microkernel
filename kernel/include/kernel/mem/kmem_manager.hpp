@@ -94,7 +94,7 @@ namespace memory {
     };
     
     // pmem (physical memory) allocation
-    void pmem_init(LoaderMemoryMap *memmap , max_t memmap_count , LoaderArgument *loader_argument);
+    void pmem_init();
     void *pmem_alloc(max_t size , max_t alignment=0);
     bool is_pmem_allocated_obj(void *ptr);
     void pmem_free(void *ptr);

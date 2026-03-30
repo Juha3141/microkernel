@@ -1,16 +1,26 @@
 #include <strings.h>
+#include <kernel/configurations.hpp>
+#include <arch/configurations.hpp>
 #include <intel_paging.h>
 
-#define KERNEL_STRUCTURE_SIGNATURE 0xC001D00D
-#define KERNEL_STRUCTURE_STACKSIZE 8*1024*1024
-#define KERNEL_NEW_HIGHER_HALF     0xC0000000
+typedef struct {
+    unsigned int addr_low;
+    unsigned int addr_high;
 
-void main(void) {
-    unsigned char *vmem = (unsigned char *)0xB8000;
-    const char string[] = "Hello, world!";
-    for(int i = 0; string[i] != 0x00; i++) {
-        *(vmem++) = string[i];
-        *(vmem++) = 0x01;
+    unsigned int len_low;
+    unsigned int len_high;
+
+    unsigned int type;
+
+    unsigned int acpi;
+}e820_memmap_entry_t;
+
+void PrintString(unsigned char color , const char *fmt , ...);
+
+void main(unsigned int memmap_addr , unsigned int memmap_size) {
+    e820_memmap_entry_t *memmap = (e820_memmap_entry_t *)memmap_addr;
+    for(int i = 0; i < memmap_size/sizeof(e820_memmap_entry_t); i++) {
+        PrintString(0x07 , "%d\n" , memmap[i].type);
     }
     while(1) {
         ;

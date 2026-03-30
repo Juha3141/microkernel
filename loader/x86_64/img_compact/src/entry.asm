@@ -13,6 +13,9 @@ entry:
     mov gs , ax
     mov ss , ax
 
+    shl esi , 4
+    push edi
+    push esi
     call main
 
     jmp $

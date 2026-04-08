@@ -12,11 +12,18 @@ jump_to_kernel_main : Changes the stack pointer to the given value and jump to t
 
 .text
 
+/* RDI : loader_argument
+ * RSI : kernel image virtual address
+ * RDX : kernel stack virtual address
+ * RCX : kernel stack size
+ */
 jump_to_kernel_main:
-    mov %rsi , %rbp
-    mov %rbp , %rsp
+  mov %rdx , %rbp  /* rbp = stack vma + stack size - 8 */
+  add %rcx , %rbp
+  sub $8 , %rbp
+  mov %rbp , %rsp
 
-    /* RDI : LoaderArgument, nothing to change here */
-    call kernel_main
+  /* The sequence of necessary argument for kernel_main is the same as what is given to jump_to_kernel_main */
+  call kernel_main
 
-    jmp .
+  jmp .

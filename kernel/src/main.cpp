@@ -19,13 +19,14 @@
 #include <pair.hpp>
 #include <arch/switch_context.hpp>
 
-__no_sanitize_address__ max_t setup_kasan_shadowmem(LoaderArgument *loader_argument , PageTableData &page_table_data);
+__no_sanitize_address__ memory::Boundary setup_kasan_shadowmem(PageTableData &page_table_data);
+__no_sanitize_address__ memory::Boundary map_usable_mem_into_vaddr(PageTableData &page_table_data , max_t linear_addr_start , max_t required_size , max_t flag=MEMORYMAP_USABLE);
 __no_sanitize_address__ max_t get_kernel_memory_pool_size();
 
 __no_sanitize_address__
 struct MappedRegionInfo {
-    max_t mapped_phys_addr_start;
-    max_t mapped_phys_addr_end;
+    max_t used_phys_addr_start;
+    max_t used_phys_addr_end;
     max_t mapped_size;
     max_t page_size;
 };
@@ -33,21 +34,14 @@ struct MappedRegionInfo {
 __no_sanitize_address__ MappedRegionInfo map_pages_auto_alignment(PageTableData &page_table_data , max_t phys_addr_start , max_t phys_addr_end , max_t linear_addr_start , max_t flags);
 
 // + Add kernel_setup argument that tells the virtual addresses of important memory areas like stack, loader_argument and kstruct etc.
-extern "C" void kernel_main(LoaderArgument *loader_argument) {
+extern "C" void kernel_main(LoaderArgument *loader_argument , max_t kernel_vmem_addr , max_t kernel_stack_vmem_addr , max_t kernel_stack_size) {
     memory::kstruct_init({loader_argument->kstruct_mem_location , loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size});
     debug::init(loader_argument);
     
     debug::out::clear_screen(0x00);
     debug::out::printf("Hello world from the higher-half kernel!\n");
-    
-    debug::out::printf("Kernel Setup Page Table Space : 0x%-10llx ~ 0x%-10llx\n" , loader_argument->pt_space_start , loader_argument->pt_space_end);
 
     memory::kmemmap_init(loader_argument);
-    memory::add_kmemmap_entry((KernelMemoryMap){
-        .start_address = loader_argument->pt_space_start , 
-        .end_address   = loader_argument->pt_space_end , 
-        .type          = MEMORYMAP_KERNEL_PT_SPACE
-    });
     KernelMemoryMap *kmemmap_ptr = memory::global_kmemmap();
     /* To-do : 
      * add KASan initialization here before the pmem_init
@@ -55,9 +49,22 @@ extern "C" void kernel_main(LoaderArgument *loader_argument) {
 
     // Very very temporary!!
     PageTableData page_table_data = {
-        .cr3_base = (x86_page_entry_t *)loader_argument->pt_space_start
+        .cr3_base = (x86_page_entry_t *)page::get_pt_space_boundary().start_address
     };
-    setup_kasan_shadowmem(loader_argument , page_table_data);
+#ifdef CONFIG_USE_KASAN
+    memory::Boundary kasan_vmem_boundary = setup_kasan_shadowmem(page_table_data);
+    max_t kasan_vmem_size = kasan_vmem_boundary.end_address - kasan_vmem_boundary.start_address;
+#endif
+
+    max_t free_pool_vma_start = align_round_up(kernel_stack_vmem_addr+kernel_stack_size , ARCH_MAXIMUM_PAGE_SIZE);
+    max_t free_pool_size      = get_kernel_memory_pool_size();
+    auto kernel_free_pool_vma = map_usable_mem_into_vaddr(page_table_data , free_pool_vma_start , free_pool_size);
+    debug::out::printf("Kernel Free Pool Boundary : 0x%llx ~ 0x%llx (%lldMB)\n" , kernel_free_pool_vma.start_address , kernel_free_pool_vma.end_address
+         , (kernel_free_pool_vma.end_address-kernel_free_pool_vma.start_address)/1024/1024);
+    
+#ifdef CONFIG_USE_KASAN
+    kasan::init(kasan_vmem_size , kernel_free_pool_vma.start_address , kernel_free_pool_vma.end_address);
+#endif
 
     debug::out::printf("========================== Kernel memory map ==========================\n");
     while(kmemmap_ptr != nullptr) {
@@ -105,35 +112,32 @@ max_t get_kernel_memory_pool_size() {
     return kernel_memory_pool_size;
 }
 
-__no_sanitize_address__
-max_t setup_kasan_shadowmem(LoaderArgument *loader_argument , PageTableData &page_table_data) {
-    // Get a space for KASan first
-    max_t kernel_memory_pool_size = get_kernel_memory_pool_size();
-    max_t linear_address_mapping_location = CONFIG_KERNEL_KASAN_VMA;
-    max_t kasan_shadowmem_size = align_round_up(kernel_memory_pool_size/(KASAN_GRANUL_SIZE+1) , DEFAULT_PAGE_SIZE);
-    debug::out::printf("Kernel memory pool size  : %dMB\n" , kernel_memory_pool_size/1024/1024);
-    debug::out::printf("KASan shadow memory size : %dMB\n" , kasan_shadowmem_size/1024/1024);
-    
+/// @brief Automatically map the memory chunks that's identified as usable in the kernel global memory map 
+///        to the given linear address for given amount of size.
+///        The result is the continuous linear address space with given size(required_size). If the flag is given, the flag of the 
+///        used memory chunks will be changed into the given flag. 
+///        In summary, this function will scan the kernel memory map, use any usable memory chunk to construct a continuous linear space
+///        from address linear_addr_start  to linear_addr_start+required_size
+///        This function uses page::map_pages to map the page, alongside with the alloc_pt_space function for page table space allocation
+/// @param page_table_data    Page table data required for page::map_pages
+/// @param linear_addr_start  Start address of the linear address space
+/// @param required_size      Size for the linear address space that'll be newly mapped
+/// @param flag               If the chunks needs to have be marked occupied after being used
+/// @return Linear address space boundary that is being mapped
+__no_sanitize_address__ memory::Boundary map_usable_mem_into_vaddr(PageTableData &page_table_data , max_t linear_addr_start , max_t required_size , max_t flag) {
+    max_t linear_address_mapping_location = linear_addr_start;
     // variable tracking how many number of pages the system has mapped
     max_t mapped_memory_size = 0;
     KernelMemoryMap *kmemmap_ptr = memory::global_kmemmap();
+    int i = 0;
+    KernelMemoryMap kasan_kmemmap[256];
     while(kmemmap_ptr != nullptr) {
         max_t addr_start = kmemmap_ptr->start_address;
         max_t addr_end   = kmemmap_ptr->end_address;
-        // skip if the size of the memory region is smaller than page size
         if(kmemmap_ptr->type != MEMORYMAP_USABLE) { kmemmap_ptr = kmemmap_ptr->next; continue; }
-        /* Determine the page size
-         * If the memory chunk(kmemmap_ptr) has more than PAGE_COUNT_THRESHOLD number of page with the size of CONFIG_PAGE_SIZE,
-         * it will use the CONFIG_LARGE_PAGE_SIZE as the default page size.
-        */
-        // number of pages >= PAGE_COUNT_THRESHOLD
-        /** TO-DO :
-         * Check alignment of the linear address mapping location before determining the page size
-         * Make an intelligent algorithm that determines how to determine page size efficiently 
-         * Also consider the PT space, maybe you might want to deprecate it and change it to something that's more fitting to main kernel space
-         */
-        max_t chunk_map_size = min(mapped_memory_size+addr_end-addr_start , kasan_shadowmem_size)-mapped_memory_size;
-        debug::disable();
+        max_t chunk_map_size = min(mapped_memory_size+addr_end-addr_start , required_size)-mapped_memory_size;
+        
+        debug::out::printf("map_pages_auto_alignment() : paddr=0x%-15llx 0x%-15llx,  laddr=0x%-15llx\n" , addr_start , addr_start+chunk_map_size , linear_address_mapping_location);
         MappedRegionInfo region_info = map_pages_auto_alignment(
             page_table_data , 
             addr_start , 
@@ -141,48 +145,60 @@ max_t setup_kasan_shadowmem(LoaderArgument *loader_argument , PageTableData &pag
             linear_address_mapping_location , 
             PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW
         );
-        debug::enable();
-        chunk_map_size = region_info.mapped_size;
         max_t page_size = region_info.page_size;
-        /*
-        page::map_pages(
-            page_table_data , 
-            linear_address_mapping_location , 
-            page_size , chunk_map_size/page_size , 
-            addr_start , 
-            PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
-            page::alloc_pt_space
-        );*/
         
-        /******* WARNING: THIS CODE WILL CHANGE THE kmemmap_ptr DURING THE LOOP!!  *******/
-        if(!memory::add_kmemmap_entry((KernelMemoryMap){region_info.mapped_phys_addr_start , region_info.mapped_phys_addr_end , MEMORYMAP_KASAN_SHADOWMEM})) {
-            debug::panic_line(__FILE_NAME__ , __LINE__ , "add_kmemmap_entry() failed, arg1: %llx, arg2: %llx, arg3: %d\n" , 
-                addr_start , addr_start+chunk_map_size , MEMORYMAP_KASAN_SHADOWMEM);
-        }
-
-        debug::out::printf("KASan shadow memory mapping : 0x%llx ~ 0x%llx  -->  0x%llx ~ 0x%llx (%d pages, ps=%d)\n" , 
-            addr_start , addr_start+chunk_map_size , 
-            linear_address_mapping_location , linear_address_mapping_location+chunk_map_size , chunk_map_size/page_size , page_size);
+        kasan_kmemmap[i++] = {
+            .start_address = region_info.used_phys_addr_start , 
+            .end_address   = region_info.used_phys_addr_end , 
+            .type = static_cast<unsigned int>(flag)
+        };
 
         linear_address_mapping_location += chunk_map_size;
         mapped_memory_size              += chunk_map_size;
 
         // If the mapped page count is bigger than the number of pages of the calculated size of shadowmem, 
         // we have completed mapping all the shadowmem.
-        if(mapped_memory_size >= kasan_shadowmem_size) {
+        if(mapped_memory_size >= required_size) {
             break;
         }
+        kmemmap_ptr = kmemmap_ptr->next;
     }
+    for(int k = 0; k < i; k++) {
+        if(!memory::add_kmemmap_entry(kasan_kmemmap[k])) {
+            debug::panic_line(__FILE_NAME__ , __LINE__ , "add_kmemmap_entry() failed, arg1: %llx, arg2: %llx, arg3: %d\n" , 
+                kasan_kmemmap[k].start_address , kasan_kmemmap[k].end_address , flag);
+        }
+    }
+    return {linear_addr_start , linear_address_mapping_location};
+}
 
+__no_sanitize_address__
+memory::Boundary setup_kasan_shadowmem(PageTableData &page_table_data) {
+    // Get a space for KASan first
+    max_t kernel_memory_pool_size = get_kernel_memory_pool_size();
+    max_t kasan_shadowmem_size = align_round_up(kernel_memory_pool_size/(KASAN_GRANUL_SIZE+1) , DEFAULT_PAGE_SIZE);
+    debug::out::printf("Kernel memory pool size  : %dMB\n" , kernel_memory_pool_size/1024/1024);
+    debug::out::printf("KASan shadow memory size : %dMB\n" , kasan_shadowmem_size/1024/1024);
+    debug::out::printf("KASan memory area : 0x%-15llx 0x%-15llx\n" , CONFIG_KERNEL_KASAN_VMA , CONFIG_KERNEL_KASAN_VMA+kasan_shadowmem_size);
+    auto res = map_usable_mem_into_vaddr(page_table_data , CONFIG_KERNEL_KASAN_VMA , kasan_shadowmem_size , MEMORYMAP_KASAN_SHADOWMEM);
+
+    max_t mapped_memory_size = (res.end_address - res.start_address);
     debug::out::printf("Total mapped size           : %dkB (%d.%d%d%%)\n" , mapped_memory_size/1024 , 
         ((mapped_memory_size*100)/kernel_memory_pool_size) , ((mapped_memory_size*1000)/kernel_memory_pool_size)%10 , ((mapped_memory_size*10000)/kernel_memory_pool_size)%10);
-
-    return kasan_shadowmem_size;
+    
+    return res;
 }
 
 #define LARGE_PS_THRESHOLD ((CONFIG_LARGE_PAGE_SIZE)*4ULL)
 #define ENORMOUS_PS_THRESHOLD ((CONFIG_ENORMOUS_PAGE_SIZE)*4ULL)
 
+/// @brief 
+/// @param page_table_data 
+/// @param phys_addr_start 
+/// @param phys_addr_end 
+/// @param linear_addr_start 
+/// @param flags 
+/// @return 
 __no_sanitize_address__ MappedRegionInfo map_pages_auto_alignment(PageTableData &page_table_data , max_t phys_addr_start , max_t phys_addr_end , max_t linear_addr_start , max_t flags) {
     if(phys_addr_start == phys_addr_end) return {};
     // default will be levels_of_page_size[0]
@@ -231,10 +247,11 @@ __no_sanitize_address__ MappedRegionInfo map_pages_auto_alignment(PageTableData 
     if(alignment_padding_phys < alignment_padding_linear) {
         alignment_padding_phys += page_size;
         aligned_phys_addr      += page_size;
+        
+        // The region is too small to align
+        if(aligned_phys_addr > aligned_phys_end) return {};
     }
-    debug::out::printf(" =========== lower unaligned area mapping ============ \n");
     map_pages_auto_alignment(page_table_data , phys_addr_start , phys_addr_start+alignment_padding_linear , linear_addr_start , flags);
-    debug::out::printf(" ========== lower unaligned area mapping end ========= \n");
 
     debug::out::printf("aligned_phys_addr   : 0x%-13llx ~ 0x%-13llx (sz=0x%llx)\n" , aligned_phys_addr , aligned_phys_end , aligned_phys_end-aligned_phys_addr);
     debug::out::printf("padding             : 0x%llx\n" , alignment_padding_phys);
@@ -242,16 +259,16 @@ __no_sanitize_address__ MappedRegionInfo map_pages_auto_alignment(PageTableData 
     debug::out::printf("padding             : 0x%llx\n" , alignment_padding_linear);
 
     max_t page_count = (aligned_linear_end-aligned_linear_addr)/page_size;
-    // page::map_pages(page_table_data , linear_addr_start+alignment_padding_linear , page_size , page_count , phys_addr_start+alignment_padding_phys , flags , page::alloc_pt_space);
+    page::map_pages(page_table_data , aligned_linear_addr , page_size , page_count , aligned_phys_addr , flags , page::alloc_pt_space);
+    debug::out::printf("pages::map_pages() : laddr=%-15llx~%-14llx paddr=%-14llx~%-14llx ps=%lld sz=%lld pages\n" , 
+        aligned_linear_addr , aligned_linear_end , aligned_phys_addr , aligned_phys_addr+(page_count*page_size) , page_size , page_count);
 
-
-    debug::out::printf(" =========== upper unaligned area mapping ============ \n");
     map_pages_auto_alignment(page_table_data , aligned_phys_end , phys_addr_end , aligned_linear_end , flags);
-    debug::out::printf(" ========== upper unaligned area mapping end ========= \n");
+
     return {
-        .mapped_phys_addr_start = aligned_phys_addr , 
-        .mapped_phys_addr_end   = aligned_phys_end , 
-        .mapped_size            = aligned_linear_end-aligned_linear_addr , 
+        .used_phys_addr_start = phys_addr_start , 
+        .used_phys_addr_end   = phys_addr_end , 
+        .mapped_size            = phys_addr_end-phys_addr_start , 
         .page_size              = page_size
     };
 }

@@ -19,7 +19,7 @@
 // The page count threshold of using CONFIG_LARGE_PAGE_SIZE instead of CONFIG_PAGE_SIZE
 #define PAGE_COUNT_THRESHOLD (CONFIG_LARGE_PAGE_SIZE/CONFIG_PAGE_SIZE)*4
 
-extern "C" void jump_to_kernel_main(LoaderArgument *loader_argument , max_t new_stack_address);
+extern "C" void jump_to_kernel_main(LoaderArgument *loader_argument , max_t kernel_vma , max_t kernel_stack_vma , max_t kernel_stack_size);
 max_t check_alignment(max_t address , int va_count , ...);
 
 extern "C" __no_sanitize_address__ __kernel_setup_text__ 
@@ -73,12 +73,20 @@ void kernel_setup(LoaderArgument *loader_argument) {
         page::alloc_pt_space
     );
 
-    // set identity paging
+    // set identity paging, use the largest page size possible
+    max_t identity_paging_ps = 
+#if CONFIG_USE_ENORMOUS_PAGE == yes
+    CONFIG_ENORMOUS_PAGE_SIZE;
+#elif CONFIG_USE_LARGE_PAGE == yes
+    CONFIG_LARGE_PAGE_SIZE;
+#else 
+    CONFIG_PAGE_SIZE;
+#endif
     page::map_pages(
         page_table_data , 
-        loader_argument->kernel_physical_location , 
-        CONFIG_LARGE_PAGE_SIZE , (maximum_memory_addr/(CONFIG_LARGE_PAGE_SIZE))+1 , 
-        loader_argument->kernel_physical_location , 
+        0 , 
+        identity_paging_ps , (maximum_memory_addr/(identity_paging_ps))+1 , 
+        0 , 
         PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
         page::alloc_pt_space
     );
@@ -112,15 +120,7 @@ void kernel_setup(LoaderArgument *loader_argument) {
     page::register_page_table(page_table_data);
     // Add the kernel setup argument at the end of the kernel stack
 
-    max_t kernel_stack_address = (kernel_stack_linear_address+kernel_stack_page_count*CONFIG_PAGE_SIZE)-WORD_SIZE;
-    // Setup kernel setup argument
-    auto [start , end] = page::get_pt_space_boundary();
-    
-    // Set up the loader_argument
-    loader_argument->pt_space_start = start;
-    loader_argument->pt_space_end   = end;
-    
-    jump_to_kernel_main(loader_argument , kernel_stack_address);
+    jump_to_kernel_main(loader_argument , kernel_linear_address , kernel_stack_linear_address , kernel_stack_page_count*CONFIG_PAGE_SIZE);
     while(1) {
         ;
     }

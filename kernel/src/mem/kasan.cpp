@@ -28,6 +28,8 @@ __no_sanitize_address__ void kasan::init(max_t kasan_shadowmem_size , max_t kern
 
     kasan_vma_start              = kernel_pool_start;
     kasan_vma_end                = kernel_pool_end;
+
+    memset((void *)kasan_shadow_memory_location , kasan_shadow_memory_size , 0);
 }
 
 void kasan::report_bug(max_t addr , max_t size , max_t buggy_shadow_address , byte is_write , max_t pc) {

@@ -146,15 +146,15 @@ inline static bool overwrite_applicable(KernelMemoryMap *ptr , const KernelMemor
 /// @param ptr 
 /// @param entry 
 /// @return 
-__no_sanitize_address__ static bool kmemmap_entry_overwrite(KernelMemoryMap *ptr , const KernelMemoryMap &entry) {
+__no_sanitize_address__ static KernelMemoryMap *kmemmap_entry_overwrite(KernelMemoryMap *ptr , const KernelMemoryMap &entry) {
 	bool overlap_front = (entry.start_address > ptr->start_address && entry.start_address < ptr->end_address);
 	bool overlap_back  = (entry.end_address   > ptr->start_address && entry.end_address   < ptr->end_address);
 	if(!overlap_front && !overlap_back) {
-		return false;
+		return nullptr;
 	}
 	if(!overwrite_applicable(ptr , entry)) {
 		// debug::out::printf("(kmemmap_entry_overwrite) Warning : unsable to overwrite to kmemmap entry [0x%llx - 0x%llx, %s], which is not a free pool\n" , ptr->start_address , ptr->end_address , memory::memmap_type_to_str(ptr->type));
-		return false;
+		return nullptr;
 	}
 
 	// Overwrite special case : entry is inside the ptr
@@ -178,25 +178,24 @@ __no_sanitize_address__ static bool kmemmap_entry_overwrite(KernelMemoryMap *ptr
 		KernelMemoryMap *new_entry = kmemmap_entry_insert_between(ptr , ptr->next , entry);
 		kmemmap_entry_insert_between(new_entry , new_entry->next , new_residual);
 
-		return true;
+		return new_entry;
 	}
 	// if ptr is completely within the entry, remove the ptr
 	if(inside(ptr , entry)) {
 		kmemmap_entry_remove(ptr);
-		return false;
+		return nullptr;
 	}
 
 	if(overlap_front) { ptr->end_address = entry.start_address; }
 	if(overlap_back) {
 		ptr->start_address = entry.end_address; 
 
-		kmemmap_entry_insert_between(ptr->prev , ptr , entry);
-		return true;
+		return kmemmap_entry_insert_between(ptr->prev , ptr , entry);
 	}
-	return false;
+	return nullptr;
 }
 
-/// @ Check whether 
+/// @brief Check whether overwriting the given entry to the existing kernel memory map is applicable
 /// @param entry 
 /// @return 
 __no_sanitize_address__ static bool check_overwriting_allowed(const KernelMemoryMap &entry) {
@@ -216,7 +215,7 @@ __no_sanitize_address__ static bool check_overwriting_allowed(const KernelMemory
 	return true;
 }
 
-__no_sanitize_address__ bool memory::add_kmemmap_entry(const LoaderMemoryMap& entry) {
+__no_sanitize_address__ KernelMemoryMap* memory::add_kmemmap_entry(const LoaderMemoryMap& entry) {
 	max_t addr = ((max_t)entry.addr_high << 32)|entry.addr_low;
 	max_t length = ((max_t)entry.length_high << 32)|entry.length_low;
 	return add_kmemmap_entry((KernelMemoryMap) {
@@ -231,22 +230,22 @@ __no_sanitize_address__ bool memory::add_kmemmap_entry(const LoaderMemoryMap& en
 ///        No overwritting will occurr if the area that will be overwritten has the same type as the 
 ///        entry given in the argument.
 /// @param entry 
-/// @return Return true if it successfully added(or overwritten) the entry, false if failed
-__no_sanitize_address__ bool memory::add_kmemmap_entry(const KernelMemoryMap &entry) {
+/// @return Pointer to the entry that is newly created in the memory map
+__no_sanitize_address__ KernelMemoryMap *memory::add_kmemmap_entry(const KernelMemoryMap &entry) {
 	/* Upon initialization, variables might not have nullptr, unlike in app environment.
 	 * (That is because contents in RAM is random in real life, not initialized to nullptr)
 	 * Thus, for that reason, we use is_kstruct_allocated_obj to determine whether it's valid or not. 
 	 */
-	if(entry.end_address == entry.start_address) return false;
+	if(entry.end_address == entry.start_address) return nullptr;
 	if(!is_kstruct_allocated_obj(kmemmap)) {
 		kmemmap = kmemmap_entry_alloc(entry);
 		kmemmap->next = nullptr;
-		return true;
+		return kmemmap;
 	}
 
 	if(!check_overwriting_allowed(entry)) {
 		debug::out::printf("Warning : overwriting not applicable for the entry [0x%llx ~ 0x%llx, %d]\n" , entry.start_address , entry.end_address , entry.type);
-		return false;
+		return nullptr;
 	}
 	
 	KernelMemoryMap *ptr = kmemmap , *ptr_prev = 0x00;
@@ -255,10 +254,11 @@ __no_sanitize_address__ bool memory::add_kmemmap_entry(const KernelMemoryMap &en
 		if(ptr->start_address == entry.start_address 
 		&& ptr->end_address   == entry.end_address) {
 			ptr->type = entry.type;
-			return true;
+			return ptr;
 		}
 
-		if(kmemmap_entry_overwrite(ptr , entry)) return true;
+		KernelMemoryMap *new_ptr;
+		if((new_ptr = kmemmap_entry_overwrite(ptr , entry)) != nullptr) return new_ptr;
 		if(entry.end_address <= ptr->start_address) break;
 		ptr_prev = ptr;
 		ptr = ptr->next;

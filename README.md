@@ -1,5 +1,5 @@
 # microkernel
-Very basic x86 Operating System (microkernel)
+A Basic Hobby Operating System That Might Not Actually Be Microkernel
 
 ~~(I didn't know what to name it so I just named it "microkernel".. cuz it's micro)~~
 ## Goal of the project

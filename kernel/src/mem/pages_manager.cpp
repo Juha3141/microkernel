@@ -48,7 +48,12 @@ bool page::init_pt_space_allocator(LoaderArgument *loader_argument) {
         return false;
     }
     kernel_pt_space_manager.start_addr = chunk_start;
-    kernel_pt_space_manager.end_addr   = chunk_end;
+    kernel_pt_space_manager.end_addr   = chunk_start+
+#if CONFIG_USE_LARGE_PAGE == yes
+            CONFIG_LARGE_PAGE_SIZE;
+#else
+            CONFIG_PAGE_SIZE;
+#endif;
     kernel_pt_space_manager.current_addr = chunk_start;
 
     return true;
@@ -59,13 +64,16 @@ __kernel_setup_text__
 void *page::alloc_pt_space(max_t size , max_t alignment) {
 	max_t addr = align_round_up(kernel_pt_space_manager.current_addr , alignment); // Align address
 	kernel_pt_space_manager.current_addr = addr+size; // increment address
-    if(kernel_pt_space_manager.current_addr >= kernel_pt_space_manager.end_addr) return nullptr;
+    if(kernel_pt_space_manager.current_addr >= kernel_pt_space_manager.end_addr) {
+        // double the size
+        kernel_pt_space_manager.end_addr += (kernel_pt_space_manager.end_addr-kernel_pt_space_manager.start_addr);
+    }
 
 	return (void *)addr;
 }
 __kernel_setup_text__
 memory::Boundary page::get_pt_space_boundary(void) {
-    return {kernel_pt_space_manager.start_addr , kernel_pt_space_manager.current_addr};
+    return {kernel_pt_space_manager.start_addr , kernel_pt_space_manager.end_addr};
 }
 
 

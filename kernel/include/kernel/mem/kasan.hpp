@@ -27,8 +27,14 @@ namespace kasan {
     void poison_address(max_t linear_address , max_t size , byte value);
     void unpoison_address(max_t linear_address , max_t size);
     
-    bool check_address_validity(max_t linear_address , max_t size);
-    void report_bug();
+    bool check_address_validity(max_t linear_address , max_t size , byte is_write , max_t pc);
+    /// @brief KASan bug report function
+    /// @param addr 
+    /// @param size 
+    /// @param buggy_shadow_address 
+    /// @param is_write 
+    /// @param pc Program Counter
+    void report_bug(max_t addr , max_t size , max_t buggy_shadow_address , byte is_write , max_t pc);
 }
 
 #endif

@@ -69,6 +69,7 @@ __kernel_start__ = .;
   /DISCARD/ : {
     *(.comment .comment.*)
     *(.eh_frame)
+    *(.note.GNU-stack)
   }
 
 __kernel_end__ = .;

@@ -1,6 +1,7 @@
 #include <string.hpp>
 #include <kernel/types.hpp>
 
+__no_sanitize_address__
 void *memset(void *dest , int c , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
     max_t aligned_dest = align_round_up((max_t)dest , WORD_SIZE);

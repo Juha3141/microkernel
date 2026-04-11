@@ -113,12 +113,12 @@ void debug::panic(void) {
 const char *debug::out::debugstr(debug_m mode) {
     switch(mode) {
         case DEBUG_NONE:    return "";
-        case DEBUG_TEXT:    return "[ ] ";
-        case DEBUG_INFO:    return "[I] ";
-        case DEBUG_SPECIAL: return "[S] ";
-        case DEBUG_WARNING: return "[W] ";
-        case DEBUG_ERROR:   return "[E] ";
-        case DEBUG_PANIC:   return "[P] ";
+        case DEBUG_TEXT:    return "";
+        case DEBUG_INFO:    return "";
+        case DEBUG_SPECIAL: return "";
+        case DEBUG_WARNING: return "";
+        case DEBUG_ERROR:   return "[ERROR] : ";
+        case DEBUG_PANIC:   return "";
     }
     return "    ";
 }

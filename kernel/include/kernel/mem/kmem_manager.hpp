@@ -21,7 +21,7 @@ struct KernelMemoryMap {
 	unsigned int type;
 
     // used for linked list
-    KernelMemoryMap *prev = 0x00, *next = 0x00;
+    KernelMemoryMap *prev, *next;
 };
 
 /// @brief  Currently there's 5 essential kernel boundaries
@@ -94,7 +94,7 @@ namespace memory {
     };
     
     // pmem (physical memory) allocation
-    void pmem_init();
+    void pmem_init(max_t kernel_vma_pool_start , max_t kernel_vma_pool_end);
     void *pmem_alloc(max_t size , max_t alignment=0);
     bool is_pmem_allocated_obj(void *ptr);
     void pmem_free(void *ptr);
@@ -103,12 +103,12 @@ namespace memory {
     max_t pmem_total_size(void);
     max_t pmem_usage(void);
 
-    __no_sanitize_address__ void kmemmap_init(LoaderArgument *loader_argument);
+    void kmemmap_init(LoaderArgument *loader_argument);
     /// @brief global_kmemmap(from KernelMemmapManager) : Linked-list style global kernel memory map
     /// @return returns global kmemmap
-    __no_sanitize_address__ KernelMemoryMap *&global_kmemmap();
-    __no_sanitize_address__ KernelMemoryMap *add_kmemmap_entry(const KernelMemoryMap& entry);
-    __no_sanitize_address__ KernelMemoryMap *add_kmemmap_entry(const LoaderMemoryMap& entry);
+    KernelMemoryMap *&global_kmemmap();
+    KernelMemoryMap *add_kmemmap_entry(const KernelMemoryMap& entry);
+    KernelMemoryMap *add_kmemmap_entry(const LoaderMemoryMap& entry);
 
     const char *memmap_type_to_str(unsigned int type);
 }

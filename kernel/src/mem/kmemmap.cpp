@@ -130,12 +130,14 @@ __no_sanitize_address__ static KernelMemoryMap *kmemmap_entry_insert_between(Ker
 	return new_entry;
 }
 
+__no_sanitize_address__
 /// @brief Helper function. Check whether ptr is inside entry, if it does, return true. Otherwise, return false
 inline static bool inside(KernelMemoryMap *ptr , const KernelMemoryMap &entry) {
 	return (entry.start_address <= ptr->start_address && ptr->start_address <= entry.end_address
 		&& entry.start_address <= ptr->end_address   && ptr->end_address   <= entry.end_address);
 }
 
+__no_sanitize_address__
 /// @brief Helper function. Check whether overwriting entry into ptr is applicable by checking their type.
 ///        The condition for overwriting is either ptr must have same type with entry, or ptr is MEMORYMAP_USABLE
 inline static bool overwrite_applicable(KernelMemoryMap *ptr , const KernelMemoryMap &entry) {

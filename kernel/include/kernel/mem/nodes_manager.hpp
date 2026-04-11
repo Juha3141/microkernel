@@ -29,7 +29,7 @@ namespace memory {
 
             max_t allocate(max_t size , max_t alignment);
             bool is_allocated(max_t ptr);
-            bool free(max_t ptr);
+            max_t free(max_t ptr);
 
             bool available(void);
 

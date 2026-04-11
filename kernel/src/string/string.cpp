@@ -23,7 +23,7 @@ void *memset(void *dest , int c , size_t n) {
     max_t *dest_ptr = (max_t *)((max_t)dest+dest_remaining);
 
     max_t fill_data = 0x00; 
-    for(int i = 0; i < WORD_SIZE; i++) {
+    for(size_t i = 0; i < WORD_SIZE; i++) {
         fill_data |= (((max_t)c & 0xff) << i*8);
     }
     
@@ -32,13 +32,14 @@ void *memset(void *dest , int c , size_t n) {
     }
 
     dest_ptr_char = (unsigned char *)dest+size;
-    for(int i = 0; i < dest_remaining_rear; i++) {
+    for(size_t i = 0; i < dest_remaining_rear; i++) {
         *dest_ptr_char++ = (unsigned char)c;
     }
 
     return dest;
 }
 
+__no_sanitize_address__
 void *memcpy(void *dest , const void *src , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
     unsigned char *src_ptr_char  = (unsigned char *)src;
@@ -75,6 +76,7 @@ void *memcpy(void *dest , const void *src , size_t n) {
     return dest;
 }
 
+__no_sanitize_address__
 static void *memcpy_reverse(void *dest , const void *src , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
     unsigned char *src_ptr_char  = (unsigned char *)src;
@@ -93,7 +95,7 @@ static void *memcpy_reverse(void *dest , const void *src , size_t n) {
 
     dest_ptr_char = (unsigned char *)dest+n;
     src_ptr_char  = (unsigned char *)src+n;
-    for(int i = 0; i < dest_remaining_rear; i++) {
+    for(size_t i = 0; i < dest_remaining_rear; i++) {
         *--dest_ptr_char = *--src_ptr_char;
     }
 
@@ -112,6 +114,7 @@ static void *memcpy_reverse(void *dest , const void *src , size_t n) {
     return dest;
 }
 
+__no_sanitize_address__
 void *memmove(void *dest , const void *src , size_t n) {
     if(dest == src) return dest;
 
@@ -119,6 +122,7 @@ void *memmove(void *dest , const void *src , size_t n) {
     return memcpy_reverse(dest , src , n);
 }
 
+__no_sanitize_address__
 int memcmp(const void *s1 , const void *s2 , size_t n) {
     unsigned char *s1_ptr = (unsigned char *)s1;
     unsigned char *s2_ptr = (unsigned char *)s2;

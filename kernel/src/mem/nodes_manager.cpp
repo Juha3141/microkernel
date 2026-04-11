@@ -4,6 +4,7 @@
 
 #include <kernel/debug.hpp>
 
+__no_sanitize_address__
 /// @brief Initializes the variables of class
 /// @param start_address start address of memory
 /// @param total_usable_mem size of total usable memory
@@ -18,12 +19,14 @@ void memory::NodesManager::init(max_t start_address , max_t end_address) {
 	allocation_available = true;
 }
 
+__no_sanitize_address__
 /// @brief Gives boolean value of whether manager is available
 /// @return Return true if manager is available to allot
 bool memory::NodesManager::available(void) {
 	return allocation_available;
 }
 
+__no_sanitize_address__
 /// @brief Allocate physical kernel memory
 /// @param size Size to allocate
 /// @param alignment Alignment
@@ -74,6 +77,7 @@ max_t memory::NodesManager::allocate(max_t size , max_t alignment) {
 																		// Address after area of node
 }
 
+__no_sanitize_address__
 /// @brief Checks whether the provided address is the address to allocated object
 /// @param address Address of memory chunk
 bool memory::NodesManager::is_allocated(max_t address) {
@@ -85,9 +89,11 @@ bool memory::NodesManager::is_allocated(max_t address) {
 	return true;
 }
 
+__no_sanitize_address__
 /// @brief Deallocate physical kernel memory
 /// @param address Address of memory chunk
-bool memory::NodesManager::free(max_t address) {
+/// @return Size of the allocated chunk
+max_t memory::NodesManager::free(max_t address) {
 	bool merged = false;
 	max_t total_merging_size = 0;
 	struct Node *node_ptr;
@@ -95,8 +101,9 @@ bool memory::NodesManager::free(max_t address) {
 	struct Node *node_next;
 	struct Node *node_prev;
 	struct Node *node = (struct Node *)(((max_t)address)-sizeof(struct Node));  // address of Node : address - Size of the node structure
-	
-	if(!is_allocated(address)) return false;
+	max_t node_size = node->size;
+
+	if(!is_allocated(address)) return 0;
 	// Allocated Size : Location of the next node - Location of current node
 	// If next node is usable, and present, the node can be merged.
 	memory_usage -= node->size+sizeof(struct Node);
@@ -155,13 +162,14 @@ bool memory::NodesManager::free(max_t address) {
 }
 
 
+__no_sanitize_address__
 /// @brief Search the node that is bigger than the given size from the argument
 /// @param size "Least minimum" size of desired node
 /// @return Location of the desired node
 struct memory::Node *memory::NodesManager::search_first_fit(max_t size) {
 	struct Node *node;
 	node = node_start;
-	while(node->signature == MEMMANAGER_SIGNATURE) {
+	while((mem_start_address <= (max_t)node && (max_t)node <= mem_end_address) && node->signature == MEMMANAGER_SIGNATURE) {
 		if((node->occupied == 0) && (node->size >= size) && (node->size-size > sizeof(struct Node))) {
 			// debug::out::printf("Free Node Found : At 0x%X, Size : %d, %d\n" , Node , (((max_t)Node->next)-(max_t)Node-sizeof(struct Node)) , Node->Size);
 			return node;
@@ -171,6 +179,7 @@ struct memory::Node *memory::NodesManager::search_first_fit(max_t size) {
 	return 0; // No node available, need to create new node
 }
 
+__no_sanitize_address__
 /// @brief Searches node that is already aligned
 /// @param Size Size of the node
 /// @param Alignment Option of alignment
@@ -193,6 +202,7 @@ struct memory::Node *memory::NodesManager::search_aligned(max_t size , max_t ali
 	return 0x00; // No node available, need to create new node
 }
 
+__no_sanitize_address__
 /// @brief Search the location for new node
 /// @param prev_node Recipient variable for the location of previous node of new node
 /// @return Location of new node, and location of previous node of That node(prev_node)
@@ -216,6 +226,7 @@ struct memory::NodesManager::NodesTuple memory::NodesManager::search_new_node_lo
 
 #define ALIGN_THRESHOLD sizeof(struct Node)+128
 
+__no_sanitize_address__
 /// @brief Create new node and link with already existing nodes
 /// @param size Size of the new node
 /// @param alignment Alignment of address of node
@@ -250,6 +261,7 @@ struct memory::Node *memory::NodesManager::create_new_node(max_t size , max_t al
 	return node;
 }
 
+__no_sanitize_address__
 /// @brief Write data to the node
 /// @param node Target node
 /// @param occupied occupied flag, 1 = node is occupied
@@ -281,6 +293,7 @@ void memory::NodesManager::write_node_data(struct Node *node , unsigned char occ
 	node->aligned = (alignment != 0);
 }
 
+__no_sanitize_address__
 struct memory::Node *memory::NodesManager::align(struct memory::Node *node , max_t alignment) {
 	max_t aligned = 0;   // PreviousNodeAddress : Previous Node Address before aligning to 4K
 	struct Node *original = node;

@@ -233,8 +233,13 @@ int memory::SegmentsManager::get_segment_index(max_t address) {
 	return -1;
 }
 
-void memory::pmem_init() {
-	
+void memory::pmem_init(max_t kernel_vma_pool_start , max_t kernel_vma_pool_end) {
+	SegmentsManager *segments_mgr = GLOBAL_OBJECT(SegmentsManager);
+	Boundary vma_pool[] = {
+		{kernel_vma_pool_start , kernel_vma_pool_end}
+	};
+	segments_mgr->init(1 , vma_pool);
+	is_pmem_alloc_available = true;
 }
 
 max_t memory::SegmentsManager::get_currently_using_mem(void) {
@@ -249,6 +254,11 @@ max_t memory::SegmentsManager::get_currently_using_mem(void) {
 void *memory::pmem_alloc(max_t size , max_t alignment) {
 	void *ptr = 0x00;
 	if(!is_pmem_alloc_available) return memory::kstruct_alloc(size , alignment);
+
+#ifdef CONFIG_USE_KASAN
+	max_t original_alloc_size = size;
+	size += KASAN_HEAP_HEAD_REDZONE_SIZE+KASAN_HEAP_TAIL_REDZONE_SIZE;
+#endif
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	if(size == 0x00) return 0x00;
 	
@@ -259,10 +269,20 @@ void *memory::pmem_alloc(max_t size , max_t alignment) {
 			break;
 		}
 	}
+#ifdef CONFIG_USE_KASAN
+	kasan::poison_address((max_t)ptr , KASAN_HEAP_HEAD_REDZONE_SIZE , KASAN_SHADOW_MAGIC_HEAP_HEAD_REDZONE);
+	kasan::poison_address((max_t)ptr+original_alloc_size+KASAN_HEAP_HEAD_REDZONE_SIZE , KASAN_HEAP_TAIL_REDZONE_SIZE , KASAN_HEAP_TAIL_REDZONE_SIZE);
+
+	ptr = (void *)((max_t)ptr+KASAN_HEAP_HEAD_REDZONE_SIZE);
+#endif
 	return ptr;
 }
 
 void memory::pmem_free(void *ptr) {
+	max_t allocated_size = 0;
+#ifdef CONFIG_USE_KASAN
+	ptr = (void *)((max_t)ptr-KASAN_HEAP_HEAD_REDZONE_SIZE);
+#endif
 	SegmentsManager *segments_mgr = SegmentsManager::get_self();
 	int index;
 	if((index = segments_mgr->get_segment_index((max_t)ptr)) == -1) {
@@ -270,9 +290,12 @@ void memory::pmem_free(void *ptr) {
 		// debug here
 		return;
 	}
-	if(segments_mgr->node_managers[index].free((max_t)ptr) == false) {
+	if((allocated_size = segments_mgr->node_managers[index].free((max_t)ptr)) == 0) {
 		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request not allocated(ptr=0x%lX)\n" , (max_t)ptr);
 	}
+#ifdef CONFIG_USE_KASAN
+	kasan::poison_address((max_t)ptr , allocated_size , KASAN_SHADOW_MAGIC_HEAP_FREE);
+#endif
 }
 
 bool memory::is_pmem_allocated_obj(void *ptr) {

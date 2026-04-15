@@ -34,6 +34,8 @@ struct Registers {
     qword rflags; // 22
     qword rip;    // 23
     
+    qword cr0;    // 24
+    qword cr2;    // 24
     qword cr3;    // 24
 };
 

@@ -158,7 +158,7 @@ max_t memory::NodesManager::free(max_t address) {
 	if((node->occupied == 0) && (((struct Node *)node->next) == 0x00)) { // If it sooths the condition,
 		memset(node , 0 , sizeof(struct Node));		  // Erase the node(Set everything to 0)
 	}
-	return true;
+	return node_size;
 }
 
 

@@ -6,6 +6,12 @@
 #include <kernel/interrupt/interrupt.hpp>
 #include <kernel/interrupt/exception.hpp>
 #include <kernel/io_port.hpp>
+#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/driver/pci.hpp>
+#include <ramdisk/ramdisk.hpp>
+#include <kernel/vfs/storage_system.hpp>
+#include <kernel/vfs/file_system_driver.hpp>
+#include <kernel/vfs/virtual_file_system.hpp>
 
 #include <kernel/debug.hpp>
 
@@ -19,11 +25,10 @@
 #include <pair.hpp>
 #include <arch/switch_context.hpp>
 
-__no_sanitize_address__ memory::Boundary setup_kasan_shadowmem(PageTableData &page_table_data , max_t kernel_size , max_t kernel_stack_size);
-__no_sanitize_address__ memory::Boundary map_usable_mem_into_vaddr(PageTableData &page_table_data , max_t linear_addr_start , max_t required_size , max_t flag=MEMORYMAP_USABLE);
-__no_sanitize_address__ max_t get_kernel_memory_pool_size();
+memory::Boundary setup_kasan_shadowmem(PageTableData &page_table_data , max_t kernel_size , max_t kernel_stack_size);
+memory::Boundary map_usable_mem_into_vaddr(PageTableData &page_table_data , max_t linear_addr_start , max_t required_size , max_t flag=MEMORYMAP_USABLE);
+max_t get_kernel_memory_pool_size();
 
-__no_sanitize_address__
 struct MappedRegionInfo {
     max_t used_phys_addr_start;
     max_t used_phys_addr_end;
@@ -34,7 +39,8 @@ struct MappedRegionInfo {
 __no_sanitize_address__ MappedRegionInfo map_pages_auto_alignment(PageTableData &page_table_data , max_t phys_addr_start , max_t phys_addr_end , max_t linear_addr_start , max_t flags);
 __no_sanitize_address__ void update_pt_space_to_kmemmap(void);
 
-// + Add kernel_setup argument that tells the virtual addresses of important memory areas like stack, loader_argument and kstruct etc.
+extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument);
+
 __no_sanitize_address__
 extern "C" void kernel_main(LoaderArgument *loader_argument , max_t kernel_vmem_addr , max_t kernel_stack_vmem_addr , max_t kernel_stack_size) {
     memory::kstruct_init({loader_argument->kstruct_mem_location , loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size});
@@ -81,23 +87,58 @@ extern "C" void kernel_main(LoaderArgument *loader_argument , max_t kernel_vmem_
         kmemmap_ptr = kmemmap_ptr->next;
     }
     debug::out::printf("Actually usable kernel memory : %lldMB\n" , (kernel_free_pool_vma.end_address - kernel_free_pool_vma.start_address)/1024/1024);
+
+    memory::pmem_init(free_pool_vma_start , free_pool_vma_start+free_pool_size);
+    sanitized_kernel_main(loader_argument);
     while(1) {
         ;
     }
+}
 
-    memory::pmem_init();
-
+extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     debug::out::printf(DEBUG_INFO , "----- Initializing segmentation system..\n");
     segmentation::init();
     debug::out::printf(DEBUG_INFO , "----- Initializing interrupt system..\n");
     interrupt::init();
     exception::init();
+    debug::out::printf(DEBUG_INFO , "----- Initializing block device driver..\n");
+    blockdev::init();
+    storage_system::init();
+    debug::out::printf(DEBUG_INFO , "----- Initializing file system driver..\n");
+    fsdev::init();
+    debug::out::printf(DEBUG_INFO , "----- Initializing character device driver..\n");
+    chardev::init();
+    register_file_system_drivers();
+    register_kernel_drivers();
 
-    debug::out::printf("We're currently in safe mode\n");
-
-    while(1) {
-        ;
+    debug::out::printf(DEBUG_INFO , "----- Initializing vfs..\n");
+    debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , loader_argument->ramdisk_location , loader_argument->ramdisk_location+loader_argument->ramdisk_size);
+    // find the ramdisk driver
+    if(loader_argument->is_ramdisk_available) {
+        blockdev::block_device *device = ramdisk_driver::create(loader_argument->ramdisk_size/512 , 512 , loader_argument->ramdisk_location);
+        if(blockdev::register_device(device->device_driver->driver_id , device) != INVALID) {
+            // mount to the root device
+            vfs::init(device);
+        }
     }
+    else {
+        debug::out::printf("no ramdisk found!\n");
+    }
+    debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
+
+    file_info *root_dir = vfs::get_root_directory();
+    int file_count = vfs::read_directory(root_dir);
+    auto *fp = root_dir->file_list->get_start_node();
+    while(fp != nullptr) {
+        file_info *file = fp->object;
+
+        debug::out::printf("%s\n" , file->file_name);
+        fp = fp->next;
+    }
+    
+    pci::probe_all_pci_devices();
+    
+    debug::out::printf("We're currently in safe mode\n");
 }
 
 #define PAGE_COUNT_THRESHOLD (CONFIG_LARGE_PAGE_SIZE/CONFIG_PAGE_SIZE)*4
@@ -227,14 +268,36 @@ memory::Boundary setup_kasan_shadowmem(PageTableData &page_table_data , max_t ke
 #else
     CONFIG_PAGE_SIZE;
 #endif
-    max_t kasan_shadowmem_addr_kernel_vma = CONFIG_KERNEL_KASAN_VMA + (CONFIG_KERNEL_VMADDRESS >> KASAN_SHADOW_SHIFT);
-    max_t kasan_shadowmem_size = align_round_up(kernel_memory_pool_size/(KASAN_GRANUL_SIZE+1) , DEFAULT_PAGE_SIZE)
+
+ // max_t kernel_area_to_be_protected_start = 0;
+    max_t kernel_area_to_be_protected_end   = 0;
+    KernelMemoryMap *ptr = memory::global_kmemmap();
+    while(ptr != nullptr) {
+        switch(ptr->type) {
+            case MEMORYMAP_KERNEL_IMAGE:
+            case MEMORYMAP_KERNEL_STACK:
+            case MEMORYMAP_LOADER_ARGUMENT:
+            case MEMORYMAP_KSTRUCT_POOL:
+                kernel_area_to_be_protected_end = max(kernel_area_to_be_protected_end , ptr->end_address);
+                break;
+        }
+        ptr = ptr->next;
+    }
+    // debug::out::printf("Kernel area to be protected end : 0x%llx\n" , kernel_area_to_be_protected_end);
+    max_t kernel_area_to_be_protected_vma  = CONFIG_KERNEL_KASAN_VMA;
+    max_t kernel_area_to_be_protected_size = align_round_up((kernel_area_to_be_protected_end+KASAN_GRANUL_SIZE) >> KASAN_SHADOW_SHIFT , CONFIG_PAGE_SIZE);
+    map_usable_mem_into_vaddr(page_table_data  , kernel_area_to_be_protected_vma , kernel_area_to_be_protected_size , MEMORYMAP_KASAN_SHADOWMEM);
+    // debug::out::printf("KASan shadow mem front : 0x%llx ~ 0x%llx\n" , kernel_area_to_be_protected_vma , kernel_area_to_be_protected_vma+kernel_area_to_be_protected_size);
+    
+    max_t kasan_shadowmem_kernel_pool_vma = CONFIG_KERNEL_KASAN_VMA + (CONFIG_KERNEL_VMADDRESS >> KASAN_SHADOW_SHIFT);
+    max_t kasan_shadowmem_kernel_pool_size = align_round_up(kernel_memory_pool_size/(KASAN_GRANUL_SIZE+1) , DEFAULT_PAGE_SIZE)
                                  + align_round_up(kernel_size       , page_size)
                                  + align_round_up(kernel_stack_size , page_size);
+    // debug::out::printf("KASan shadow mem kernel pool : 0x%llx ~ 0x%llx\n" , kasan_shadowmem_kernel_pool_vma , kasan_shadowmem_kernel_pool_vma+kasan_shadowmem_kernel_pool_size);
     // debug::out::printf("Kernel memory pool size  : %dMB\n" , kernel_memory_pool_size/1024/1024);
     // debug::out::printf("KASan shadow memory size : %dMB\n" , kasan_shadowmem_size/1024/1024);
     // debug::out::printf("KASan memory area : 0x%-15llx 0x%-15llx\n" , kasan_shadowmem_addr_kernel_vma , kasan_shadowmem_addr_kernel_vma+kasan_shadowmem_size);
-    auto res = map_usable_mem_into_vaddr(page_table_data , kasan_shadowmem_addr_kernel_vma , kasan_shadowmem_size , MEMORYMAP_KASAN_SHADOWMEM);
+    auto res = map_usable_mem_into_vaddr(page_table_data , kasan_shadowmem_kernel_pool_vma , kasan_shadowmem_kernel_pool_size , MEMORYMAP_KASAN_SHADOWMEM);
 
     max_t mapped_memory_size = (res.end_address - res.start_address);
     // debug::out::printf("Total mapped size           : %dkB (%d.%d%d%%)\n" , mapped_memory_size/1024 , 
@@ -307,15 +370,15 @@ __no_sanitize_address__ MappedRegionInfo map_pages_auto_alignment(PageTableData 
     }
     map_pages_auto_alignment(page_table_data , phys_addr_start , phys_addr_start+alignment_padding_linear , linear_addr_start , flags);
 
-    debug::out::printf("aligned_phys_addr   : 0x%-13llx ~ 0x%-13llx (sz=0x%llx)\n" , aligned_phys_addr , aligned_phys_end , aligned_phys_end-aligned_phys_addr);
-    debug::out::printf("padding             : 0x%llx\n" , alignment_padding_phys);
-    debug::out::printf("aligned_linear_addr : 0x%-13llx ~ 0x%-13llx (sz=0x%llx)\n" , aligned_linear_addr , aligned_linear_end , aligned_linear_end-aligned_linear_addr);
-    debug::out::printf("padding             : 0x%llx\n" , alignment_padding_linear);
+    // debug::out::printf("aligned_phys_addr   : 0x%-13llx ~ 0x%-13llx (sz=0x%llx)\n" , aligned_phys_addr , aligned_phys_end , aligned_phys_end-aligned_phys_addr);
+    // debug::out::printf("padding             : 0x%llx\n" , alignment_padding_phys);
+    // debug::out::printf("aligned_linear_addr : 0x%-13llx ~ 0x%-13llx (sz=0x%llx)\n" , aligned_linear_addr , aligned_linear_end , aligned_linear_end-aligned_linear_addr);
+    // debug::out::printf("padding             : 0x%llx\n" , alignment_padding_linear);
 
     max_t page_count = (aligned_linear_end-aligned_linear_addr)/page_size;
     page::map_pages(page_table_data , aligned_linear_addr , page_size , page_count , aligned_phys_addr , flags , page::alloc_pt_space);
-    debug::out::printf("pages::map_pages() : laddr=%-15llx~%-14llx paddr=%-14llx~%-14llx ps=%lld sz=%lld pages\n" , 
-        aligned_linear_addr , aligned_linear_end , aligned_phys_addr , aligned_phys_addr+(page_count*page_size) , page_size , page_count);
+    // debug::out::printf("pages::map_pages() : laddr=%-15llx~%-14llx paddr=%-14llx~%-14llx ps=%lld sz=%lld pages\n" , 
+        // aligned_linear_addr , aligned_linear_end , aligned_phys_addr , aligned_phys_addr+(page_count*page_size) , page_size , page_count);
 
     map_pages_auto_alignment(page_table_data , aligned_phys_end , phys_addr_end , aligned_linear_end , flags);
 

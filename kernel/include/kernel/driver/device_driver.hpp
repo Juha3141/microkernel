@@ -12,7 +12,7 @@
 typedef void(*driver_init_func_ptr_t)(void);
 
 #define REGISTER_FPTR_TO_SECTION(init_driver , section_name) void __register_driver_init_##init_driver(void) { init_driver(); } \
-static __attribute__ ((section(section_name))) driver_init_func_ptr_t __device_driver_init_##init_driver  = __register_driver_init_##init_driver; 
+__attribute__ ((used)) __attribute__ ((section(section_name))) driver_init_func_ptr_t __device_driver_init_##init_driver  = __register_driver_init_##init_driver; 
 
 #define REGISTER_DRIVER(init_driver) REGISTER_FPTR_TO_SECTION(init_driver , ".drivers_init")
 #define REGISTER_FS_DRIVER(init_driver) REGISTER_FPTR_TO_SECTION(init_driver , ".fs_drivers_init")

@@ -21,6 +21,10 @@
 #define KASAN_HEAP_HEAD_REDZONE_SIZE 8
 #define KASAN_HEAP_TAIL_REDZONE_SIZE 8
 
+#define KASAN_READ false
+#define KASAN_WRITE true
+#define CALLER_PC ((max_t)__builtin_return_address(0))
+
 namespace kasan {
     typedef max_t uptr;
 

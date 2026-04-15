@@ -20,6 +20,7 @@ max_t blockdev::register_driver(blockdev::block_device_driver *driver , const ch
     max_t id = driver_container->add(driver); // register driver to global container
     driver->driver_id = id;
     if(id == INVALID) { return INVALID; }
+    
     driver->device_container = new FixedArray<block_device*>();
     driver->device_container->init(256);
     // assign new local device container
@@ -62,7 +63,14 @@ max_t blockdev::register_device(blockdev::block_device_driver *driver , blockdev
 /// @brief Other form of register_device
 
 max_t blockdev::register_device(const char *driver_name , blockdev::block_device *device) { return blockdev::register_device(search_driver(driver_name) , device); }
-max_t blockdev::register_device(max_t driver_id , blockdev::block_device *device) { return blockdev::register_device(GLOBAL_OBJECT(BlockDeviceDriverContainer)->get(driver_id) , device); }
+max_t blockdev::register_device(max_t driver_id , blockdev::block_device *device) {
+    blockdev::block_device_driver *driver = GLOBAL_OBJECT(BlockDeviceDriverContainer)->get(driver_id);
+    if(driver == nullptr) {
+        debug::out::printf(DEBUG_WARNING , "Unable to find block device driver with driver_id=%d\n" , driver_id);
+        return INVALID;
+    }
+    return blockdev::register_device(driver , device);
+}
 
 blockdev::block_device *blockdev::search_device(max_t driver_id , max_t device_id) { return search_driver(driver_id)->device_container->get(driver_id); }
 blockdev::block_device *blockdev::search_device(blockdev::block_device_driver *driver , max_t device_id) { return driver->device_container->get(device_id); }

@@ -34,5 +34,10 @@ void exception::hardware::register_hardware_exceptions(void) {
 }
 
 void exception::hardware::archdep_general_exception_handler(int handler_id , Registers *regs) {
-    debug::out::printf(DEBUG_ERROR , "RIP = 0x%08x\n" , regs->rip);
+    debug::out::printf(DEBUG_ERROR , "RAX=0x%-16llx RBX=0x%-16llx RCX=0x%-16llx RDX=0x%-16llx\n" , regs->rax,regs->rbx,regs->rcx,regs->rdx);
+    debug::out::printf(DEBUG_ERROR , "RDI=0x%-16llx RSI=0x%-16llx RBP=0x%-16llx RSP=0x%-16llx\n" , regs->rdi,regs->rsi,regs->rbp,regs->rsp);
+    debug::out::printf(DEBUG_ERROR , "R8 =0x%-16llx R9 =0x%-16llx R10=0x%-16llx R11=0x%-16llx\n" , regs->r8,regs->r9,regs->r10,regs->r11);
+    debug::out::printf(DEBUG_ERROR , "R12=0x%-16llx R13=0x%-16llx R14=0x%-16llx R15=0x%-16llx\n" , regs->r12,regs->r13,regs->r14,regs->r15);
+    debug::out::printf(DEBUG_ERROR , "RIP=0x%-16llx\n" , regs->rip);
+    debug::out::printf(DEBUG_ERROR , "CR0=0x%-16llx CR2=0x%-16llx CR3=0x%-16llx\n" , regs->cr0,regs->cr2,regs->cr3);
 }

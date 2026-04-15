@@ -20,8 +20,8 @@
 
 // for C++ standard
 
-void *operator new(size_t size) { return memory::pmem_alloc(size , 0); }
-void *operator new[](size_t size) { return memory::pmem_alloc(size , 0); }
+void *operator new(size_t size) { return memory::pmem_alloc(size); }
+void *operator new[](size_t size) { return memory::pmem_alloc(size); }
 void operator delete(void *ptr , max_t) { memory::pmem_free(ptr); }
 
 // Just temporary patch
@@ -251,16 +251,10 @@ max_t memory::SegmentsManager::get_currently_using_mem(void) {
 	return currently_using_mem;
 }
 
-void *memory::pmem_alloc(max_t size , max_t alignment) {
-	void *ptr = 0x00;
-	if(!is_pmem_alloc_available) return memory::kstruct_alloc(size , alignment);
-
-#ifdef CONFIG_USE_KASAN
-	max_t original_alloc_size = size;
-	size += KASAN_HEAP_HEAD_REDZONE_SIZE+KASAN_HEAP_TAIL_REDZONE_SIZE;
-#endif
-	SegmentsManager *segments_mgr = SegmentsManager::get_self();
-	if(size == 0x00) return 0x00;
+static void *pmem_alloc_main(max_t size , max_t alignment) {
+	memory::SegmentsManager *segments_mgr = memory::SegmentsManager::get_self();
+	if(size == 0x00) return nullptr;
+	void *ptr = nullptr;
 	
 	for(int i = 0; i < segments_mgr->managers_count; i++) {
 		if(!segments_mgr->node_managers[i].available()) continue;
@@ -269,32 +263,144 @@ void *memory::pmem_alloc(max_t size , max_t alignment) {
 			break;
 		}
 	}
-#ifdef CONFIG_USE_KASAN
-	kasan::poison_address((max_t)ptr , KASAN_HEAP_HEAD_REDZONE_SIZE , KASAN_SHADOW_MAGIC_HEAP_HEAD_REDZONE);
-	kasan::poison_address((max_t)ptr+original_alloc_size+KASAN_HEAP_HEAD_REDZONE_SIZE , KASAN_HEAP_TAIL_REDZONE_SIZE , KASAN_HEAP_TAIL_REDZONE_SIZE);
-
-	ptr = (void *)((max_t)ptr+KASAN_HEAP_HEAD_REDZONE_SIZE);
-#endif
 	return ptr;
 }
 
-void memory::pmem_free(void *ptr) {
-	max_t allocated_size = 0;
-#ifdef CONFIG_USE_KASAN
-	ptr = (void *)((max_t)ptr-KASAN_HEAP_HEAD_REDZONE_SIZE);
-#endif
-	SegmentsManager *segments_mgr = SegmentsManager::get_self();
+static max_t pmem_free_main(void *ptr) {
+	memory::SegmentsManager *segments_mgr = memory::SegmentsManager::get_self();
 	int index;
+	max_t allocated_size = 0;
 	if((index = segments_mgr->get_segment_index((max_t)ptr)) == -1) {
-		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request out of range(ptr=0x%lX)\n" , (max_t)ptr);
+		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request out of range(ptr=0x%llx)\n" , (max_t)ptr);
 		// debug here
-		return;
+		return 0;
 	}
 	if((allocated_size = segments_mgr->node_managers[index].free((max_t)ptr)) == 0) {
-		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request not allocated(ptr=0x%lX)\n" , (max_t)ptr);
+		debug::out::printf(DEBUG_WARNING , "Warning : Memory release request not allocated(ptr=0x%llx)\n" , (max_t)ptr);
+		return 0;
 	}
+	return allocated_size;
+}
+
 #ifdef CONFIG_USE_KASAN
-	kasan::poison_address((max_t)ptr , allocated_size , KASAN_SHADOW_MAGIC_HEAP_FREE);
+
+__no_sanitize_address__
+static void *kasan_pmem_alloc_hook(max_t size , max_t alignment) {
+	void *ptr = nullptr;
+	if(size == 0) return nullptr;
+	if(alignment%KASAN_GRANUL_SIZE != 0) {
+		debug::out::printf(DEBUG_WARNING , "Warning : Alignment should be a multiple of %d if KASan is enabled\n" , KASAN_GRANUL_SIZE);
+		return nullptr;
+	}
+
+	if(!is_pmem_alloc_available) return memory::kstruct_alloc(size , alignment);
+	
+	max_t head_redzone_size = KASAN_HEAP_HEAD_REDZONE_SIZE;
+	if(alignment == 0) alignment = KASAN_GRANUL_SIZE;
+	else head_redzone_size = alignment;
+
+	max_t aligned_sz = align_round_up(size , KASAN_GRANUL_SIZE);
+	max_t original_alloc_size = size;
+	
+	/* 
+	 * <KASan redzone memory layout>
+	 *             The address that will be       aligned by 
+	 *             V    returned                  V   granul
+	 * +-----------+-+--------------------+---------+-----------+
+	 * |  redzone  |@|   allocated pool   | redzone |  redzone  |
+	 * +-----------+-+--------------------+---------+-----------+
+	 * ^            |<~~~~~~~~~~aligned_sz~~~~~~~~~~>
+	 * aligned      |
+	 * by granul    +--> Size of the redzone will be recorded right before the allocated pool
+	 * 
+	 * <------------------------------------------------------>
+	 *     The size that the kasan hook will be requesting
+	 *                     to the allocator
+	 *  =  redzone_head 
+	 *   + aligned_sz
+	 *   + redzone_tail
+	 * 
+	 * 
+	 * If the certain alignment is requested, the size of the redzone head will become
+	 *  the size of alignment requested.
+	 *  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	 */
+
+	// the actual allocation
+	ptr = pmem_alloc_main(head_redzone_size+aligned_sz+KASAN_HEAP_TAIL_REDZONE_SIZE , alignment);
+	max_t actual_ptr_start = (max_t)ptr+head_redzone_size;
+	max_t kasan_head_start = (max_t)ptr;
+	max_t kasan_head_size  = head_redzone_size;
+
+	max_t kasan_tail_start = actual_ptr_start+size;
+	max_t kasan_tail_size  = size-aligned_sz+KASAN_HEAP_TAIL_REDZONE_SIZE;
+
+	// record the alignment
+	*((max_t *)(actual_ptr_start-WORD_SIZE)) = head_redzone_size;
+
+	kasan::poison_address(kasan_head_start , kasan_head_size , KASAN_SHADOW_MAGIC_HEAP_HEAD_REDZONE);
+	kasan::poison_address(kasan_tail_start , kasan_tail_size , KASAN_SHADOW_MAGIC_HEAP_TAIL_REDZONE);
+	kasan::unpoison_address(actual_ptr_start , align_round_down(size , KASAN_GRANUL_SIZE));
+	
+	debug::out::printf(DEBUG_SPECIAL , "(alloc-POISON) kasan head redzone : 0x%llx~0x%llx\n" , kasan_head_start , kasan_head_start+kasan_head_size);
+	debug::out::printf(DEBUG_SPECIAL , "(alloc-POISON) kasan tail redzone : 0x%llx~0x%llx\n" , kasan_tail_start , kasan_tail_start+kasan_tail_size);
+	debug::out::printf(DEBUG_SPECIAL , "(alloc-UNPOISON) allocated memory pool : 0x%llx~0x%llx (sz=%lld)\n" , actual_ptr_start , actual_ptr_start+align_round_down(size , KASAN_GRANUL_SIZE) , align_round_down(size , KASAN_GRANUL_SIZE));
+
+	return (void *)actual_ptr_start;
+}
+
+__no_sanitize_address__
+static void kasan_pmem_free_hook(void *ptr) {
+	// to get the kasan head size
+	max_t head_redzone_size = *(max_t *)((max_t)ptr-WORD_SIZE);
+	
+	max_t allocated_size = pmem_free_main((void *)((max_t)ptr-head_redzone_size));
+	if(allocated_size == 0) return;
+	
+	max_t kasan_head_start = (max_t)ptr - head_redzone_size;
+	max_t kasan_head_size  = head_redzone_size;
+	/*
+	 *                     |>------unpoison------<|
+	 *                     <--- 8 ---> <--- 8 --->
+	 * +-||--------------------+-------+-----------+
+	 * | ||  allocated pool     | redz. |  redzone  |
+	 * +-||---------------------+-------+-----------+
+	 *                          <- ??? ->
+	 *                          |
+	 *                          +--> We don't know the exact alignment, 
+	 *                               so just unpoison the 8 bytes, even though the 
+	 *                               padding might not actually be 8 bytes.
+	 * */
+
+	max_t kasan_tail_start = (max_t)ptr+allocated_size-KASAN_GRANUL_SIZE;
+	max_t kasan_tail_size  = KASAN_HEAP_TAIL_REDZONE_SIZE;
+	kasan::unpoison_address(kasan_head_start , kasan_head_size);
+	kasan::unpoison_address(kasan_tail_start , kasan_tail_size);
+	
+	// Poison the de-allocated memory area to detect use-after-free leak
+	kasan::poison_address((max_t)ptr , align_round_down(allocated_size , KASAN_GRANUL_SIZE) , KASAN_SHADOW_MAGIC_HEAP_FREE);
+
+	debug::out::printf(DEBUG_SPECIAL , "allocated size = %lld\n" , allocated_size);
+	debug::out::printf(DEBUG_SPECIAL , "(free-UNPOISON) kasan head redzone : 0x%llx~0x%llx\n" , kasan_head_start , kasan_head_start+kasan_head_size);
+	debug::out::printf(DEBUG_SPECIAL , "(free-UNPOISON) kasan tail redzone : 0x%llx~0x%llx\n" , kasan_tail_start , kasan_tail_start+kasan_tail_size);
+	debug::out::printf(DEBUG_SPECIAL , "(use-after-free) 0x%llx ~ 0x%llx\n" , ptr , (max_t)ptr+align_round_down(allocated_size , KASAN_GRANUL_SIZE));
+}
+
+#endif
+
+void *memory::pmem_alloc(max_t size , max_t alignment) {
+#ifdef CONFIG_USE_KASAN
+	return kasan_pmem_alloc_hook(size , alignment);
+#else
+	return pmem_alloc_main(size , alignment);
+#endif
+}
+
+void memory::pmem_free(void *ptr) {
+#ifdef CONFIG_USE_KASAN
+	kasan_pmem_free_hook(ptr);
+#else
+	pmem_free_main(ptr);
 #endif
 }
 

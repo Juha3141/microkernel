@@ -14,7 +14,7 @@ bool ps2_mouse_driver::prepare(void) {
     chardev::char_device *device = create_empty_device<chardev::char_device>();
     // interrupt : 1 (IRQ 12)
     // etc resource : data queue, phase
-    designate_resources_count(device , 0 , 1 , 0 , 2);
+    designate_resources_count(device , 0 , 1 , 0 , 3);
     Queue<byte>*mouse_raw_data_queue = (Queue<byte> *)memory::pmem_alloc(sizeof(Queue<byte>));
     StructQueue<struct mouse_data>*mouse_data_queue = (StructQueue<struct mouse_data> *)memory::pmem_alloc(sizeof(StructQueue<struct mouse_data>));
     int *phase = (int *)memory::pmem_alloc(sizeof(int));

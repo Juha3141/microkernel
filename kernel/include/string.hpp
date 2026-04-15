@@ -10,6 +10,11 @@ extern "C" void *memcpy(void *dest , const void *src , size_t n);
 extern "C" void *memmove(void *dest , const void *src , size_t n);
 extern "C" int memcmp(const void *s1 , const void *s2 , size_t n);
 
+extern "C" void *unsanitized_memset(void *dest , int c , size_t n);
+extern "C" void *unsanitized_memcpy(void *dest , const void *src , size_t n);
+extern "C" void *unsanitized_memmove(void *dest , const void *src , size_t n);
+extern "C" int unsanitized_memcmp(const void *s1 , const void *s2 , size_t n);
+
 size_t strlen(const char *s);
 char *strcpy(char *dest , const char *src);
 char *strncpy(char *dest , const char *src , size_t n);

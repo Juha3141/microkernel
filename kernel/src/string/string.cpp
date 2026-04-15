@@ -1,8 +1,44 @@
 #include <string.hpp>
 #include <kernel/types.hpp>
 
-__no_sanitize_address__
+#ifdef CONFIG_USE_KASAN
+#include <kernel/mem/kasan.hpp>
+#endif
+
 void *memset(void *dest , int c , size_t n) {
+#ifdef CONFIG_USE_KASAN
+    kasan::check_address_validity((max_t)dest , n , KASAN_WRITE , CALLER_PC);
+#endif
+    return unsanitized_memset(dest , c , n);
+}
+
+void *memcpy(void *dest , const void *src , size_t n) {
+#ifdef CONFIG_USE_KASAN
+    kasan::check_address_validity((max_t)dest , n , KASAN_WRITE , CALLER_PC);
+    kasan::check_address_validity((max_t)src , n , KASAN_READ , CALLER_PC);
+#endif
+    return unsanitized_memcpy(dest , src , n);
+}
+
+void *memmove(void *dest , const void *src , size_t n) {
+#ifdef CONFIG_USE_KASAN
+    kasan::check_address_validity((max_t)dest , n , KASAN_WRITE , CALLER_PC);
+    kasan::check_address_validity((max_t)src , n , KASAN_READ , CALLER_PC);
+#endif
+    return unsanitized_memmove(dest , src , n);
+}
+
+int memcmp(const void *s1 , const void *s2 , size_t n) {
+#ifdef CONFIG_USE_KASAN
+    kasan::check_address_validity((max_t)s1 , n , KASAN_READ , CALLER_PC);
+    kasan::check_address_validity((max_t)s2 , n , KASAN_READ , CALLER_PC);
+#endif
+    return unsanitized_memcmp(s1 , s2 , n);
+}
+
+
+__no_sanitize_address__
+void *unsanitized_memset(void *dest , int c , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
     max_t aligned_dest = align_round_up((max_t)dest , WORD_SIZE);
     
@@ -35,12 +71,11 @@ void *memset(void *dest , int c , size_t n) {
     for(size_t i = 0; i < dest_remaining_rear; i++) {
         *dest_ptr_char++ = (unsigned char)c;
     }
-
     return dest;
 }
 
 __no_sanitize_address__
-void *memcpy(void *dest , const void *src , size_t n) {
+void *unsanitized_memcpy(void *dest , const void *src , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
     unsigned char *src_ptr_char  = (unsigned char *)src;
     max_t aligned_dest = align_round_up((max_t)dest , WORD_SIZE);
@@ -77,7 +112,7 @@ void *memcpy(void *dest , const void *src , size_t n) {
 }
 
 __no_sanitize_address__
-static void *memcpy_reverse(void *dest , const void *src , size_t n) {
+static void *unsanitized_memcpy_reverse(void *dest , const void *src , size_t n) {
     unsigned char *dest_ptr_char = (unsigned char *)dest;
     unsigned char *src_ptr_char  = (unsigned char *)src;
     max_t aligned_dest = align_round_up((max_t)dest , WORD_SIZE);
@@ -115,15 +150,15 @@ static void *memcpy_reverse(void *dest , const void *src , size_t n) {
 }
 
 __no_sanitize_address__
-void *memmove(void *dest , const void *src , size_t n) {
+void *unsanitized_memmove(void *dest , const void *src , size_t n) {
     if(dest == src) return dest;
 
-    if(dest < src) { return memcpy(dest , src , n); }
-    return memcpy_reverse(dest , src , n);
+    if(dest < src) { return unsanitized_memcpy(dest , src , n); }
+    return unsanitized_memcpy_reverse(dest , src , n);
 }
 
 __no_sanitize_address__
-int memcmp(const void *s1 , const void *s2 , size_t n) {
+int unsanitized_memcmp(const void *s1 , const void *s2 , size_t n) {
     unsigned char *s1_ptr = (unsigned char *)s1;
     unsigned char *s2_ptr = (unsigned char *)s2;
     for(size_t i = 0; i < n; i++) {

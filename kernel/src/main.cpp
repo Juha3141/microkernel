@@ -42,6 +42,7 @@ __no_sanitize_address__ void update_pt_space_to_kmemmap(void);
 extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument);
 
 __no_sanitize_address__
+__entry_function__
 extern "C" void kernel_main(LoaderArgument *loader_argument , max_t kernel_vmem_addr , max_t kernel_stack_vmem_addr , max_t kernel_stack_size) {
     memory::kstruct_init({loader_argument->kstruct_mem_location , loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size});
     memory::kmemmap_init(loader_argument);
@@ -95,6 +96,7 @@ extern "C" void kernel_main(LoaderArgument *loader_argument , max_t kernel_vmem_
     }
 }
 
+__entry_function__
 extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     debug::out::printf(DEBUG_INFO , "----- Initializing segmentation system..\n");
     segmentation::init();
@@ -124,7 +126,6 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     else {
         debug::out::printf("no ramdisk found!\n");
     }
-    debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
 
     file_info *root_dir = vfs::get_root_directory();
     int file_count = vfs::read_directory(root_dir);
@@ -137,8 +138,7 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     }
     
     pci::probe_all_pci_devices();
-    
-    debug::out::printf("We're currently in safe mode\n");
+    debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
 }
 
 #define PAGE_COUNT_THRESHOLD (CONFIG_LARGE_PAGE_SIZE/CONFIG_PAGE_SIZE)*4

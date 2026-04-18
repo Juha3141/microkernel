@@ -35,156 +35,6 @@ bool is_pmem_alloc_available = false;
 void memory::get_kstruct_boundary(struct Boundary &boundary) {
 	memcpy(&boundary , &kstruct_mgr.boundary , sizeof(struct Boundary));
 }
-#if 0
-void memory::determine_kstruct_boundary(struct memory::Boundary &new_mboundary , LoaderArgument *loader_argument) {
-	debug::push_function("d_kstruct_b");
-	struct LoaderMemoryMap *memmap = (struct LoaderMemoryMap *)((max_t)loader_argument->memmap_ptr);
-	max_t kernel_end_address = loader_argument->total_kernel_area_end;
-	debug::out::printf("kernel_end_address : 0x%X\n" , kernel_end_address);
-	new_mboundary.start_address = align_address(kernel_end_address , 4096); // padding
-	/* The "kstruct" is location of all sorts of kernel structures that requires static memory location.
-	 * The kernel makes a space about 1MB large at the rear of kernel image for static structures.
-	 * This code (haha) basically searches what "memmap" entry contains the kernel image and calculates whether
-	 * the kstruct area is available to be created.
-	 */
-	
-	for(int i = 0; i < loader_argument->memmap_count; i++) {
-		max_t address = ((max_t)memmap[i].addr_high << 32)|memmap[i].addr_low;
-		max_t length = ((max_t)memmap[i].length_high << 32)|memmap[i].length_low;
-		// debug::out::printf("seg%d : 0x%X~0x%X\n" , i , address , address+length);
-		if(kernel_end_address >= address && kernel_end_address <= address+length
-		&& loader_argument->total_kernel_area_start >= address && loader_argument->total_kernel_area_start <= address+length) { // is kernel inside?
-			// determine boundary
-			// If segment cannot hold more than designated size, just use maximum size for the segment
-			new_mboundary.end_address = min(address+length , new_mboundary.start_address+LOADER_ARGUMENT_LENGTH);
-			debug::out::printf(DEBUG_INFO , "kstruct_boundary : 0x%X~0x%X\n" , new_mboundary.start_address , new_mboundary.end_address);
-			debug::pop_function();
-			return;
-		}
-	}
-	new_mboundary.end_address = new_mboundary.start_address+LOADER_ARGUMENT_LENGTH;
-	debug::out::printf(DEBUG_INFO , "def,kstruct_boundary : 0x%X~0x%X\n" , new_mboundary.start_address , new_mboundary.end_address);
-	debug::pop_function();
-	return;
-}
-#endif
-
-#if 0
-/// @brief Use the bubble sort algorithm to sort the boundaries list. 
-/// @param boundaries List of boundaries that is to be sorted (array)
-/// @param count Number of items in the list
-static void sort_boundaries_list(memory::Boundary *boundaries , int count) {
-	for(int i = 0; i < count-1; i++) {
-		bool swapped = false;
-		for(int j = 0; j < count-i-1; j++) {
-			if(boundaries[j].start_address > boundaries[j+1].start_address) {
-				memory::Boundary tmp = {boundaries[j].start_address , boundaries[j].end_address};
-				boundaries[j].start_address = boundaries[j+1].start_address;
-				boundaries[j].end_address   = boundaries[j+1].end_address;
-				boundaries[j+1].start_address = tmp.start_address;
-				boundaries[j+1].end_address   = tmp.end_address;
-				swapped = true;
-			}
-		}
-		if(swapped == false) break;
-	}
-}
-
-/// @brief Merge the continunous boundaries into one (only merge boundaries with same type)
-/// @param boundaries 
-/// @param count 
-/// @param merged_continuous_boundaries Merged version of boundaries
-/// @return Numbers of items in new merged one 
-int merge_boundaries_list(KernelMemoryMap *boundaries , int count , KernelMemoryMap *merged_continuous_boundaries) {
-	sort_boundaries_list(boundaries , count);
-	
-	// The maximum amount of memory between the memory segments to be considered as one memory boundary
-	int THRESHOLD = 2048; // 2kB
-    unsigned long continuous_segment_start = sorted_boundaries[0].start_address;
-    int k;
-    int actual_protected_area_count = 0;
-	debug::out::printf("Sorted bounadry list : \n");
-	for(int i = 0; i < count; i++) {
-		debug::out::printf("0x%lx ~ 0x%lx\n" , sorted_boundaries[i].start_address , sorted_boundaries[i].end_address);
-	}
-	debug::out::printf("Merged segments : \n");
-    for(k = 0; k < count-1; k++) {
-        if(sorted_boundaries[k].end_address-sorted_boundaries[k+1].start_address > THRESHOLD) { // not continuous
-            debug::out::printf("0x%lx ~ 0x%lx\n" , continuous_segment_start , sorted_boundaries[k].end_address);
-            
-            merged_continuous_boundaries[actual_protected_area_count].start_address = continuous_segment_start;
-            merged_continuous_boundaries[actual_protected_area_count].end_address   = sorted_boundaries[k].end_address;
-            actual_protected_area_count++;
-
-            continuous_segment_start = sorted_boundaries[k+1].start_address;
-        }
-    }
-    debug::out::printf("0x%lx ~ 0x%lx\n" , continuous_segment_start , sorted_boundaries[k].end_address);
-    merged_continuous_boundaries[actual_protected_area_count].start_address = continuous_segment_start;
-    merged_continuous_boundaries[actual_protected_area_count].end_address   = sorted_boundaries[k].end_address;
-    actual_protected_area_count++;
-    
-	return actual_protected_area_count;
-}
-
-/// @brief Truncate the given protected areas from the memory map and 
-///        create new boundary list(new_msegment_list) that completely excludes the protected boundary
-/// @param protected_areas arrays of protected memory areas
-/// @param protected_areas_count number of items on the array
-/// @param new_msegment_list the list of new memory segment with protected areas removed
-/// @param memmap the original memory map
-/// @param memmap_count number of entries in the memory map
-/// @return number of entries on new memory segment list
-int truncate_protected_areas(memory::Boundary *protected_areas , int protected_areas_count , KernelMemoryMap *new_msegment_list , LoaderMemoryMap *memmap , int memmap_count) {
-	int new_msegment_list_count = 0;
-    for(int i = 0; i < memmap_count; i++) {
-        if(memmap[i].type != MEMORYMAP_USABLE) continue;
-
-        unsigned long memmap_start = (((unsigned long)memmap[i].addr_high << 32)|memmap[i].addr_low) , memmap_end = memmap_start+(((unsigned long)memmap[i].length_high << 32)|memmap[i].length_low);
-        debug::out::printf("%d : 0x%lx~0x%lx\n" , i , memmap_start , memmap_end);
-
-        unsigned long new_segment_addr = memmap_start;
-        for(int j = 0; j < protected_areas_count; j++) {
-            debug::out::printf("protected %d : 0x%lx ~ 0x%lx\n" , j , protected_areas[j].start_address , protected_areas[j].end_address);
-            bool is_overlap_front = (memmap_start <= protected_areas[j].start_address && protected_areas[j].start_address <= memmap_end);
-            bool is_overlap_rear  = (memmap_start <= protected_areas[j].end_address && protected_areas[j].end_address <= memmap_end);
-            if(!is_overlap_front && !is_overlap_rear) continue;
-
-            unsigned long overlap_region_start , overlap_region_end;
-            if(is_overlap_front && !is_overlap_rear) { // only the front overlaps
-                overlap_region_start = protected_areas[j].start_address;
-                overlap_region_end   = memmap_end;
-                debug::out::printf("1,");
-            }
-            if(!is_overlap_front && is_overlap_rear) {
-                overlap_region_start = memmap_start;
-                overlap_region_end   = protected_areas[j].end_address;
-                debug::out::printf("2,");
-            }
-            if(is_overlap_front && is_overlap_rear) { // completely inside of the map entry
-                overlap_region_start = protected_areas[j].start_address;
-                overlap_region_end   = protected_areas[j].end_address;
-                debug::out::printf("3,");
-            }
-            debug::out::raw_printf("memmap #%d, protected area #%d, overlapped area : 0x%lx~0x%lx\n" , i , j , overlap_region_start , overlap_region_end);
-            if(new_segment_addr < overlap_region_start) {
-                new_msegment_list[new_msegment_list_count].start_address = new_segment_addr;
-                new_msegment_list[new_msegment_list_count].end_address = overlap_region_start;
-                new_msegment_list_count++;
-                debug::out::printf("     new segment : 0x%lx~0x%lx\n" , new_segment_addr , overlap_region_start);
-            }
-            new_segment_addr = overlap_region_end;
-        }
-        if(new_segment_addr < memmap_end) {
-            new_msegment_list[new_msegment_list_count].start_address = new_segment_addr;
-            new_msegment_list[new_msegment_list_count].end_address = memmap_end;
-            new_msegment_list_count++;
-            debug::out::printf("     new segment : 0x%lx~0x%lx\n" , new_segment_addr , memmap_end);
-        }
-    }
-    return new_msegment_list_count;
-}
-#endif
 
 __no_sanitize_address__ void memory::kstruct_init(struct memory::Boundary boundary) {
 	memcpy(&kstruct_mgr.boundary , &boundary , sizeof(struct Boundary));
@@ -292,26 +142,25 @@ static void *kasan_pmem_alloc_hook(max_t size , max_t alignment) {
 		debug::out::printf(DEBUG_WARNING , "Warning : Alignment should be a multiple of %d if KASan is enabled\n" , KASAN_GRANUL_SIZE);
 		return nullptr;
 	}
-
-	if(!is_pmem_alloc_available) return memory::kstruct_alloc(size , alignment);
 	
 	max_t head_redzone_size = KASAN_HEAP_HEAD_REDZONE_SIZE;
 	if(alignment == 0) alignment = KASAN_GRANUL_SIZE;
 	else head_redzone_size = alignment;
 
 	max_t aligned_sz = align_round_up(size , KASAN_GRANUL_SIZE);
-	max_t original_alloc_size = size;
 	
 	/* 
 	 * <KASan redzone memory layout>
-	 *             The address that will be       aligned by 
-	 *             V    returned                  V   granul
-	 * +-----------+-+--------------------+---------+-----------+
-	 * |  redzone  |@|   allocated pool   | redzone |  redzone  |
-	 * +-----------+-+--------------------+---------+-----------+
+	 *               The address that will be       aligned by 
+	 *               V    returned                  V   granul
+	 * +-----------+-+-------------------------+----+-----------+
+	 * |  redzone  |@|        allocated pool   |    redzone     |
+	 * +-----------+-+-------------------------+----+-----------+
 	 * ^            |<~~~~~~~~~~aligned_sz~~~~~~~~~~>
-	 * aligned      |
-	 * by granul    +--> Size of the redzone will be recorded right before the allocated pool
+	 * |            |                          <---->
+	 * aligned      |                         padding
+	 * by granul    |
+	 *              +--> Size of the redzone will be recorded right before the allocated pool
 	 * 
 	 * <------------------------------------------------------>
 	 *     The size that the kasan hook will be requesting
@@ -333,19 +182,19 @@ static void *kasan_pmem_alloc_hook(max_t size , max_t alignment) {
 	max_t kasan_head_size  = head_redzone_size;
 
 	max_t kasan_tail_start = actual_ptr_start+size;
-	max_t kasan_tail_size  = size-aligned_sz+KASAN_HEAP_TAIL_REDZONE_SIZE;
+	max_t kasan_tail_size  = aligned_sz-size+KASAN_HEAP_TAIL_REDZONE_SIZE;
 
 	// record the alignment
 	*((max_t *)(actual_ptr_start-WORD_SIZE)) = head_redzone_size;
 
 	kasan::poison_address(kasan_head_start , kasan_head_size , KASAN_SHADOW_MAGIC_HEAP_HEAD_REDZONE);
 	kasan::poison_address(kasan_tail_start , kasan_tail_size , KASAN_SHADOW_MAGIC_HEAP_TAIL_REDZONE);
-	kasan::unpoison_address(actual_ptr_start , align_round_down(size , KASAN_GRANUL_SIZE));
-	
+	kasan::unpoison_address(actual_ptr_start , aligned_sz);
+	/*
 	debug::out::printf(DEBUG_SPECIAL , "(alloc-POISON) kasan head redzone : 0x%llx~0x%llx\n" , kasan_head_start , kasan_head_start+kasan_head_size);
 	debug::out::printf(DEBUG_SPECIAL , "(alloc-POISON) kasan tail redzone : 0x%llx~0x%llx\n" , kasan_tail_start , kasan_tail_start+kasan_tail_size);
-	debug::out::printf(DEBUG_SPECIAL , "(alloc-UNPOISON) allocated memory pool : 0x%llx~0x%llx (sz=%lld)\n" , actual_ptr_start , actual_ptr_start+align_round_down(size , KASAN_GRANUL_SIZE) , align_round_down(size , KASAN_GRANUL_SIZE));
-
+	debug::out::printf(DEBUG_SPECIAL , "(alloc-UNPOISON) allocated memory pool : 0x%llx~0x%llx (sz=%lld)\n" , actual_ptr_start , actual_ptr_start+aligned_sz , aligned_sz);
+	*/
 	return (void *)actual_ptr_start;
 }
 
@@ -359,10 +208,12 @@ static void kasan_pmem_free_hook(void *ptr) {
 	
 	max_t kasan_head_start = (max_t)ptr - head_redzone_size;
 	max_t kasan_head_size  = head_redzone_size;
+	debug::out::printf("head redzone size = %d\n" , head_redzone_size);
+	debug::out::printf("allocated size    = %d\n" , allocated_size);
 	/*
-	 *                     |>------unpoison------<|
-	 *                     <--- 8 ---> <--- 8 --->
-	 * +-||--------------------+-------+-----------+
+	 *                       |>------unpoison------<|
+	 *                       <--- 8 ---> <--- 8 --->
+	 * +-||---------------------+-------+-----------+
 	 * | ||  allocated pool     | redz. |  redzone  |
 	 * +-||---------------------+-------+-----------+
 	 *                          <- ??? ->
@@ -372,23 +223,30 @@ static void kasan_pmem_free_hook(void *ptr) {
 	 *                               padding might not actually be 8 bytes.
 	 * */
 
-	max_t kasan_tail_start = (max_t)ptr+allocated_size-KASAN_GRANUL_SIZE;
-	max_t kasan_tail_size  = KASAN_HEAP_TAIL_REDZONE_SIZE;
+	max_t kasan_tail_start = (max_t)ptr+allocated_size-head_redzone_size-KASAN_HEAP_TAIL_REDZONE_SIZE+KASAN_GRANUL_SIZE;
+	max_t kasan_tail_size  = KASAN_HEAP_TAIL_REDZONE_SIZE+KASAN_GRANUL_SIZE;
+
+	// use-after-free protection area
+	max_t uaf_start = (max_t)ptr;
+	max_t uaf_size  = kasan_tail_start-(max_t)ptr;
 	kasan::unpoison_address(kasan_head_start , kasan_head_size);
 	kasan::unpoison_address(kasan_tail_start , kasan_tail_size);
 	
 	// Poison the de-allocated memory area to detect use-after-free leak
-	kasan::poison_address((max_t)ptr , align_round_down(allocated_size , KASAN_GRANUL_SIZE) , KASAN_SHADOW_MAGIC_HEAP_FREE);
+	kasan::poison_address(uaf_start , uaf_size , KASAN_SHADOW_MAGIC_HEAP_FREE);
 
+	/*
 	debug::out::printf(DEBUG_SPECIAL , "allocated size = %lld\n" , allocated_size);
 	debug::out::printf(DEBUG_SPECIAL , "(free-UNPOISON) kasan head redzone : 0x%llx~0x%llx\n" , kasan_head_start , kasan_head_start+kasan_head_size);
 	debug::out::printf(DEBUG_SPECIAL , "(free-UNPOISON) kasan tail redzone : 0x%llx~0x%llx\n" , kasan_tail_start , kasan_tail_start+kasan_tail_size);
-	debug::out::printf(DEBUG_SPECIAL , "(use-after-free) 0x%llx ~ 0x%llx\n" , ptr , (max_t)ptr+align_round_down(allocated_size , KASAN_GRANUL_SIZE));
+	debug::out::printf(DEBUG_SPECIAL , "(use-after-free) 0x%llx ~ 0x%llx\n" , uaf_start , uaf_start+uaf_size);
+	*/
 }
 
 #endif
 
 void *memory::pmem_alloc(max_t size , max_t alignment) {
+	if(!is_pmem_alloc_available) return memory::kstruct_alloc(size , alignment);
 #ifdef CONFIG_USE_KASAN
 	return kasan_pmem_alloc_hook(size , alignment);
 #else

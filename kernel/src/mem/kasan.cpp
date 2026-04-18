@@ -1,8 +1,5 @@
 #include <kernel/mem/kasan.hpp>
 #include <string.hpp>
-#include <kernel/interrupt/interrupt.hpp>
-
-#define KASAN_SHADOW_MASK (1 << KASAN_SHADOW_SHIFT)-1
 
 // Some codes are referenced(copied...) from Linux Kernel!
 
@@ -14,11 +11,6 @@ max_t kasan_shadow_memory_size     = 0x00;
 max_t kasan_vma_start              = 0x00;
 max_t kasan_vma_end                = 0x00;
 
-#define KASAN_LADDR_TO_SHADOW(addr)  \
-    (((addr) >> KASAN_SHADOW_SHIFT)+CONFIG_KERNEL_KASAN_VMA)
-#define KASAN_SHADOW_TO_LADDR(saddr) \
-    ((((saddr)-kasan_shadow_memory_location) << 3))
-
 __no_sanitize_address__
 void kasan::init(max_t kasan_shadowmem_size , max_t kernel_pool_start , max_t kernel_pool_end) {
     kasan_shadow_memory_size     = kasan_shadowmem_size;
@@ -29,61 +21,6 @@ void kasan::init(max_t kasan_shadowmem_size , max_t kernel_pool_start , max_t ke
 
 #include <kernel/debug.hpp>
 
-static inline const char *shadow_byte_to_str(byte b) {
-    switch(b) {
-        case KASAN_SHADOW_MAGIC_HEAP_FREE:          return "Heap-Use-After-Free";
-        case KASAN_SHADOW_MAGIC_HEAP_HEAD_REDZONE:  return "Heap-Head-Redzone";
-        case KASAN_SHADOW_MAGIC_HEAP_TAIL_REDZONE:  return "Heap-Tail-Redzone";
-        case KASAN_SHADOW_MAGIC_STACK_AFTER_RETURN: return "Stack-After-Return";
-        case KASAN_SHADOW_MAGIC_STACK_AFTER_SCOPE:  return "Stack-After-Scope";
-        case KASAN_SHADOW_MAGIC_GLOBAL_REDZONE:     return "Global-Reserved";
-        case KASAN_SHADOW_MAGIC_RESERVED:           return "Reserved";
-    }
-    return "Unknown";
-}
-
-__no_sanitize_address__
-void kasan::report_bug(max_t addr , max_t size , byte is_write , max_t pc , bool noabort) {
-    debug::out::printf(DEBUG_ERROR , "------------- kasan::report_bug() -------------\n");
-    debug::out::printf(DEBUG_ERROR , "From trying to access 0x%llx sz=%d\n" , addr , size);
-    
-    debug::out::printf(DEBUG_ERROR , "pc=0x%llx   (%s)\n"  , pc , is_write ? "Write" : "Read");
-    // debug::out::printf(DEBUG_ERROR , "Type : %s\n" , shadow_byte_to_str(*((byte *)buggy_shadow_address)));
-    debug::out::printf(DEBUG_ERROR , "-- Stack trace : \n");
-    debug::out::printf(DEBUG_WARNING , "      3. pc=0x%llx\n" , __builtin_return_address(3));
-    debug::out::printf(DEBUG_WARNING , "      4. pc=0x%llx\n" , __builtin_return_address(4));
-    debug::out::printf(DEBUG_WARNING , "      5. pc=0x%llx\n" , __builtin_return_address(5));
-    // debug::out::printf(DEBUG_WARNING , "      6. pc=0x%llx\n" , __builtin_return_address(6));
-/*
-    max_t shadow_size = align_round_up(size , KASAN_GRANUL_SIZE) >> KASAN_SHADOW_SHIFT;
-    max_t shadow_area_dump_start = buggy_shadow_address-16;
-    max_t shadow_area_dump_end   = buggy_shadow_address+16+shadow_size;
-    max_t range = align_round_up(shadow_area_dump_end-shadow_area_dump_start , 8);
-
-    debug::out::printf("0x%llx : " , shadow_area_dump_start);
-    for(max_t i = 0; i < range; i++) {
-        if(i%8 == 0 && i > 0) debug::out::printf("\n0x%llx : " , shadow_area_dump_start+i);
-        byte b = *((byte *)shadow_area_dump_start+i);
-
-        if(shadow_area_dump_start+i == buggy_shadow_address) {
-            debug::out::printf("[%02x%c" , b , (shadow_size == 1) ? ']' : ' ');
-        }
-        else if(shadow_area_dump_start+i == buggy_shadow_address+shadow_size-1 && shadow_size > 1) {
-            debug::out::printf(" %02x]" , b);
-        }
-        else {
-            debug::out::printf(" %02x " , b);
-        }
-    }
-    */
-    
-    // if(noabort) return;
-
-    interrupt::controller::disable_all_interrupt();
-    while(1) {
-        ;
-    }
-}
 __no_sanitize_address__
 bool kasan::is_enabled() {
 #ifdef CONFIG_USE_KASAN
@@ -157,58 +94,34 @@ __no_sanitize_address__
 /// @param value 
 void kasan::poison_address(max_t laddr , max_t size , byte value) {
     if(!kasan::is_enabled()) return;
-    if(size == 0) {
-        debug::out::printf(DEBUG_WARNING , "Size is zero!\n");
+    if(size < KASAN_GRANUL_SIZE) {
+        debug::out::printf(DEBUG_WARNING , "Unsupported poisoning size : %lld\n" , size);
         debug::out::printf(DEBUG_WARNING , "Caller = 0x%llx\n" , CALLER_PC);
         return;
-    }
+    } 
+
     if(!is_aligned(laddr , KASAN_GRANUL_SIZE)) {
-        debug::out::printf(DEBUG_WARNING , "KASan poisoning area is not %d-byte aligned\n" , KASAN_GRANUL_SIZE);
-        return;
+        *((byte *)KASAN_LADDR_TO_SHADOW(laddr)) = value == KASAN_SHADOW_MAGIC_HEAP_FREE ? value : (laddr & KASAN_SHADOW_MASK);
+        laddr = align_round_up(laddr , KASAN_GRANUL_SIZE);
+        size--;
     }
     
     byte last_shadow_byte = size & KASAN_SHADOW_MASK;
     max_t shadow_start = KASAN_LADDR_TO_SHADOW(laddr);
-    max_t shadow_end   = KASAN_LADDR_TO_SHADOW(align_round_down(laddr , KASAN_GRANUL_SIZE)); // inclusive
-    
-    unsanitized_memset((void *)shadow_start , shadow_end-shadow_start+1 , value);
-    if(last_shadow_byte) {
-        *((byte *)(shadow_end+1)) = last_shadow_byte;
+    max_t shadow_end   = KASAN_LADDR_TO_SHADOW(align_round_down(laddr+size , KASAN_GRANUL_SIZE)); // inclusive
+
+    for(max_t a = shadow_start; a < shadow_end; a++) {
+        *((byte *)a) = value;
     }
 }
 
 __no_sanitize_address__
 void kasan::unpoison_address(max_t linear_address , max_t size) {
     if(!kasan::is_enabled()) return;
-    poison_address(linear_address , size , KASAN_SHADOW_MAGIC_UNPOISONED);
+    poison_address(linear_address , align_round_up(size , KASAN_GRANUL_SIZE) , KASAN_SHADOW_MAGIC_UNPOISONED);
 }
 
 __no_sanitize_address__
-unsigned long get_poisoned_shadow_address(max_t linear_address , max_t size) {
-    if(!kasan::is_enabled()) return 0;
-
-    max_t shadow_start_addr = KASAN_LADDR_TO_SHADOW(linear_address);
-    max_t shadow_end_addr   = KASAN_LADDR_TO_SHADOW(linear_address+size-1)+1;
-    max_t nonzero_shadow_addr = 0;
-
-    for(max_t addr = shadow_start_addr; addr < shadow_end_addr; addr++) {
-        if(*(byte*)addr != KASAN_SHADOW_MAGIC_UNPOISONED) {
-            nonzero_shadow_addr = addr;
-            break;
-        }
-    }
-    if(nonzero_shadow_addr) {
-        max_t last_byte = linear_address+size-1;
-        char *last_shadow_byte = (char *)KASAN_LADDR_TO_SHADOW(last_byte);
-
-        if(nonzero_shadow_addr != (max_t)last_shadow_byte
-        || ((char)(last_byte & KASAN_SHADOW_MASK)) >= *last_shadow_byte) {
-            return nonzero_shadow_addr;
-        }
-    }
-    return 0;
-}
-
 bool kasan::is_poisoned_1(max_t addr) {
     if(!kasan::is_enabled()) return false;
     if(addr < KASAN_NULLPTR_PROTECTION) return true;
@@ -243,6 +156,7 @@ bool kasan::is_poisoned_1(max_t addr) {
     return false;
 }
 
+__no_sanitize_address__
 bool kasan::is_poisoned_2_4_8(max_t addr , size_t size) {
     unsigned char *shadow_addr = (unsigned char *)KASAN_LADDR_TO_SHADOW(addr);
     
@@ -288,6 +202,7 @@ bool kasan::is_poisoned_2_4_8(max_t addr , size_t size) {
     return is_poisoned_1(addr+size-1);
 }
 
+__no_sanitize_address__
 bool kasan::is_poisoned_16(max_t addr) {
     unsigned short *shadow_addr = (unsigned short *)KASAN_LADDR_TO_SHADOW(addr);
 
@@ -303,13 +218,14 @@ bool kasan::is_poisoned_16(max_t addr) {
     return *shadow_addr;
 }
 
+__no_sanitize_address__
 bool kasan::is_poisoned_N(max_t addr , size_t size) {
     max_t shadow_start = KASAN_LADDR_TO_SHADOW(addr);
     max_t shadow_end   = KASAN_LADDR_TO_SHADOW(addr+size-1)+1;
 
     max_t poisoned_addr = 0;
-    for(max_t sa = shadow_start; sa <= shadow_end; sa++) {
-        if(*(byte *)sa != 0) {
+    for(max_t sa = shadow_start; sa < shadow_end; sa++) {
+        if(*((byte *)sa) != KASAN_SHADOW_MAGIC_UNPOISONED) {
             poisoned_addr = sa;
             break;
         }
@@ -320,7 +236,7 @@ bool kasan::is_poisoned_N(max_t addr , size_t size) {
         char *last_shadow_byte = (char *)KASAN_LADDR_TO_SHADOW(last_byte_addr);
         char last_accessible_byte = last_byte_addr & KASAN_SHADOW_MASK;
 
-        if(poisoned_addr != last_byte_addr||last_accessible_byte >= *last_shadow_byte) {
+        if(poisoned_addr != (max_t)last_shadow_byte||last_accessible_byte >= *last_shadow_byte) {
             return true;
         }
     }
@@ -333,7 +249,25 @@ bool kasan::check_address_validity(max_t linear_address , max_t size , byte is_w
     if(size == 0)     return true;
     if(linear_address < KASAN_NULLPTR_PROTECTION) kasan::report_bug(linear_address , size , is_write , pc , noabort);
     
-    if(is_poisoned_N(linear_address , size)) kasan::report_bug(linear_address , size , is_write , pc , noabort);
+    bool is_poisoned = false;
+    switch(size) {
+        case 1:
+            is_poisoned = is_poisoned_1(linear_address);
+            break;
+        case 2:
+        case 4:
+        case 8:
+            is_poisoned = is_poisoned_2_4_8(linear_address , size);
+            break;
+        case 16:
+            is_poisoned = is_poisoned_16(linear_address);
+            break;
+        default:
+            is_poisoned = is_poisoned_N(linear_address , size);
+            break;
+    }
+
+    if(is_poisoned) kasan::report_bug(linear_address , size , is_write , pc , noabort);
 
     return true;
 }
@@ -355,7 +289,7 @@ KASAN_INTERNALS_INTERFACE void __asan_unpoison_memory_region(void const volatile
 }
 
 KASAN_INTERNALS_INTERFACE void __asan_alloca_poison(void *addr , kasan::uptr size) {
-    debug::out::printf("Warning : You're seeing this message because you're using variable string at pc=0x%llx\n" , CALLER_PC);
+    debug::out::printf(DEBUG_WARNING , "Warning : You're seeing this message because you're using variable string at pc=0x%llx\n" , CALLER_PC);
 }
 
 KASAN_INTERNALS_INTERFACE void __asan_allocas_unpoison(void *stack_top , kasan::uptr stack_bottom) {
@@ -363,7 +297,7 @@ KASAN_INTERNALS_INTERFACE void __asan_allocas_unpoison(void *stack_top , kasan::
 }
 
 KASAN_INTERNALS_INTERFACE void __asan_report_error(kasan::uptr pc , kasan::uptr bp , kasan::uptr sp , kasan::uptr addr , int is_write , kasan::uptr access_size , uint32_t exp) {
-    kasan::report_bug(addr , access_size , get_poisoned_shadow_address(addr , access_size) , is_write , pc);
+    kasan::report_bug(addr , access_size , is_write , pc);
 }
 
 KASAN_INTERNALS_INTERFACE void __asan_report_load_n(kasan::uptr p , kasan::uptr size) {
@@ -401,15 +335,15 @@ KASAN_INTERNALS_INTERFACE void __asan_storeN_noabort(kasan::uptr p , kasan::uptr
 
 // Memcpy/Memset/Memmove with memory sanitization
 KASAN_INTERNALS_INTERFACE void *__asan_memcpy(void *dst , const void *src , kasan::uptr size) {
-    return unsanitized_memcpy(dst , src , size);
+    return memcpy(dst , src , size);
 }
 
 KASAN_INTERNALS_INTERFACE void *__asan_memset(void *s , int c , kasan::uptr n) {
-    return unsanitized_memset(s , c , n);
+    return memset(s , c , n);
 }
 
 KASAN_INTERNALS_INTERFACE void *__asan_memmove(void *dest , const void * src , kasan::uptr n) {
-    return unsanitized_memmove(dest , src , n);
+    return memmove(dest , src , n);
 }
 
 #define DECLARE_ASAN_SET_SHADOW(value) \

@@ -161,8 +161,11 @@ dword fat::get_file_cluster_count(blockdev::block_device *device , dword sector_
     max_t i;
     max_t next_cluster_addr;
     dword cluster_count = 0;
+    // If the given location is the root directory, return the number of clusters in the root directory from ginfo
+    if(sector_number == ginfo.root_dir_loc) {
+        return ginfo.root_dir_size/((common_vbr_t *)ginfo.vbr)->sectors_per_cluster;
+    }
 
-    // this is silly
     next_cluster_addr = sector_to_cluster(sector_number , ginfo);
     while(next_cluster_addr != 0x00) {
         next_cluster_addr = find_next_cluster(device , next_cluster_addr , ginfo);
@@ -821,8 +824,11 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
     entry_count = get_directory_info(dir_location->block_device , dir_location->block_location , ginfo);
     dir_cluster_size = get_file_cluster_count(dir_location->block_device , dir_location->block_location , ginfo);
     directory = (byte *)memory::pmem_alloc(dir_cluster_size*vbr->sectors_per_cluster*vbr->bytes_per_sector);
+    
     debug::out::printf("entry_count   : %d\n" , entry_count);
     debug::out::printf("cluster count : %d\n" , dir_cluster_size);
+    debug::out::printf("root dir size : %lld\n" , ginfo.root_dir_size);
+    debug::out::printf("allocation size = %lld\n" , dir_cluster_size*vbr->sectors_per_cluster*vbr->bytes_per_sector);
     if(dir_location->block_location == ginfo.root_dir_loc) {
         dir_location->block_device->device_driver->read(dir_location->block_device , dir_location->block_location , ginfo.root_dir_size , directory);
     }
@@ -832,6 +838,7 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
     
     int file_count = 0;
     char temp_file_name[(entry_count*(5+6+2))+1];
+    
     debug::out::printf("directory location : %d\n" , dir_location->block_location);
     for(i = 0; i < entry_count; i++) {
         sfn_entry = (sfn_entry_t *)(directory+offset);

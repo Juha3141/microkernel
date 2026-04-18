@@ -32,6 +32,11 @@ namespace kasan {
     bool is_enabled();
     void poison_address(max_t linear_address , max_t size , byte value);
     void unpoison_address(max_t linear_address , max_t size);
+
+    bool is_poisoned_1(max_t addr);
+    bool is_poisoned_2_4_8(max_t addr , size_t size);
+    bool is_poisoned_16(max_t addr);
+    bool is_poisoned_N(max_t addr , size_t size);
     
     bool check_address_validity(max_t linear_address , max_t size , byte is_write , max_t pc , bool noabort=false);
     /// @brief KASan bug report function
@@ -40,7 +45,7 @@ namespace kasan {
     /// @param buggy_shadow_address 
     /// @param is_write 
     /// @param pc Program Counter
-    void report_bug(max_t addr , max_t size , max_t buggy_shadow_address , byte is_write , max_t pc , bool noabort=false);
+    void report_bug(max_t addr , max_t size , byte is_write , max_t pc , bool noabort=false);
 }
 
 #endif

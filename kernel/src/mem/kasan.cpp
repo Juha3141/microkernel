@@ -4,13 +4,10 @@
 
 #define KASAN_SHADOW_MASK (1 << KASAN_SHADOW_SHIFT)-1
 
+// Some codes are referenced(copied...) from Linux Kernel!
+
 // Check out
 // https://github.com/llvm-mirror/compiler-rt/blob/master/lib/asan/asan_interface_internal.h
-
-/**
- * Microkernel utilizes physical memory by re-mapping them into one big contiguous memory block using the paging system.
- * Thus, Microkernel puts KASan's shadow memory at the end of the big memory chunk, in order to make memory layout more simple. 
- */
 
 max_t kasan_shadow_memory_size     = 0x00;
 // The linear memory address that Kasan will manage
@@ -46,23 +43,18 @@ static inline const char *shadow_byte_to_str(byte b) {
 }
 
 __no_sanitize_address__
-void kasan::report_bug(max_t addr , max_t size , max_t buggy_shadow_address , byte is_write , max_t pc , bool noabort) {
+void kasan::report_bug(max_t addr , max_t size , byte is_write , max_t pc , bool noabort) {
     debug::out::printf(DEBUG_ERROR , "------------- kasan::report_bug() -------------\n");
     debug::out::printf(DEBUG_ERROR , "From trying to access 0x%llx sz=%d\n" , addr , size);
-    if(buggy_shadow_address == 0x00) {
-        debug::out::printf(DEBUG_ERROR , "Shadow addr : Null Pointer Access(laddr<%llx)\n" , KASAN_NULLPTR_PROTECTION);
-    }
-    else {
-        debug::out::printf(DEBUG_ERROR , "Shadow addr : 0x%llx\n" , buggy_shadow_address);
-    }
+    
     debug::out::printf(DEBUG_ERROR , "pc=0x%llx   (%s)\n"  , pc , is_write ? "Write" : "Read");
-    debug::out::printf(DEBUG_ERROR , "Type : %s\n" , shadow_byte_to_str(*((byte *)buggy_shadow_address)));
+    // debug::out::printf(DEBUG_ERROR , "Type : %s\n" , shadow_byte_to_str(*((byte *)buggy_shadow_address)));
     debug::out::printf(DEBUG_ERROR , "-- Stack trace : \n");
     debug::out::printf(DEBUG_WARNING , "      3. pc=0x%llx\n" , __builtin_return_address(3));
     debug::out::printf(DEBUG_WARNING , "      4. pc=0x%llx\n" , __builtin_return_address(4));
     debug::out::printf(DEBUG_WARNING , "      5. pc=0x%llx\n" , __builtin_return_address(5));
     // debug::out::printf(DEBUG_WARNING , "      6. pc=0x%llx\n" , __builtin_return_address(6));
-
+/*
     max_t shadow_size = align_round_up(size , KASAN_GRANUL_SIZE) >> KASAN_SHADOW_SHIFT;
     max_t shadow_area_dump_start = buggy_shadow_address-16;
     max_t shadow_area_dump_end   = buggy_shadow_address+16+shadow_size;
@@ -83,6 +75,7 @@ void kasan::report_bug(max_t addr , max_t size , max_t buggy_shadow_address , by
             debug::out::printf(" %02x " , b);
         }
     }
+    */
     
     // if(noabort) return;
 
@@ -158,34 +151,30 @@ KASAN_INTERNALS_INTERFACE void __asan_after_dynamic_init() {}
 KASAN_INTERNALS_INTERFACE void __asan_handle_no_return() {}
 
 __no_sanitize_address__
-/// @brief Note: linear_address + size should be always aligned to granul size!
-/// @param laddr 
+/// @brief Note: linear address should always be aligned to shadow size!
+/// @param laddr 8-byte aligned address
 /// @param size 
 /// @param value 
 void kasan::poison_address(max_t laddr , max_t size , byte value) {
     if(!kasan::is_enabled()) return;
-
-    max_t shadow_start = KASAN_LADDR_TO_SHADOW(laddr);
-    max_t shadow_end   = KASAN_LADDR_TO_SHADOW(laddr+size)+1;
-    max_t shadow_len = shadow_end-shadow_start;
-    debug::out::printf(DEBUG_INFO , "Poisoning shadow : ");
-
-    max_t aligned_laddr = align_round_down(laddr , KASAN_GRANUL_SIZE);
-    if(aligned_laddr != laddr) {
-        byte b = laddr-aligned_laddr;
-        if(value == 0) b = value;
-        *((byte *)KASAN_LADDR_TO_SHADOW(laddr)) = b;
-        
-        debug::out::printf(DEBUG_INFO , "  - unaligned : %02x (0x%llx ~ 0x%llx), SHW:0x%llx\n" , b , laddr , aligned_laddr , KASAN_LADDR_TO_SHADOW(laddr));
-        laddr = aligned_laddr+KASAN_GRANUL_SIZE;
-        shadow_len--; // already covered one
-
-        shadow_start = KASAN_LADDR_TO_SHADOW(aligned_laddr)+1;
+    if(size == 0) {
+        debug::out::printf(DEBUG_WARNING , "Size is zero!\n");
+        debug::out::printf(DEBUG_WARNING , "Caller = 0x%llx\n" , CALLER_PC);
+        return;
     }
-    if(shadow_len <= 0) return;
-
-    debug::out::printf(DEBUG_INFO , "  - aligned   : 0x%llx~0x%llx (SHW:0x%llx~0x%llx) = %02x, shadow len=%d\n" , laddr , laddr+size , shadow_start , shadow_end , value , shadow_len);
-    unsanitized_memset((void *)shadow_start , value , shadow_len);
+    if(!is_aligned(laddr , KASAN_GRANUL_SIZE)) {
+        debug::out::printf(DEBUG_WARNING , "KASan poisoning area is not %d-byte aligned\n" , KASAN_GRANUL_SIZE);
+        return;
+    }
+    
+    byte last_shadow_byte = size & KASAN_SHADOW_MASK;
+    max_t shadow_start = KASAN_LADDR_TO_SHADOW(laddr);
+    max_t shadow_end   = KASAN_LADDR_TO_SHADOW(align_round_down(laddr , KASAN_GRANUL_SIZE)); // inclusive
+    
+    unsanitized_memset((void *)shadow_start , shadow_end-shadow_start+1 , value);
+    if(last_shadow_byte) {
+        *((byte *)(shadow_end+1)) = last_shadow_byte;
+    }
 }
 
 __no_sanitize_address__
@@ -220,14 +209,131 @@ unsigned long get_poisoned_shadow_address(max_t linear_address , max_t size) {
     return 0;
 }
 
+bool kasan::is_poisoned_1(max_t addr) {
+    if(!kasan::is_enabled()) return false;
+    if(addr < KASAN_NULLPTR_PROTECTION) return true;
+    
+    char shadow_val = *(char *)KASAN_LADDR_TO_SHADOW(addr);
+
+    if(shadow_val) {
+        /* Shadow value indicates the number of bytes accessible from the start in the given 8-byte chunk
+         * last_accessible_byte : the offset from the 8-byte aligned chunk (addr & SHADOW_MASK)
+         * 
+         * Say last_accessible_byte is 5. If shadow_val is 5, then, only the first five bytes are accessible, which is
+         * byte 0,1,2,3 and 4.
+         * 
+         *                last_accessible_byte
+         *                       V 
+         * +---+---+---+---+---+---+---+---+
+         * | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+         * +---+---+---+---+---+---+---+---+
+         * <===================>
+         *    Accessible when
+         *    shadow val = 5
+         * 
+         * This is a faulty memory access, from looking at the layout. So, 
+         * 
+         * If last_accessible_byte >= shadow_val, then the memory that's being accessed is poisoned. 
+         */
+
+        char last_accessible_byte = (addr & KASAN_SHADOW_MASK);
+        return last_accessible_byte >= shadow_val;
+    }
+
+    return false;
+}
+
+bool kasan::is_poisoned_2_4_8(max_t addr , size_t size) {
+    unsigned char *shadow_addr = (unsigned char *)KASAN_LADDR_TO_SHADOW(addr);
+    
+    /* Check if the memory access crosses 8(shadow-size)-byte boundary. 
+     * If so, map into 2 shadow bytes.
+     */
+    /* 2/4/8 memory access across two shadow bytes
+     *
+     *                               trying to access
+     *                     <=================================>
+     * +---+---+---+---+---+---+---+---+ +---+---+---+---+---+---+---+---+
+     * | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+     * +---+---+---+---+---+---+---+---+ +---+---+---+---+---+---+---+---+ 
+     *             shadow_addr       ^
+     *                              rear
+     * 
+     * KASan always indicates the accessibility from the start of the memory chunk
+     * So, if shadow_addr is nonzero, that means the very rear byte of the memory (7th) is always poisoned, and
+     * since the memory access is overlapping this memory region, the access is poisoned.
+     * 
+     * Checking procedure for the other chunk is the same as checking 2/4/8 memory access within the one KASan shadow.
+     */
+    if(((addr+size-1) & KASAN_SHADOW_MASK) < size-1) {
+        return *shadow_addr||is_poisoned_1(addr+size-1);
+    }
+
+    /* 2/4/8 memory access is within the one KASan shadow memory : 
+     * 
+     *          trying to access 
+     *         <===============>
+     * +---+---+---+---+---+---+---+---+
+     * | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | shadow_val = 4
+     * +---+---+---+---+---+---+---+---+
+     * <=======================>
+     *         accessible
+     * 
+     * KASan always indicates the accessibility from the start of the memory chunk(IMPORTANT SO I ITERATE!)
+     * If the last byte we're trying to access(addr+size-1) is accessible, 
+     * that means that the address less than so is all accessible within the memory chunk
+     * 
+     * So we only have to check the last byte of the memory!
+     */
+    return is_poisoned_1(addr+size-1);
+}
+
+bool kasan::is_poisoned_16(max_t addr) {
+    unsigned short *shadow_addr = (unsigned short *)KASAN_LADDR_TO_SHADOW(addr);
+
+    // if it's not aligned to 16 bytes, the memory access spans three memory chunks
+	if(!is_aligned(addr , KASAN_GRANUL_SIZE)) {
+        /* Check first two bytes by just checking if shadow values are nonzero,
+         * Check the last byte with is_poisoned_1 
+         * This will make sense now that you understood how KASan works! */
+        return *shadow_addr||is_poisoned_1(addr + 15);
+    }
+    // Just return whether it's zero or nonzero.
+    // In 16-bit aligned case, the memory access is valid if and only if the shadow bytes are all zero. 
+    return *shadow_addr;
+}
+
+bool kasan::is_poisoned_N(max_t addr , size_t size) {
+    max_t shadow_start = KASAN_LADDR_TO_SHADOW(addr);
+    max_t shadow_end   = KASAN_LADDR_TO_SHADOW(addr+size-1)+1;
+
+    max_t poisoned_addr = 0;
+    for(max_t sa = shadow_start; sa <= shadow_end; sa++) {
+        if(*(byte *)sa != 0) {
+            poisoned_addr = sa;
+            break;
+        }
+    }
+
+    if(poisoned_addr) {
+        max_t last_byte_addr = addr+size-1;
+        char *last_shadow_byte = (char *)KASAN_LADDR_TO_SHADOW(last_byte_addr);
+        char last_accessible_byte = last_byte_addr & KASAN_SHADOW_MASK;
+
+        if(poisoned_addr != last_byte_addr||last_accessible_byte >= *last_shadow_byte) {
+            return true;
+        }
+    }
+    return false;
+}
+
 __no_sanitize_address__
 bool kasan::check_address_validity(max_t linear_address , max_t size , byte is_write , max_t pc , bool noabort) {
     if(!kasan::is_enabled()) return true;
     if(size == 0)     return true;
-    if(linear_address < KASAN_NULLPTR_PROTECTION) kasan::report_bug(linear_address , size , 0x00 , is_write , pc , noabort);
+    if(linear_address < KASAN_NULLPTR_PROTECTION) kasan::report_bug(linear_address , size , is_write , pc , noabort);
     
-    max_t buggy_shadow_addr = get_poisoned_shadow_address(linear_address , size);
-    if(buggy_shadow_addr != 0) kasan::report_bug(linear_address , size , buggy_shadow_addr , is_write , pc , noabort);
+    if(is_poisoned_N(linear_address , size)) kasan::report_bug(linear_address , size , is_write , pc , noabort);
 
     return true;
 }

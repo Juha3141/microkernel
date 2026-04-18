@@ -22,7 +22,9 @@ __kernel_start__ = .;
 
   /* section dedicated to kernel_main function */
   .entry ALIGN(4096) : AT (ADDR(.entry) - CONFIG_KERNEL_VMADDRESS) {
+  __kernel_main_start__ = .;
     *(.entry) *(.entry.*)
+  __kernel_main_end__   = .;
   }
   .text : AT (ADDR(.text) - CONFIG_KERNEL_VMADDRESS) {
     __text_start__ = .;

@@ -14,7 +14,7 @@ bool GPTPartitionDriver::identify(blockdev::block_device *device) {
     if(memcmp(header->signature , "EFI PART" , 8) != 0) {
         return false;
     }
-    debug::out::printf(DEBUG_INFO , "gptdrv::identify" , "device %s%d : GPT detected" , device->device_driver->driver_name , device->id);
+    debug::out::printf(DEBUG_INFO , "device %s%d : GPT detected" , device->device_driver->driver_name , device->id);
     return true;
 }
 

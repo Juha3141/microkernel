@@ -78,6 +78,7 @@ typedef void (*interrupt_handler_t)(struct Registers *regs);
 #define big    2
 
 #define offsetof(s, m)      ((max_t)&(((s *)0)->m))
+#define is_aligned(val , alignment)  ((val & (alignment-1)) == 0)
 #define align_round_up(val , step)   ((step) == 0 ? (val) : ((val)%(step) == 0 ? (val) : ((val)+(step - (val)%(step)))))
 #define align_round_down(val , step) ((step) == 0 ? (val) : ((val)%(step) == 0 ? (val) : (val)-((val)%(step))))
 

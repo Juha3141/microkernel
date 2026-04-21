@@ -1,3 +1,4 @@
 [submodule "gnu-efi"]
 	path = gnu-efi
 	url = https://github.com/ncroxon/gnu-efi
+	branch = 8a45cdb08cfb9653fc5a2fb659487d04a8af4f45

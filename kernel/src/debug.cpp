@@ -50,9 +50,11 @@ __no_sanitize_address__ void debug::register_debug_interface(debug::debug_interf
 __no_sanitize_address__ void debug::register_debug_interface(debug::debug_interface *interface) { debug_interface_container.add(interface); }
 
 __no_sanitize_address__ void debug::set_current_debug_interface(const char *interface_identifier) {
-    max_t id = debug_interface_container.search<const char *>([](debug::debug_interface*& data , const char *str) { 
-        return (bool)(strcmp(data->interface_identifier , str) == 0);
-    } , interface_identifier);
+    max_t id = debug_interface_container.search(
+        [interface_identifier](debug::debug_interface* data) { 
+            return (bool)(strcmp(data->interface_identifier , interface_identifier) == 0);
+        }
+    );
 
     if(id == INVALID) return;
     debug_info.current_debug_interface = debug_interface_container.get(id);

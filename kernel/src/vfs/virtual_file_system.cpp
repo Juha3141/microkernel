@@ -26,10 +26,8 @@ void vfs::VirtualFileSystemManager::add_object(file_info *file , file_info *dire
 bool vfs::VirtualFileSystemManager::remove_object(const char *file_name , file_info *directory) {
     if(directory->file_list == 0x00) return false;
     return directory->file_list->remove(
-        directory->file_list->search<const char *>(
-            [](file_info *f , const char *fn) {
-                return strcmp(f->file_name , fn) == 0;
-            } , file_name
+        directory->file_list->search(
+            [file_name](file_info *f) { return strcmp(f->file_name , file_name) == 0; }
         )
     );
 }
@@ -52,7 +50,9 @@ file_info *vfs::VirtualFileSystemManager::search_object_last(int level_count , f
     for(; i < level_count; i++) {
         last_hit_loc = i;
         if(ptr->file_list == 0x00) return ptr;
-        LinkedList<file_info_s*>::node_s *node = ptr->file_list->search<char*>([](file_info_s *obj , char *str) { return (strcmp(obj->file_name , str) == 0); } , file_links[i]);
+        LinkedList<file_info_s*>::node_s *node = ptr->file_list->search(
+            [file_links,i](file_info_s *obj) { return (strcmp(obj->file_name , file_links[i]) == 0); }
+        );
         if(node == 0x00) return ptr;
 
         ptr = node->object;
@@ -355,7 +355,9 @@ bool vfs::flush(file_info *file) {
     max_t task_id;
 
     task_id = 0x00; // not implemented yet!
-    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj,max_t id) {return obj->task_id==id;} , task_id);
+    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search(
+        [task_id](open_info_t *obj) { return obj->task_id==task_id; }
+    );
     if(who_opened == 0x00) return false;
 
     HashTable<block_cache_t , max_t>*preexist_cache_hash_table = who_opened->object->cache_hash_table;
@@ -371,7 +373,9 @@ bool vfs::close(file_info *file) {
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
     if(vfs::flush(file) == false) return false; // flush the file
 
-    LinkedList<open_info_t*>::node_s *node = file->who_open_list->search<max_t>([](open_info_t *o,max_t id) {return(bool)(o->task_id==id);} , current_task_id);
+    LinkedList<open_info_t*>::node_s *node = file->who_open_list->search(
+        [current_task_id](open_info_t *o) { return(bool)(o->task_id==current_task_id); }
+    );
     if(node->object->maximum_offset > file->file_size) {
         debug::out::printf("applying new file info\n");
         file_loc->fs_driver->apply_new_file_info(file , node->object->maximum_offset);
@@ -402,10 +406,14 @@ bool vfs::remove(const general_file_name file_path) {
 }
 
 bool vfs::rename(const general_file_name file_path , const char *new_name) {
+    file_path;
+    new_name;
     return false;
 }
 
 bool vfs::move(const general_file_name file_path , const general_file_name new_directory) {
+    file_path;
+    new_directory;
     return 0x00;
 }
 
@@ -423,7 +431,9 @@ static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr ,
     max_t cluster_start_phys_location = file_loc->fs_driver->get_cluster_start_address(file , linear_block_addr);
     if(cluster_start_phys_location == INVALID) {
         // Out of the bounds, search from new_cache_linked_list
-        LinkedList<block_cache_t*>::node_s *n = open_info->new_cache_linked_list->search<max_t>([](block_cache_t *o,max_t l){return o->linear_block_addr == l;} , linear_block_addr);
+        LinkedList<block_cache_t*>::node_s *n = open_info->new_cache_linked_list->search(
+            [linear_block_addr](block_cache_t *o) { return o->linear_block_addr == linear_block_addr; }
+        );
         if(n != 0x00) return n->object;
         return 0x00;
     }
@@ -434,7 +444,9 @@ static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr ,
     cache = open_info->cache_hash_table->search(block_phys_location);
     if(cache != 0x00) return cache;
 
-    LinkedList<block_cache_t*>::node_s *n = open_info->new_cache_linked_list->search<max_t>([](block_cache_t *o,max_t l){return o->linear_block_addr == l;} , linear_block_addr);
+    LinkedList<block_cache_t*>::node_s *n = open_info->new_cache_linked_list->search(
+        [linear_block_addr](block_cache_t *o) { return o->linear_block_addr == linear_block_addr; }
+    );
     if(n != 0x00) return n->object;
     // we actually need to create new cache page now..
 
@@ -478,7 +490,9 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
     if(file->who_open_list == 0x00) return 0; // error
     current_task_id = 0x00; // currently not implemented yet!
     
-    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
+    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search(
+        [current_task_id](open_info_t *obj) { return (bool)(obj->task_id == current_task_id); }
+    );
     if(who_opened == 0x00) return 0; // If not opened -- 
 
     file_loc = fsdev::get_physical_loc_info(file);
@@ -536,7 +550,9 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
     if(file->who_open_list == 0x00) return 0; // error
     current_task_id = 0x00; // currently not implemented yet!
     
-    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
+    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search(
+        [current_task_id](open_info_t *obj) { return (bool)(obj->task_id == current_task_id); }
+    );
     if(who_opened == 0x00) return 0;
 
     file_loc = fsdev::get_physical_loc_info(file);
@@ -617,7 +633,9 @@ long vfs::lseek(file_info *file , long cursor , int option) {
     max_t current_task_id;
     current_task_id = 0x00; /* Not implemented */
 
-    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search<max_t>([](open_info_t *obj , max_t tid) { return (bool)(obj->task_id == tid); } , current_task_id);
+    LinkedList<open_info_t*>::node_s *who_opened = file->who_open_list->search(
+        [current_task_id](open_info_t *obj) { return (bool)(obj->task_id == current_task_id); }
+    );
     if(who_opened == 0x00) return -1;
     debug::out::printf(DEBUG_TEXT , "(before) open_offset = %d\n" , who_opened->object->open_offset);
     switch(option) {
@@ -664,9 +682,8 @@ int vfs::read_directory(file_info *directory) {
     }
     while(ptr != 0x00) {
         file_info *new_file = ptr->object;
-        LinkedList<file_info*>::node_s *file_node = directory->file_list->search<const char *>(
-            [](file_info *o , const char *fn) { return (strcmp(o->file_name , fn) == 0); } , 
-            new_file->file_name
+        LinkedList<file_info*>::node_s *file_node = directory->file_list->search(
+            [new_file](file_info *o) { return (strcmp(o->file_name , new_file->file_name) == 0); }
         );
         
         // does not exist, register new one

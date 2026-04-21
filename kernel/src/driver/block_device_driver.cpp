@@ -35,7 +35,9 @@ max_t blockdev::register_driver(blockdev::block_device_driver *driver , const ch
 ///@brief some bridge-like functions(just basic stuff)
 
 blockdev::block_device_driver *blockdev::search_driver(const char *driver_name) { 
-    max_t id = GLOBAL_OBJECT(BlockDeviceDriverContainer)->search<const char *>([](block_device_driver *&driver , const char *name) { return (bool)(strcmp(driver->driver_name , name) == 0); } , driver_name);  
+    max_t id = GLOBAL_OBJECT(BlockDeviceDriverContainer)->search(
+        [driver_name](block_device_driver *&driver) { return (bool)(strcmp(driver->driver_name , driver_name) == 0); }
+    );  
     return GLOBAL_OBJECT(BlockDeviceDriverContainer)->get(id);
 }
 

@@ -11,18 +11,23 @@ max_t fsdev::register_driver(fsdev::file_system_driver *driver , const char *fs_
 }
 
 fsdev::file_system_driver *fsdev::search_driver(const char *fs_name) {
-    max_t id = GLOBAL_OBJECT(FileSystemDriverContainer)->search<const char*>([](fsdev::file_system_driver *&dev , const char *str) { return (bool)(strcmp(dev->fs_string , str) == 0); } , fs_name);
+    max_t id = GLOBAL_OBJECT(FileSystemDriverContainer)->search(
+        [fs_name](fsdev::file_system_driver *&dev) { return (bool)(strcmp(dev->fs_string , fs_name) == 0); }
+    );
     return GLOBAL_OBJECT(FileSystemDriverContainer)->get(id);
 }
 
 fsdev::file_system_driver *fsdev::search_driver(max_t driver_id) { return GLOBAL_OBJECT(FileSystemDriverContainer)->get(driver_id); }
 
 fsdev::file_system_driver *fsdev::detect_fs(blockdev::block_device *device) {
-    max_t id = GLOBAL_OBJECT(FileSystemDriverContainer)->search<blockdev::block_device*>([](fsdev::file_system_driver *&fdev , blockdev::block_device *bdev) {
-        // breakpoint
-        if(fdev == 0x00) return false;
-        return (bool)(fdev->check(bdev));
-    } , device);
+    max_t id = GLOBAL_OBJECT(FileSystemDriverContainer)->search(
+        [device](fsdev::file_system_driver *&fdev) {
+            // breakpoint
+            if(fdev == 0x00) return false;
+            return (bool)(fdev->check(device));
+        }
+    );
+    if(id == INVALID) return nullptr;
     return GLOBAL_OBJECT(FileSystemDriverContainer)->get(id);
 }
 

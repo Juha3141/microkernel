@@ -34,7 +34,9 @@ max_t chardev::register_driver(chardev::char_device_driver *driver , const char 
 ///@brief some bridge-like functions(just basic stuff)
 
 chardev::char_device_driver *chardev::search_driver(const char *driver_name) { 
-    max_t id = GLOBAL_OBJECT(CharDeviceDriverContainer)->search<const char *>([](char_device_driver *&driver , const char *name) { return (bool)(strcmp(driver->driver_name , name) == 0); } , driver_name);  
+    max_t id = GLOBAL_OBJECT(CharDeviceDriverContainer)->search(
+        [driver_name](char_device_driver *&driver) { return (bool)(strcmp(driver->driver_name , driver_name) == 0); }
+    );  
     return GLOBAL_OBJECT(CharDeviceDriverContainer)->get(id);
 }
 

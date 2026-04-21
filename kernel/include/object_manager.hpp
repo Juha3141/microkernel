@@ -69,14 +69,16 @@ public:
         count--;
         return true;
     }
-    template <typename T2> max_t search(bool (*check)(T& data , T2 sample_data) , T2 sample_data) {
+    template <typename F>
+    max_t search(F check) {
         for(max_t i = 0; i < max_count; i++) {
-            if(check(*container[i] , sample_data) == true) {
+            if(check(*container[i]) == true) {
                 return i;
             }
         }
         return INVALID;
     }
+    // Warning: this function doesn't check for the id range
     T &get(max_t id) const {
         return *container[id];
     }

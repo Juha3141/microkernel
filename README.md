@@ -6,7 +6,7 @@ A Basic Hobby Operating System That Might Not Actually Be Microkernel
 The goal of this project is to make a *very flexible* kernel(or operating system) that can be used in a variety of hardware(from Embedded Systems to Personal Computer) so that an end-user can only customize hardware specific parts of kernel code and easily develop operating system according to the detailed specification of hardware.
 
 ## Current Progress
-Currently, only available architecture implemented is Intel x86_64 architecture.
+Currently, the only architecture implemented is **Intel x86_64 architecture**.
 Here's some current progress and future plans (decoratively displayed as To-do list)
 ### Kernel Loader: 
 - [X] GRUB Loader

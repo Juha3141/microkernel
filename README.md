@@ -11,6 +11,7 @@ Here's some current progress and future plans (decoratively displayed as To-do l
 ### Kernel Loader: 
 - [X] GRUB Loader
 - [X] EFI Loader
+- [ ] Other loaders for architectures other than x86_64
 ### Memory Management: 
 - [X] Physical Memory Allocator
 - [ ] Advanced Physical Memory Allocator

@@ -5,7 +5,6 @@
 #include <kernel/interrupt/interrupt.hpp>
 #include <kernel/interrupt/predeclared_interrupt_handlers.hpp>
 
-// *** To-do : Fix issues in interrupt routine
 #define INTERRUPT_START \
 /* qword regs_ptr; */ /* use RSI register for regs_ptr */  \
 __asm__ ("push rax"); \
@@ -52,8 +51,8 @@ __asm__ ("add rsp , %c0"::"i"(sizeof(struct Registers))); \
 __asm__ ("pop rax"); \
 __asm__ ("mov [rsp-8+%c0] , rax"::"i"(-sizeof(struct Registers)+offsetof(struct Registers , rax))); \
 /* use RSI register for regs_ptr */ \
-__asm__ ("mov rsi , rsp"); \
 __asm__ ("sub rsp , %c0"::"i"(sizeof(struct Registers)+8)); \
+__asm__ ("mov rsi , rsp"); \
 PUSH_REGISTERS
 
 #define INTERRUPT_END \

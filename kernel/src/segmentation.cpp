@@ -26,7 +26,9 @@ static bool checkfunc(segmentation::segment_info_t &data , const char *name) {
 segment_t segmentation::SegmentationManager::discard_segment(const char *segment_name) {
     segment_t value;
 
-    max_t id = search<const char *>([](segment_info_t &data , const char *name){ return (bool)(strcmp(data.name , name) == 0);} , segment_name);
+    max_t id = search(
+        [segment_name](segment_info_t &data){ return (bool)(strcmp(data.name , segment_name) == 0); }
+    );
     value = this->get(id).value;
     if(discard_space(id) == false) return 0x00;
 
@@ -34,7 +36,9 @@ segment_t segmentation::SegmentationManager::discard_segment(const char *segment
 }
 
 segment_t segmentation::SegmentationManager::search_segment(const char *segment_name) {
-    max_t id = search<const char *>(checkfunc , segment_name);
+    max_t id = search(
+        [segment_name](segment_info_t &data) { return (strcmp(data.name , segment_name) == 0); }
+    );
     if(id == INVALID) return SEGMENT_VALUE_INVALID;
     return this->get(id).value;
 }
@@ -71,7 +75,9 @@ void segmentation::init(void) {
     
 bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) {
     SegmentationManager *segment_mgr = SegmentationManager::get_self();
-    max_t id = segment_mgr->search<const char *>([](segment_info_t &data , const char *name){ return (bool)(strcmp(data.name , name) == 0);} , segment_name);
+    max_t id = segment_mgr->search(
+        [segment_name](segment_info_t &data) { return (bool)(strcmp(data.name , segment_name) == 0); }
+    );
     if(id == INVALID) return false;
     memcpy(&segment_info , &(segment_mgr[id]) , sizeof(segment_info_t));
     return true;
@@ -79,7 +85,9 @@ bool segmentation::get_segment_info(const char *segment_name , segmentation::seg
     
 bool segmentation::get_segment_info(segment_t segment_value , segmentation::segment_info_t &segment_info) {
     SegmentationManager *segment_mgr = SegmentationManager::get_self();
-    max_t id = segment_mgr->search<segment_t>([](segment_info_t &data , segment_t value){ return (bool)(data.value == value);} , segment_value);
+    max_t id = segment_mgr->search(
+        [segment_value](segment_info_t &data){ return (bool)(data.value == segment_value); }
+    );
     if(id == INVALID) return false;
     memcpy(&segment_info , &(segment_mgr[id]) , sizeof(segment_info_t));
     return true;
@@ -87,7 +95,9 @@ bool segmentation::get_segment_info(segment_t segment_value , segmentation::segm
 
 segment_t segmentation::get_segment_value(const char *segment_name) {
     SegmentationManager *segment_mgr = SegmentationManager::get_self();
-    max_t id = segment_mgr->search<const char *>([](segment_info_t &data , const char *name){ return (bool)(strcmp(data.name , name) == 0); } , segment_name);
+    max_t id = segment_mgr->search(
+        [segment_name](segment_info_t &data){ return (bool)(strcmp(data.name , segment_name) == 0); } 
+    );
     if(id == INVALID) return SEGMENT_VALUE_INVALID;
     return segment_mgr->get(id).value;
 }

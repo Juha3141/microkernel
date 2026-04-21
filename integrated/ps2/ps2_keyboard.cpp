@@ -26,6 +26,7 @@ void ps2::ps2_interrupt_handler_irq1(struct Registers *regs) {
 
     chardev::char_device *dev = chardev::search_device(ps2_keyboard_driver_id , 0);
     if(dev == 0x00) return;
+    debug::out::printf("K : 0x%02x\n" , data);
 
     Queue<byte>*scan_code_queue = (Queue<byte>*)dev->resources.etc_resources[0];
     scan_code_queue->enqueue(data);

@@ -10,23 +10,24 @@ To achieve this goal, the OS is separated into three parts: Bootloader, Kernel, 
 - **Hardware** part consists of (nearly) every hardware-specific system(functions) in kernel system (= HAL) and device driver.
 
 ## Current Progress
-Currently, only available architecture implemented is Intel x86_64 architecture. Not much is actually happening for now, as even the basic device driver manager is not implemented yet.
+Currently, only available architecture implemented is Intel x86_64 architecture.
 Here's some current progress and future plans (decoratively displayed as To-do list)
 - [ ] Documenting kernel's specific system (for end-users' accessibility to kernel's systems)
 - [X] ~~Much more flexible way to compile project~~
 - [ ] Much much more flexible way to compile project
 - [X] GRUB Loader
 - [X] EFI Loader
-- [ ] Interface between Kernel and Hardware
 - [X] Physical Memory Allocator
+- [X] Higher half kernel  (Introduced around March 2026)
+- [X] KASan(Kernel Address Sanitization) (Introduced around April 2026)
 - [ ] Paging system (+ Page Frame Manager)
 - [X] Segmentation system
 - [X] Interrupt system (+ Exception system)
-- [ ] Kernel Scheduler
 - [X] Device Driver & Storage Driver Manager
 - [X] File System Manager
 - [X] FAT12, FAT16, FAT32 File System
 - [ ] ISO9660 File System
+- [ ] Kernel Scheduler
 - [ ] Networking
 (Lots of more stuff will be added in distant future)
 

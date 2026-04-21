@@ -7,16 +7,10 @@
 // https://github.com/llvm-mirror/compiler-rt/blob/master/lib/asan/asan_interface_internal.h
 
 max_t kasan_shadow_memory_size     = 0x00;
-// The linear memory address that Kasan will manage
-max_t kasan_vma_start              = 0x00;
-max_t kasan_vma_end                = 0x00;
 
 __no_sanitize_address__
-void kasan::init(max_t kasan_shadowmem_size , max_t kernel_pool_start , max_t kernel_pool_end) {
+void kasan::init(max_t kasan_shadowmem_size) {
     kasan_shadow_memory_size     = kasan_shadowmem_size;
-
-    kasan_vma_start              = kernel_pool_start;
-    kasan_vma_end                = kernel_pool_end;
 }
 
 #include <kernel/debug.hpp>

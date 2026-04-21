@@ -34,7 +34,7 @@
 namespace kasan {
     typedef max_t uptr;
 
-    void init(max_t kasan_shadowmem_size , max_t kernel_pool_start , max_t kernel_pool_end);
+    void init(max_t kasan_shadowmem_size);
     bool is_enabled();
     void poison_address(max_t linear_address , max_t size , byte value);
     void unpoison_address(max_t linear_address , max_t size);

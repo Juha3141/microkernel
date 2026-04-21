@@ -2,7 +2,6 @@
 #define _OBJECT_LIST_HPP_
 
 #include <kernel/essentials.hpp>
-#include <kernel/mem/kmem_manager.hpp>
 
 template <typename T> class LinkedList {
 public:
@@ -22,7 +21,7 @@ public:
         last_node = start_node;
     }
     node_s *add_front(T obj) { // id
-        node_s *new_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
+        node_s *new_node = new node_s();
         new_node->object = obj;
 
         if(start_node == 0x00) {
@@ -41,7 +40,7 @@ public:
         return new_node;
     }
     node_s *add_rear(T obj) {
-        node_s *new_node = (node_s *)memory::pmem_alloc(sizeof(node_s));
+        node_s *new_node = new node_s();
         new_node->object = obj;
         if(start_node == 0x00) {
             start_node = new_node;
@@ -93,10 +92,11 @@ public:
     /// @param check The checker function, user-provided, it must compare data with the given sample_data
     /// @param sample_data the sample data that will be used when calling the check() function internally
     /// @return The first element that the check() function returned true, otherwise 0x00
-    template <typename T2> node_s *search(bool (*check)(T object , T2 sample_data) , T2 sample_data) {
+    template <typename F>
+    node_s *search(F check) {
         node_s *ptr = start_node;
         while(ptr != 0x00) {
-            if(check(ptr->object , sample_data)) {
+            if(check(ptr->object)) {
                 return ptr;
             }
             ptr = ptr->next;
@@ -120,7 +120,7 @@ private:
         if(target->previous == 0x00) start_node = target->next;
         else target->previous->next = target->next;
         count--;
-        memory::pmem_free(target);
+        delete target;
         return true;
     }
     inline max_t allocate_id(void) { return id_index++; }

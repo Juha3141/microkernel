@@ -19,9 +19,7 @@
 
 typedef unsigned long x86_page_entry_t;
 
-struct PageTableData ARCHDEP {
-    x86_page_entry_t *cr3_base;
-};
+typedef max_t PageTableAddr;
 
 extern "C" void enable_5_level_paging(void);
 

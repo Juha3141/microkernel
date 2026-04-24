@@ -26,9 +26,7 @@ namespace x86_64 {
         qword base_high:48;
         dword reserved;
     };
-    struct IDTContainer : DescriptorTableContainer<struct IDTEntry> {
-        SINGLETON_PATTERN_KSTRUCT(IDTContainer);
-    };
+    struct IDTContainer : DescriptorTableContainer<struct IDTEntry> {};
 }
 
 #endif

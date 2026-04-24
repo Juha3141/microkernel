@@ -21,28 +21,6 @@
 
 namespace debug  { namespace out { void printf(const char *string , ...); }}
 
-#define SINGLETON_FUNCTION get_self
-
-#define SINGLETON_PATTERN_KSTRUCT(type) \
-inline static __singleton_ptr__ type *__singleton_object = 0x00; \
-static type *SINGLETON_FUNCTION(void) {\
-    if(__singleton_object == 0x00) { \
-        __singleton_object = (type *)memory::kstruct_alloc(sizeof(type));\
-    }\
-    return __singleton_object;\
-}
-
-#define SINGLETON_PATTERN_PMEM(type) \
-inline static __singleton_ptr__ type *__singleton_object = 0x00; \
-static type *SINGLETON_FUNCTION(void) {\
-    if(__singleton_object == 0x00) { \
-        __singleton_object = (type *)memory::pmem_alloc(sizeof(type));\
-    } \
-    return __singleton_object;\
-}
-
-#define GLOBAL_OBJECT(type) type::SINGLETON_FUNCTION() 
-
 // Maximum calculatable data size, corresponds to architecture(16-bit,32-bit, ...)
 typedef unsigned long long  max_t;
 

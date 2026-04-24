@@ -12,8 +12,6 @@ namespace pci {
     bool write_device_configuration_dword(max_t vendor_id , max_t device_id , byte offset);
 
     struct PCIDeviceContainer {
-        SINGLETON_PATTERN_PMEM(PCIDeviceContainer);
-
         void init(void);
         void register_device(byte bus , byte device , byte function , max_t vendor_id , max_t device_id);
     };

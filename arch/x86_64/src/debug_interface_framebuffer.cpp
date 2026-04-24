@@ -181,7 +181,17 @@ static void process_newline(void) {
     scrinfo.char_y -= 1; 
 }
 
+#include <kernel/io_port.hpp>
+
+static void write_string_to_comport(const char *str) {
+    for(int i = 0; str[i] != 0; i++) {
+        if(str[i] == '\n') io_write_byte(0x3f8 , '\r');
+        io_write_byte(0x3f8 , str[i]);
+    }
+}
+
 void debug_interface_framebuffer::print_str(const char *str) {
+    write_string_to_comport(str);
     int real_x = scrinfo.char_x*scrinfo.font_avg_width;
     int real_y = scrinfo.char_y*scrinfo.font_avg_height;
     for(int i = 0; str[i] != 0; i++) {
@@ -240,6 +250,18 @@ void debug_interface_framebuffer::move_cursor_position(int x , int y) {
 }
 
 void debug_interface_framebuffer::set_background_color(debug_color_t color) { scrinfo.color_background = color; }
-void debug_interface_framebuffer::set_foreground_color(debug_color_t color) { scrinfo.color_foreground = color; }
+
+
+void set_foreground_color_comport(debug_color_t color) {
+    if(color == 0) {
+        write_string_to_comport("\033[0m");
+        return;
+    }
+    char str[50];
+    sprintf(str , "\033[%d;%dm" , color>>8 , color & 0xff);
+    write_string_to_comport(str);
+}
+
+void debug_interface_framebuffer::set_foreground_color(debug_color_t color) { scrinfo.color_foreground = color; set_foreground_color_comport(color); }
 
 REGISTER_DEBUG_INTERFACE("framebuffer" , debug_interface_framebuffer)

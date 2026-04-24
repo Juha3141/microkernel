@@ -8,6 +8,7 @@
 
 #include <kernel/mem/kmem_manager.hpp>
 #include <kernel/mem/nodes_manager.hpp>
+#include <kernel/mem/pages_manager.hpp>
 #include <loader/loader_argument.hpp>
 
 #include <string.hpp>
@@ -25,51 +26,14 @@ void *operator new[](size_t size) { return memory::pmem_alloc(size); }
 void operator delete(void *ptr) { memory::pmem_free(ptr); }
 void operator delete[](void *ptr) { memory::pmem_free(ptr); }
 
-// Just temporary patch
-struct {
-	struct memory::Boundary boundary;
-	max_t current_addr;
-}kstruct_mgr;
-
+memory::SegmentsManager *pmem_segments_mgr;
 bool is_pmem_alloc_available = false;
-
-void memory::get_kstruct_boundary(struct Boundary &boundary) {
-	memcpy(&boundary , &kstruct_mgr.boundary , sizeof(struct Boundary));
-}
-
-__no_sanitize_address__ void memory::kstruct_init(struct memory::Boundary kstruct_pmem_boundary) {
-	max_t vmem_start_addr = PMEM_TO_VMEM(kstruct_pmem_boundary.start_address);
-	max_t vmem_end_addr   = PMEM_TO_VMEM(kstruct_pmem_boundary.end_address);
-	
-	kstruct_mgr.boundary.start_address = vmem_start_addr;
-	kstruct_mgr.boundary.end_address   = vmem_end_addr;
-	kstruct_mgr.current_addr = vmem_start_addr;
-
-	// initialize the memory
-	memset((void *)vmem_start_addr , 0 , vmem_end_addr-vmem_start_addr);
-}
-
-__no_sanitize_address__ void *memory::kstruct_alloc(max_t size , max_t alignment) {
-	max_t addr = align_round_up(kstruct_mgr.current_addr , alignment); // Align address
-	kstruct_mgr.current_addr = addr+size; // increment address
-	if(kstruct_mgr.current_addr >= kstruct_mgr.boundary.end_address) {
-		debug::panic("kmem_manager.cpp" , 40 , "kstruct_alloc() : full kernel struct space\n");
-	}
-	return (void *)addr;
-}
-
-__no_sanitize_address__ bool memory::is_kstruct_allocated_obj(void *obj) {
-	return kstruct_mgr.boundary.start_address <= (max_t)obj && (max_t)obj <= kstruct_mgr.current_addr;
-}
-
-max_t memory::kstruct_get_current_addr(void) { return kstruct_mgr.current_addr; }
-void memory::kstruct_rollback_addr(max_t prev_addr) { if(kstruct_mgr.boundary.start_address <= prev_addr && prev_addr <= kstruct_mgr.boundary.end_address) { kstruct_mgr.current_addr = prev_addr; } }
 
 void memory::SegmentsManager::init() {
 	nodes_managers.init();
 }
 
-void memory::SegmentsManager::add_nodes_manager(const memory::Boundary &mem_boundary) {
+void memory::SegmentsManager::add_nodes_manager(const Boundary &mem_boundary) {
 	NodesManager new_node_mgr;
 	new_node_mgr.init(mem_boundary.start_address , mem_boundary.end_address);
 	nodes_managers.add_rear(new_node_mgr);
@@ -85,18 +49,18 @@ memory::NodesManager *memory::SegmentsManager::get_nodes_manager(max_t address) 
 }
 
 void memory::pmem_init() {
-	SegmentsManager *segments_mgr = GLOBAL_OBJECT(SegmentsManager);
-	segments_mgr->init();
+	pmem_segments_mgr = memory::new_global_object<SegmentsManager>();
+	pmem_segments_mgr->init();
 	KernelMemoryMap *kmemmap_ptr = global_kmemmap();
 	while(kmemmap_ptr != nullptr) {
 		if(kmemmap_ptr->type != MEMORYMAP_USABLE) {
 			kmemmap_ptr = kmemmap_ptr->next;
 			continue;
 		}
-		max_t vmem_start_address = PMEM_TO_VMEM(kmemmap_ptr->start_address);
-		max_t vmem_end_address   = PMEM_TO_VMEM(kmemmap_ptr->end_address);
+		max_t vmem_start_address = TO_VMEM(kmemmap_ptr->start_address);
+		max_t vmem_end_address   = TO_VMEM(kmemmap_ptr->end_address);
 
-		segments_mgr->add_nodes_manager({vmem_start_address , vmem_end_address});
+		pmem_segments_mgr->add_nodes_manager({vmem_start_address , vmem_end_address});
 		kmemmap_ptr = kmemmap_ptr->next;
 	}
 	is_pmem_alloc_available = true;
@@ -106,7 +70,6 @@ max_t memory::SegmentsManager::get_currently_using_mem(void) {
 	max_t currently_using_mem = 0;
 	auto *ptr = nodes_managers.get_start_node();
 	while(ptr != nullptr) {
-		debug::out::printf("%lld (0x%llx ~ 0x%llx)\n" , ptr->object.memory_usage , ptr->object.mem_start_address , ptr->object.mem_end_address);
 		currently_using_mem += ptr->object.memory_usage;
 		ptr = ptr->next;
 	}
@@ -114,10 +77,9 @@ max_t memory::SegmentsManager::get_currently_using_mem(void) {
 }
 
 static void *pmem_alloc_main(max_t size , max_t alignment) {
-	memory::SegmentsManager *segments_mgr = memory::SegmentsManager::get_self();
 	if(size == 0x00) return nullptr;
 	void *ptr = nullptr;
-	auto *node_s_ptr = segments_mgr->nodes_managers.get_start_node();
+	auto *node_s_ptr = pmem_segments_mgr->nodes_managers.get_start_node();
 
 	while(node_s_ptr != nullptr) {
 		if(node_s_ptr->object.available()) {
@@ -126,12 +88,11 @@ static void *pmem_alloc_main(max_t size , max_t alignment) {
 
 		node_s_ptr = node_s_ptr->next;
 	}
-	debug::out::printf("ptr return = 0x%llx\n" , ptr);
 	return ptr;
 }
 
 static max_t pmem_free_main(void *ptr) {
-	memory::NodesManager *node_mgr = GLOBAL_OBJECT(memory::SegmentsManager)->get_nodes_manager((max_t)ptr);
+	memory::NodesManager *node_mgr = pmem_segments_mgr->get_nodes_manager((max_t)ptr);
 	if(node_mgr == nullptr) return 0;
 
 	return node_mgr->free((max_t)ptr);
@@ -266,7 +227,7 @@ void memory::pmem_free(void *ptr) {
 }
 
 bool memory::is_pmem_allocated_obj(void *ptr) {
-	NodesManager *nodes_mgr = GLOBAL_OBJECT(SegmentsManager)->get_nodes_manager((max_t)ptr);
+	NodesManager *nodes_mgr = pmem_segments_mgr->get_nodes_manager((max_t)ptr);
 	if(nodes_mgr == nullptr) return false;
 
 	return nodes_mgr->is_allocated((max_t)ptr);
@@ -277,4 +238,4 @@ bool memory::pmem_protect(struct Boundary boundary) {
 	return false;
 }
 
-max_t memory::pmem_usage(void) { return GLOBAL_OBJECT(SegmentsManager)->get_currently_using_mem(); }
+max_t memory::pmem_usage(void) { return pmem_segments_mgr->get_currently_using_mem(); }

@@ -8,9 +8,7 @@ namespace modules {
     typedef void(*module_init)(void);
     typedef void(*module_discard)(void);
 
-    struct KernelModulesManager : ObjectManager<kernel_module> {
-        SINGLETON_PATTERN_PMEM(KernelModulesManager);
-    };
+    struct KernelModulesManager : ObjectManager<kernel_module> {};
 
     struct kernel_module {
         max_t id;

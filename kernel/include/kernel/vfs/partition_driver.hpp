@@ -32,8 +32,6 @@ namespace storage_system {
     };
 
     struct PartitionDriverContainer : FixedArray<PartitionDriver*> {
-        SINGLETON_PATTERN_PMEM(PartitionDriverContainer);
-
         friend max_t identify_partition_driver(blockdev::block_device *device);
     };
 

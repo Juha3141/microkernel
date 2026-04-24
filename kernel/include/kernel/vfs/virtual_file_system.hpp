@@ -101,12 +101,7 @@ typedef struct directory_cache_info_s {
 }directory_cache_info;
 
 namespace vfs {
-    struct DirectoryCacheManager : HashTable<directory_cache_info , char*> {
-        SINGLETON_PATTERN_PMEM(DirectoryCacheManager);
-    };
     struct VirtualFileSystemManager { // General VFS manager
-        SINGLETON_PATTERN_PMEM(VirtualFileSystemManager);
-
         void init(file_info *rdir , blockdev::block_device *root_device , char dir_ident);
         void add_object(file_info *file , file_info *directory);
         bool remove_object(const char *file_name , file_info *directory);

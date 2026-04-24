@@ -14,8 +14,6 @@
 
 #include <loader/loader_argument.hpp>
 
-#define PMEM_TO_VMEM(addr) ((addr)+CONFIG_KERNEL_VMADDRESS)
-
 #define KERNEL_MEMORY_SEGMENT_THRESHOLD 512*1024  // 512KB
 
 /// @brief Structure used for global kernel memory map
@@ -58,11 +56,6 @@ struct KernelMemoryMap {
                 +align_round_up((loader_argument->memmap_count*sizeof(LoaderMemoryMap)) , 4096) ,                   \
         .type          = MEMORYMAP_LOADER_ARGUMENT                                                                  \
     } ,                                                                                                             \
-    { /* kstruct Memory Area */                                                                                     \
-        .start_address = loader_argument->kstruct_mem_location ,                                                    \
-        .end_address   = loader_argument->kstruct_mem_location+loader_argument->kstruct_mem_size ,                  \
-        .type          = MEMORYMAP_KSTRUCT_POOL                                                                     \
-    } ,                                                                                                             \
     { /* Loader Argument */                                                                                         \
         .start_address = loader_argument->ramdisk_location ,                                                        \
         .end_address   = loader_argument->ramdisk_location+loader_argument->ramdisk_size ,                          \
@@ -70,33 +63,57 @@ struct KernelMemoryMap {
     } ,                                                                                                             \
 }
 
-namespace memory {
-    typedef void *(*memory_allocator_func_t)(max_t size, max_t alignment);
-    typedef void(*memory_deallocator_func_t)(void *ptr);
+struct Boundary {
+    max_t start_address;
+    max_t end_address;
+};
 
-    struct Boundary {
-        max_t start_address;
-        max_t end_address;
-    };
-    void get_kstruct_boundary(struct Boundary &boundary);
+///////////////// kstruct /////////////////
+namespace memory {
+    void get_kstruct_boundary(Boundary& boundary);
     
-    void kstruct_init(struct Boundary kstruct_pmem_boundary);
+    void kstruct_init(LoaderArgument *loader_argument);
     void *kstruct_alloc(max_t size , max_t alignment=0);
     bool is_kstruct_allocated_obj(void *obj);
 
-    max_t kstruct_get_current_addr(void);
-    void kstruct_rollback_addr(max_t prev_addr);
+    max_t kstruct_get_current_addr();
+
+    template <typename T>T *new_global_object() {
+        return (T *)kstruct_alloc(sizeof(T));
+    }
+}
+
+///////////////// general physical memory allocator /////////////////
+namespace memory {
+    typedef void *(*memory_allocator_func_t)(max_t size, max_t alignment);
+    typedef void(*memory_deallocator_func_t)(void *ptr);
     
     // pmem (physical memory) allocation
     void pmem_init();
     void *pmem_alloc(max_t size , max_t alignment=0);
     bool is_pmem_allocated_obj(void *ptr);
     void pmem_free(void *ptr);
-    bool pmem_protect(struct Boundary boundary);
+    bool pmem_protect(Boundary boundary);
 
     max_t pmem_total_size();
     max_t pmem_usage();
+    
+    // SegmentsManager : Manager of segments, decide what segments to be used next
+    // Global class, use singleton pattern
+    struct SegmentsManager {
+        void init();
+        void add_nodes_manager(const Boundary &mem_boundary);
+        
+        NodesManager *get_nodes_manager(max_t address);
+        
+        max_t get_currently_using_mem(void);
+        max_t total_memory;
+        LinkedList<NodesManager>nodes_managers;
+    };
+}
 
+////////////// kmemmap //////////////
+namespace memory {
     void kmemmap_init(LoaderArgument *loader_argument);
     /// @brief global_kmemmap(from KernelMemmapManager) : Linked-list style global kernel memory map
     /// @return returns global kmemmap
@@ -105,20 +122,6 @@ namespace memory {
     KernelMemoryMap *add_kmemmap_entry(const LoaderMemoryMap& entry);
 
     const char *memmap_type_to_str(unsigned int type);
-    
-    // SegmentsManager : Manager of segments, decide what segments to be used next
-    // Global class, use singleton pattern
-    struct SegmentsManager {
-        void init();
-        void add_nodes_manager(const Boundary &mem_boundary);
-        SINGLETON_PATTERN_KSTRUCT(SegmentsManager);
-        
-        NodesManager *get_nodes_manager(max_t address);
-        
-        max_t get_currently_using_mem(void);
-        max_t total_memory;
-        LinkedList<NodesManager>nodes_managers;
-    };
 }
 
 #endif

@@ -64,10 +64,6 @@ namespace blockdev {
 
         bool use_auto_partition_detector;
     };
-
-    struct BlockDeviceDriverContainer : public FixedArray<block_device_driver*> {
-        SINGLETON_PATTERN_PMEM(BlockDeviceDriverContainer);
-    };
     void init(void);
 
     max_t register_driver(block_device_driver *driver , const char *driver_name);

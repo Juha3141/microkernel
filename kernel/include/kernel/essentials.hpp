@@ -26,6 +26,18 @@ constexpr max_t ARCH_MAXIMUM_PAGE_SIZE =
     CONFIG_PAGE_SIZE;
 #endif
 
+// Checks whether higher-half kernel is configured, and whether the address change is necessary.
+// Used in TO_VMEM and TO_PMEM macro
+extern "C" bool is_higherhalf_configured();
+
+// If it's already in virtual memory space, don't change. It not, add/subtract the offset (and vice versa)
+// Also, for TO_VMEM, check if higherhalf kernel is configured. If not, do not change the address.
+#define TO_VMEM(addr) (((addr) < CONFIG_KERNEL_VMADDRESS) ? \
+    (is_higherhalf_configured() ? ((addr)+CONFIG_KERNEL_VMADDRESS) : (addr)) \
+    : (addr))
+#define TO_PMEM(addr) (((addr) < CONFIG_KERNEL_VMADDRESS) ? (addr) : (addr-CONFIG_KERNEL_VMADDRESS))
+
+
 #define __no_sanitize_address__ __attribute__((no_sanitize("address")))
 
 #endif

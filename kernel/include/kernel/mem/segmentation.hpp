@@ -34,8 +34,6 @@ namespace segmentation {
         max_t task_id;
     };
     struct SegmentationManager : public FixedArray<segment_info_t> {
-        SINGLETON_PATTERN_KSTRUCT(SegmentationManager);
-
         bool register_segment(const char *segment_name , segment_t segment_value , word segment_type , max_t task_id=INVALID);
         segment_t discard_segment(const char *segment_name);
         segment_t search_segment(const char *segment_name);

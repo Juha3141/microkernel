@@ -3,6 +3,8 @@
 
 #include <kernel/essentials.hpp>
 
+#define PAGETABLE_SIZE (512*8)
+
 #define PML4_FLAGS_PRESENT  0x01
 #define PML4_FLAGS_RW       0x02
 #define PML4_FLAGS_US       0x04
@@ -18,8 +20,6 @@
 #define PML4_FLAGS_EXD      0x8000000000000000
 
 typedef unsigned long x86_page_entry_t;
-
-typedef max_t PageTableAddr;
 
 extern "C" void enable_5_level_paging(void);
 

@@ -1,5 +1,8 @@
 #include <x86_64/gdt.hpp>
 
+// where do I initialize gdt container?
+x86_64::GDTContainer *gdt_container;
+
 void x86_64::gdt::convert_type_flags(word segment_type , byte &type , byte &flags , byte &rpl) {
     // determine real "gdt" type
     rpl = 0; // default : kernel
@@ -26,7 +29,6 @@ int x86_64::gdt::get_segment_index(segment_t segment_value) {
 }
 
 int x86_64::gdt::register_gdt(dword base_address , dword limit , byte type , byte flags) {
-    GDTContainer *gdt_container = GDTContainer::get_self();
     int index = gdt_container->current_index;
     GDTEntry *gdt_entry = (GDTEntry *)&(gdt_container->entries[index]);
     gdt_entry->base_low = base_address & 0xFFFFFF;
@@ -48,7 +50,6 @@ int x86_64::gdt::register_gdt(dword base_address , dword limit , byte type , byt
 /// @param flags flags
 /// @return index of the segment
 int x86_64::gdt::register_ldt(qword base_address , dword limit , byte type , byte flags) {
-    GDTContainer *gdt_container = GDTContainer::get_self();
     int index = gdt_container->current_index;
     LDTEntry *ldt_entry = (LDTEntry *)&(gdt_container->entries[index]);
     ldt_entry->base_low = base_address & 0xFFFFFFF;

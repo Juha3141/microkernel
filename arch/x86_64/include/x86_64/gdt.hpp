@@ -57,8 +57,6 @@ namespace x86_64 {
     typedef struct LDTEntry TSSEntry;
     struct GDTContainer : DescriptorTableContainer<struct GDTEntry> {
         int current_index;
-        SINGLETON_PATTERN_KSTRUCT(GDTContainer);
-
         void init(int entries_count) {
             DescriptorTableContainer<struct GDTEntry>::init(entries_count);
             current_index = 1; // we skip first entry for null descriptor

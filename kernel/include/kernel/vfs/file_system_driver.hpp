@@ -76,10 +76,6 @@ namespace fsdev {
 
         char fs_string[32];
     };
-
-    struct FileSystemDriverContainer : public FixedArray<file_system_driver*> {
-        SINGLETON_PATTERN_PMEM(FileSystemDriverContainer);
-    };
     void init(void);
 
     max_t register_driver(file_system_driver *driver , const char *fs_name);

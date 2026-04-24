@@ -21,10 +21,6 @@ namespace chardev {
         virtual bool io_read(char_device *device , max_t command , max_t argument , max_t &data_out) = 0;
         virtual bool io_write(char_device *device , max_t command , max_t argument) = 0;
     };
-
-    struct CharDeviceDriverContainer : FixedArray<char_device_driver*> {
-        SINGLETON_PATTERN_PMEM(CharDeviceDriverContainer);
-    };
     void init(void);
 
     max_t register_driver(char_device_driver *driver , const char *driver_name);

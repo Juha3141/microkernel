@@ -36,9 +36,10 @@ bool ramdisk_driver::close(blockdev::block_device *device) {
 max_t ramdisk_driver::read(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) {
     ramdisk_info_s *info = (ramdisk_info_s *)device->resources.etc_resources[0];
     max_t offset = 0 , mem_addr , tmp;
-    max_t start_addr = info->physical_address+(sector_address*info->bytes_per_sector);
+    max_t linear_addr = TO_VMEM(info->physical_address);
+    max_t start_addr = linear_addr+(sector_address*info->bytes_per_sector);
     for(mem_addr = start_addr; mem_addr < (start_addr+(count*info->bytes_per_sector)); mem_addr += sizeof(max_t)) {
-        if(mem_addr >= (info->physical_address+(info->total_sector_count*info->bytes_per_sector))) break;
+        if(mem_addr >= (linear_addr+(info->total_sector_count*info->bytes_per_sector))) break;
         *((max_t *)((max_t)buffer+offset)) = *((max_t *)mem_addr);
         offset += sizeof(max_t);
     }
@@ -48,9 +49,10 @@ max_t ramdisk_driver::read(blockdev::block_device *device , max_t sector_address
 max_t ramdisk_driver::write(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) {
     ramdisk_info_s *info = (ramdisk_info_s *)device->resources.etc_resources[0];
     max_t offset = 0 , mem_addr , tmp;
-    max_t start_addr = info->physical_address+(sector_address*info->bytes_per_sector);
+    max_t linear_addr = TO_VMEM(info->physical_address);
+    max_t start_addr = linear_addr+(sector_address*info->bytes_per_sector);
     for(mem_addr = start_addr; mem_addr < (start_addr+(count*info->bytes_per_sector)); mem_addr += sizeof(max_t)) {
-        if(mem_addr >= (info->physical_address+(info->total_sector_count*info->bytes_per_sector))) break;
+        if(mem_addr >= (linear_addr+(info->total_sector_count*info->bytes_per_sector))) break;
         *((max_t *)mem_addr) = *((max_t *)((max_t)buffer+offset));
         offset += sizeof(max_t);
     }

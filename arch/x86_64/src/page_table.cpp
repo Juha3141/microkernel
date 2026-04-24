@@ -58,12 +58,9 @@ static max_t generate_page_entry_flag(max_t flag) {
 }
 
 __kernel_setup_text__
-void ARCHDEP page::init_page_table_data(PageTableData &page_table_data) { page_table_data.cr3_base = nullptr; }
-
-__kernel_setup_text__
 // By the way, the implementation of map_one_page() right now feels kinda dumb. I hope you fix it sooner or later, Ian. 
 // Warning : This function will not work properly if the given linear address exceeds the 128TB limit of PML4.
-bool ARCHDEP page::map_one_page(PageTableData &page_table_data , max_t linear_address , max_t page_size , 
+bool ARCHDEP page::map_one_page(max_t page_table , max_t linear_address , max_t page_size , 
         max_t physical_address , max_t flags , func_alloc_pt_space_t alloc_func) {
     // translate linear page number into pde, pdpt, and pde numbers
 
@@ -84,25 +81,21 @@ bool ARCHDEP page::map_one_page(PageTableData &page_table_data , max_t linear_ad
     auto [pml4t_num, pdpt_num, pde_num, pte_num] = translate_linear_addr(linear_address);
     // debug::out::printf("[%d, %d, %d, %d]\n" , pml4t_num , pdpt_num , pde_num , pte_num);
     
-    // Set up for PML4 entry
-    if(page_table_data.cr3_base == nullptr) {
-        page_table_data.cr3_base = (x86_page_entry_t *)alloc_func(512*8 , 4096);
-        for(max_t *base = (max_t *)page_table_data.cr3_base; (max_t)base < (max_t)page_table_data.cr3_base+(sizeof(x86_page_entry_t)*512*8); base += 1) {
-            *base = 0;
-        }
-        // debug::out::printf("setting up pml4 entry(cr3 base) : 0x%llx\n" , page_table_data.cr3_base);
-    }
-    
+    x86_page_entry_t *cr3_base = (x86_page_entry_t *)page_table;
+
     // only get the address to pdpt from the entry, excluding the EXB flag(at the bit 63)
     uint64_t addr_mask = (uint64_t)((~(((uint64_t)1 << 12)-1))^((uint64_t)1 << 63));
-    x86_page_entry_t *pdpt_entries = (x86_page_entry_t *)(page_table_data.cr3_base[pml4t_num] & addr_mask);
+    x86_page_entry_t *pdpt_entries = (x86_page_entry_t *)(cr3_base[pml4t_num] & addr_mask);
 
     // Set up for PDPT entry
-    if(pdpt_entries == nullptr) {
-        pdpt_entries = (x86_page_entry_t *)alloc_func(512*8 , 4096);
+    if(pdpt_entries == nullptr) { 
+        pdpt_entries = (x86_page_entry_t *)alloc_func(PAGETABLE_SIZE , 4096);
         // debug::out::printf("new_pdpt_table : 0x%llx\n" , (uint64_t)pdpt_entries);
-        page_table_data.cr3_base[pml4t_num] = (uint64_t)pdpt_entries|generate_page_entry_flag(flags);
+        cr3_base[pml4t_num] = TO_PMEM((uint64_t)pdpt_entries)|generate_page_entry_flag(flags);
     }
+
+    // Since the address page table is physical address, change it to virtual address
+    pdpt_entries = (x86_page_entry_t *)TO_VMEM((max_t)pdpt_entries);
     // If the desired page size is one pdpt entry, set PS=1 and 
     if(page_size == pdpt_single_page_size) {
         pdpt_entries[pdpt_num] = physical_address|generate_page_entry_flag(flags)|PML4_FLAGS_PS;
@@ -114,29 +107,32 @@ bool ARCHDEP page::map_one_page(PageTableData &page_table_data , max_t linear_ad
 
     // pdpt_entries[pdpt_num] = target PDE entry
     if(pde_entries == nullptr) {
-        pde_entries = (x86_page_entry_t *)alloc_func(512*8 , 4096);
+        pde_entries = (x86_page_entry_t *)(max_t)alloc_func(PAGETABLE_SIZE , 4096);
         // debug::out::printf("new_pde_table : 0x%llx\n" , (uint64_t)pde_entries);
-        pdpt_entries[pdpt_num] = (uint64_t)pde_entries|generate_page_entry_flag(flags);
+        pdpt_entries[pdpt_num] = TO_PMEM((uint64_t)pde_entries)|generate_page_entry_flag(flags);
     }
+
+    pde_entries = (x86_page_entry_t *)TO_VMEM((max_t)pde_entries);
     if(page_size == pde_single_page_size) {
         pde_entries[pde_num] = physical_address|generate_page_entry_flag(flags)|PML4_FLAGS_PS;
         return true;
     }
 
     if(pde_entries[pde_num] == 0x00) {
-        x86_page_entry_t *new_pte_table = (x86_page_entry_t *)alloc_func(512*8 , 4096);
+        x86_page_entry_t *new_pte_table = (x86_page_entry_t *)alloc_func(PAGETABLE_SIZE , 4096);
         // debug::out::printf("new_pte_table : 0x%llx\n" , (uint64_t)new_pte_table);
-        pde_entries[pde_num] = (uint64_t)new_pte_table|generate_page_entry_flag(flags);
+        pde_entries[pde_num] = TO_PMEM((uint64_t)new_pte_table)|generate_page_entry_flag(flags);
     }
 
     x86_page_entry_t *pte_entries = (x86_page_entry_t *)(pde_entries[pde_num] & addr_mask);
 
+    pte_entries = (x86_page_entry_t *)TO_VMEM((max_t)pte_entries);
     pte_entries[pte_num] = physical_address|generate_page_entry_flag(flags);
     return true;
 }
 
 __kernel_setup_text__
-void ARCHDEP page::register_page_table(PageTableData &page_table_data) {
+void ARCHDEP page::register_page_table(max_t page_table_addr) {
     dword eax , unused;
     cpuid(0x80000008 , eax , unused , unused , unused);
     word max_linear_addr_width = (eax >> 8) & 0xFF;
@@ -147,7 +143,7 @@ void ARCHDEP page::register_page_table(PageTableData &page_table_data) {
         // do whatever
     }
 #endif
-    set_cr3_reg((qword)page_table_data.cr3_base);
+    set_cr3_reg((qword)page_table_addr);
 }
 
 __kernel_setup_text__

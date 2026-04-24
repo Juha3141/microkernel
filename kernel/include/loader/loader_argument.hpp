@@ -48,11 +48,6 @@ struct __attribute__ ((packed)) LoaderArgument {
 	unsigned int kernel_stack_location;    /* 20 */
 	unsigned int kernel_stack_size;        /* 24 */
 
-	/* kstruct_mem_location: memory pool given for kstruct memory allocator
-	kstruct: temporary memory allocator used before initializing the proper heap system */
-	unsigned int kstruct_mem_location;     /* 28 */ 
-	unsigned int kstruct_mem_size;         /* 32 */
-
 	unsigned int loader_argument_location; /* 36 */
 	unsigned int loader_argument_size;     /* 40 */
 

@@ -2,10 +2,6 @@
 #include <kernel/driver/block_device_driver.hpp>
 #include <kernel/vfs/partition_driver.hpp>
 
-void storage_system::init(void) {
-    GLOBAL_OBJECT(PartitionDriverContainer)->init(64);
-}
-
 bool storage_system::detect_partitions(blockdev::block_device *device) {
     max_t partitiondrv_id = identify_partition_driver(device);
     PartitionDriver *partition_driver = get_partition_identifier(partitiondrv_id);

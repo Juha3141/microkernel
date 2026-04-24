@@ -86,8 +86,6 @@ namespace interrupt {
      */
     class GeneralInterruptManager {
     public:
-        SINGLETON_PATTERN_KSTRUCT(GeneralInterruptManager);
-        
         void init(void);
         
         bool register_interrupt(int number , interrupt_handler_t handler , word interrupt_option);
@@ -105,8 +103,6 @@ namespace interrupt {
      */
     
     struct HardwareSpecifiedInterruptManager {
-        SINGLETON_PATTERN_KSTRUCT(HardwareSpecifiedInterruptManager);
-
         void init(int maxcount);
 
         int register_interrupt_name(const char *name);
@@ -122,7 +118,6 @@ namespace interrupt {
     };
 
     struct InterruptStackTableManager {
-        SINGLETON_PATTERN_KSTRUCT(InterruptStackTableManager);
         max_t ist_location;
         max_t ist_size;
     };

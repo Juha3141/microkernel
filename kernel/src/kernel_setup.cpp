@@ -19,62 +19,46 @@
 // The page count threshold of using CONFIG_LARGE_PAGE_SIZE instead of CONFIG_PAGE_SIZE
 #define PAGE_COUNT_THRESHOLD (CONFIG_LARGE_PAGE_SIZE/CONFIG_PAGE_SIZE)*4
 
-extern "C" void jump_to_kernel_main(LoaderArgument *loader_argument , max_t kernel_vma , max_t kernel_stack_vma , max_t kernel_stack_size);
+extern "C" void jump_to_kernel_main(LoaderArgument *loader_argument , max_t kernel_vma , max_t kernel_stack_vma , max_t kernel_stack_size , max_t pt_space_addr , max_t pt_space_size);
 max_t check_alignment(max_t address , int va_count , ...);
 
-extern "C" __no_sanitize_address__ __kernel_setup_text__ 
-void kernel_setup(LoaderArgument *loader_argument) {
+__no_sanitize_address__ __kernel_setup_text__ 
+extern "C" void kernel_setup(LoaderArgument *loader_argument) {
     if(loader_argument->signature != LOADER_ARGUMENT_SIGNATURE) {
         while(1) { ; }
     }
 
     // If kernel's not configured to be higher-half, ignore all the setup stage and immediately jump to kernel main
 #if CONFIG_KERNEL_HIGHERHALF == no
-    kernel_main(loader_argument);
+    kernel_main(loader_argument , 0 , 0 , 0);
 #endif
     LoaderMemoryMap *lmemmap = (LoaderMemoryMap*)loader_argument->memmap_location;
     page::init_pt_space_allocator(loader_argument);
 
     // Calculate the maximum memory address 
     max_t maximum_memory_addr = 0;
+    max_t maximum_kernel_structure_addr = 0;
     for(int i = 0; i < loader_argument->memmap_count; i++) {
         max_t addr = ((max_t)lmemmap[i].addr_high << (sizeof(lmemmap[i].addr_high)*8))|lmemmap[i].addr_low;
         max_t len  = ((max_t)lmemmap[i].length_high << (sizeof(lmemmap[i].length_high)*8))|lmemmap[i].length_low;
         
         maximum_memory_addr = max(maximum_memory_addr , addr+len);
     }
-    // determine page size, use large page if applicable
+    // Kernel image
+    maximum_kernel_structure_addr = max(maximum_kernel_structure_addr
+        , loader_argument->kernel_physical_location+loader_argument->kernel_size);
+    // Kernel stack
+    maximum_kernel_structure_addr = max(maximum_kernel_structure_addr
+        , loader_argument->kernel_stack_location+CONFIG_KERNEL_STACK_SIZE);
+    // Loader argument
+    maximum_kernel_structure_addr = max(maximum_kernel_structure_addr
+        , loader_argument->loader_argument_location+loader_argument->loader_argument_size);
+    // The memory map itself
+    maximum_kernel_structure_addr = max(maximum_kernel_structure_addr
+        , loader_argument->memmap_location+loader_argument->memmap_count*sizeof(LoaderMemoryMap));
 
-    max_t kernel_size = loader_argument->kernel_size;
-    PageTableData page_table_data;
-
-    // map the kernel onto the higher-half address
-    max_t kernel_linear_address = CONFIG_KERNEL_VMADDRESS+loader_argument->kernel_physical_location;
-    max_t kernel_page_size = check_alignment(loader_argument->kernel_physical_location , 2 , CONFIG_PAGE_SIZE , CONFIG_LARGE_PAGE_SIZE);
-    max_t kernel_page_count = align_round_up(kernel_size , kernel_page_size)/kernel_page_size;
-    page::map_pages(
-        page_table_data , 
-        kernel_linear_address , 
-        kernel_page_size , kernel_page_count , 
-        loader_argument->kernel_physical_location , 
-        PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
-        page::alloc_pt_space
-    );
-    // map the kernel stack onto the higher-half address
-    max_t kernel_stack_linear_address = CONFIG_KERNEL_VMADDRESS+loader_argument->kernel_physical_location+(kernel_page_count*DEFAULT_PAGE_SIZE);
-    max_t kernel_stack_page_size = check_alignment(kernel_stack_linear_address , 2 , CONFIG_PAGE_SIZE , CONFIG_LARGE_PAGE_SIZE);
-    max_t kernel_stack_page_count = align_round_up(loader_argument->kernel_stack_size , kernel_stack_page_size)/kernel_stack_page_size;
-    page::map_pages(
-        page_table_data , 
-        kernel_stack_linear_address , 
-        kernel_stack_page_size , kernel_stack_page_count , 
-        loader_argument->kernel_stack_location , 
-        PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
-        page::alloc_pt_space
-    );
-
-    // set identity paging, use the largest page size possible
-    max_t identity_paging_ps = 
+    // Map the entire physical address directly to the CONFIG_KERNEL_VMA
+    max_t page_size = 
 #if CONFIG_USE_ENORMOUS_PAGE == yes
     CONFIG_ENORMOUS_PAGE_SIZE;
 #elif CONFIG_USE_LARGE_PAGE == yes
@@ -82,45 +66,55 @@ void kernel_setup(LoaderArgument *loader_argument) {
 #else 
     CONFIG_PAGE_SIZE;
 #endif
+    // map the kernel onto the higher-half address
+    max_t kernel_area_ps = check_alignment(maximum_kernel_structure_addr , 2 , CONFIG_PAGE_SIZE , CONFIG_LARGE_PAGE_SIZE);
     page::map_pages(
-        page_table_data , 
-        0 , 
-        identity_paging_ps , (maximum_memory_addr/(identity_paging_ps))+1 , 
-        0 , 
+        page::kernel_page_table() , 
+        0x00 ,  
+        kernel_area_ps , 
+        align_round_up(maximum_kernel_structure_addr,  kernel_area_ps)/kernel_area_ps , 
+        0x00 , 
         PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
         page::alloc_pt_space
     );
-
-    // identity-map the video memory (If it's not covered by maximum_memory_addr)
-    if(((loader_argument->video_mode & LOADER_ARGUMENT_VIDEOMODE_GRAPHIC) == LOADER_ARGUMENT_VIDEOMODE_GRAPHIC)
-    && loader_argument->dbg_graphic_framebuffer_end >= maximum_memory_addr) {
-        page::map_pages(
-            page_table_data , 
-            loader_argument->dbg_graphic_framebuffer_start , 
-            DEFAULT_PAGE_SIZE , 
-            align_round_up(loader_argument->dbg_graphic_framebuffer_end-loader_argument->dbg_graphic_framebuffer_start , DEFAULT_PAGE_SIZE) , 
-            loader_argument->dbg_graphic_framebuffer_end , 
-            PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
-            page::alloc_pt_space
-        );
-    }
-    if(((loader_argument->video_mode & LOADER_ARGUMENT_VIDEOMODE_TEXTMODE) == LOADER_ARGUMENT_VIDEOMODE_TEXTMODE)
-    && loader_argument->dbg_graphic_framebuffer_end >= maximum_memory_addr) {
-        page::map_pages(
-            page_table_data , 
-            loader_argument->dbg_graphic_framebuffer_start , 
-            DEFAULT_PAGE_SIZE , 
-            align_round_up(loader_argument->dbg_graphic_framebuffer_end-loader_argument->dbg_graphic_framebuffer_start , DEFAULT_PAGE_SIZE) , 
-            loader_argument->dbg_graphic_framebuffer_end , 
-            PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
-            page::alloc_pt_space
-        );
-    }
     
-    page::register_page_table(page_table_data);
-    // Add the kernel setup argument at the end of the kernel stack
+    // map ramdisk onto the higher-half address
+    max_t ramdisk_area_ps = check_alignment(loader_argument->ramdisk_location , 2 , CONFIG_PAGE_SIZE , CONFIG_LARGE_PAGE_SIZE);
+    page::map_pages(
+        page::kernel_page_table() , 
+        CONFIG_KERNEL_RAMDISK_VMA , 
+        ramdisk_area_ps , 
+        align_round_up(loader_argument->ramdisk_size , ramdisk_area_ps)/ramdisk_area_ps , 
+        loader_argument->ramdisk_location , 
+        PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_RW , 
+        page::alloc_pt_space
+    );
+    
+    // identity-map the page table space, use default page size
+    auto [pt_space_start, pt_space_end] = page::get_pt_space_boundary();
 
-    jump_to_kernel_main(loader_argument , kernel_linear_address , kernel_stack_linear_address , kernel_stack_page_count*CONFIG_PAGE_SIZE);
+    // directly map the whole RAM to CONFIG_KERNEL_VMADDRESS
+    page::map_pages(
+        page::kernel_page_table() , 
+        CONFIG_KERNEL_VMADDRESS , 
+        page_size , 
+        align_round_up(maximum_memory_addr,  page_size)/page_size ,
+        0x00 , 
+        PAGE_ENTRY_FLAGS_KERNEL|PAGE_ENTRY_FLAGS_PRESENT|PAGE_ENTRY_FLAGS_RW , 
+        page::alloc_pt_space
+    );
+
+    page::register_page_table(page::kernel_page_table());
+    // Tell everybody that we're now in the higher half kernel!
+    page::higherhalf_is_now_configured();
+
+    // Add the kernel setup argument at the end of the kernel stack
+    jump_to_kernel_main(loader_argument , 
+        TO_VMEM(loader_argument->kernel_physical_location) , 
+        TO_VMEM(loader_argument->kernel_stack_location) , 
+        loader_argument->kernel_stack_size , 
+        pt_space_start , 
+        pt_space_end);
     while(1) {
         ;
     }

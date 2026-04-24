@@ -14,6 +14,8 @@
 
 #include <kernel/debug.hpp>
 
+exception::ExceptionManager *exception_mgr;
+
 max_t exception::ExceptionManager::register_general_int(const char *exception_name , int general_interrupt_info) {
     max_t id = add_empty_space();
     if(id == INVALID) return INVALID;
@@ -46,12 +48,12 @@ max_t exception::ExceptionManager::register_etc(const char *exception_name) {
 #ifdef CONFIG_USE_INTERRUPT
 
 void exception::init(void) {
-    GLOBAL_OBJECT(ExceptionManager)->init(EXCEPTIONS_MAXCOUNT);
+    exception_mgr = memory::new_global_object<ExceptionManager>();
+    exception_mgr->init(EXCEPTIONS_MAXCOUNT);
     exception::hardware::register_hardware_exceptions();
 }
 
 void exception::archindep_general_exception_handler(int handler_id , Registers *regs) {
-    ExceptionManager *exception_mgr = ExceptionManager::get_self();
     debug::out::printf(DEBUG_ERROR , "Exception, handler_id : %d, name : %s\n" , handler_id , exception_mgr->get(handler_id).name);
     
     exception::hardware::archdep_general_exception_handler(handler_id , regs);
@@ -63,7 +65,6 @@ void exception::archindep_general_exception_handler(int handler_id , Registers *
 
 void exception::register_exception_general_int(const char *exception_name , int general_interrupt_number) {
     EXCEPTION_HANDLER_ARRAY
-    ExceptionManager *exception_mgr = ExceptionManager::get_self();
     int internal_id = exception_mgr->register_general_int(exception_name , general_interrupt_number);
     if(internal_id == -1) {
         debug::out::printf(DEBUG_WARNING , "No registrable \"general interrupt\" exception\n");
@@ -77,7 +78,6 @@ void exception::register_exception_general_int(const char *exception_name , int 
 
 void exception::register_exception_hardware_specified(const char *exception_name , const char *interrupt_name) {
     EXCEPTION_HANDLER_ARRAY
-    ExceptionManager *exception_mgr = ExceptionManager::get_self();
     int internal_id = exception_mgr->register_hardware_specified(exception_name , interrupt_name);
     if(internal_id == -1) {
         debug::out::printf(DEBUG_WARNING , "No registrable \"hardware-specified interrupt\" exception\n");
@@ -91,7 +91,6 @@ void exception::register_exception_hardware_specified(const char *exception_name
 
 ptr_t exception::register_exception_etc(const char *exception_name) {
     EXCEPTION_HANDLER_ARRAY
-    ExceptionManager *exception_mgr = ExceptionManager::get_self();
     int internal_id = exception_mgr->register_etc(exception_name);
     if(internal_id == -1) {
         debug::out::printf(DEBUG_WARNING , "No registrable \"etc\" exception\n");

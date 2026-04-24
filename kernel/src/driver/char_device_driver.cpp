@@ -5,9 +5,12 @@
 
 #include <kernel/debug.hpp>
 
+FixedArray<chardev::char_device_driver*> *chardevdrv_container;
+
 void chardev::init(void) {
     // CharDeviceDriverContainer : global container for kernel
-    GLOBAL_OBJECT(CharDeviceDriverContainer)->init(512);
+    chardevdrv_container = memory::new_global_object<FixedArray<chardev::char_device_driver*>>();
+    chardevdrv_container->init(512);
 }
 
 /// @brief Register the block device driver
@@ -15,8 +18,7 @@ void chardev::init(void) {
 /// @param driver_name Name of the driver
 /// @return Return the id of driver
 max_t chardev::register_driver(chardev::char_device_driver *driver , const char *driver_name) {
-    CharDeviceDriverContainer *driver_container = GLOBAL_OBJECT(CharDeviceDriverContainer);
-    max_t id = driver_container->add(driver); // register driver to global container
+    max_t id = chardevdrv_container->add(driver); // register driver to global container
     driver->driver_id = id;
     if(id == INVALID) return INVALID; 
     
@@ -34,24 +36,22 @@ max_t chardev::register_driver(chardev::char_device_driver *driver , const char 
 ///@brief some bridge-like functions(just basic stuff)
 
 chardev::char_device_driver *chardev::search_driver(const char *driver_name) { 
-    max_t id = GLOBAL_OBJECT(CharDeviceDriverContainer)->search(
+    max_t id = chardevdrv_container->search(
         [driver_name](char_device_driver *&driver) { return (bool)(strcmp(driver->driver_name , driver_name) == 0); }
     );  
-    return GLOBAL_OBJECT(CharDeviceDriverContainer)->get(id);
+    return chardevdrv_container->get(id);
 }
 
-chardev::char_device_driver *chardev::search_driver(max_t driver_id) { return GLOBAL_OBJECT(CharDeviceDriverContainer)->get(driver_id); }
+chardev::char_device_driver *chardev::search_driver(max_t driver_id) { return chardevdrv_container->get(driver_id); }
 
-max_t chardev::discard_driver(const char *driver_name) { return GLOBAL_OBJECT(CharDeviceDriverContainer)->discard(search_driver(driver_name)); }
-max_t chardev::discard_driver(max_t driver_id) { return GLOBAL_OBJECT(CharDeviceDriverContainer)->discard(GLOBAL_OBJECT(CharDeviceDriverContainer)->get(driver_id)); }
+max_t chardev::discard_driver(const char *driver_name) { return chardevdrv_container->discard(search_driver(driver_name)); }
+max_t chardev::discard_driver(max_t driver_id) { return chardevdrv_container->discard(chardevdrv_container->get(driver_id)); }
 
 /// @brief Registeres device to driver (kernel)
 /// @param driver Target driver
 /// @param device Device to be registered
 /// @return Return the id of the device
 max_t chardev::register_device(chardev::char_device_driver *driver , chardev::char_device *device) {
-    CharDeviceDriverContainer *driver_container = CharDeviceDriverContainer::get_self();
-
     device->id = driver->device_container->add(device);
     if(device->id == INVALID) { debug::out::printf(DEBUG_ERROR , "invalid id!\n"); return INVALID; }
     
@@ -62,7 +62,7 @@ max_t chardev::register_device(chardev::char_device_driver *driver , chardev::ch
 /// @brief Other form of register_device
 
 max_t chardev::register_device(const char *driver_name , chardev::char_device *device) { return chardev::register_device(search_driver(driver_name) , device); }
-max_t chardev::register_device(max_t driver_id , chardev::char_device *device) { return chardev::register_device(GLOBAL_OBJECT(CharDeviceDriverContainer)->get(driver_id) , device); }
+max_t chardev::register_device(max_t driver_id , chardev::char_device *device) { return chardev::register_device(chardevdrv_container->get(driver_id) , device); }
 
 chardev::char_device *chardev::search_device(max_t driver_id , max_t device_id) { return search_driver(driver_id)->device_container->get(device_id); }
 chardev::char_device *chardev::search_device(chardev::char_device_driver *driver , max_t device_id) {  return driver->device_container->get(device_id); }

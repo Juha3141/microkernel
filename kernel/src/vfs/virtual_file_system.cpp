@@ -3,6 +3,8 @@
 
 #include <kernel/debug.hpp>
 
+vfs::VirtualFileSystemManager *vfs_mgr;
+
 ////// VirtualFileSystemManager
 
 void vfs::VirtualFileSystemManager::init(file_info *rdir , blockdev::block_device *root_device , char dir_ident)  {
@@ -112,20 +114,20 @@ void vfs::VirtualFileSystemManager::get_file_base_name(const char *full_file_pat
 
 void vfs::init(blockdev::block_device *root_device) {
     file_info *root_file = create_file_info_struct({0x00 , 0x00 , 0x00} , "@" , FILE_TYPE_DIRECTORY , 0);
-
+    vfs_mgr = memory::new_global_object<VirtualFileSystemManager>();
     // mount the file
     if(vfs::mount(root_file , root_device) == false) {
         debug::out::printf(DEBUG_WARNING , "Failed mounting root device!\n");
-        GLOBAL_OBJECT(VirtualFileSystemManager)->is_initialized_properly = false;
+        vfs_mgr->is_initialized_properly = false;
         return;
     }
     
     debug::out::printf(DEBUG_SPECIAL , "fs_driver : 0x%lx\n" , root_file->mount_loc_info.fs_driver);
     debug::out::printf(DEBUG_SPECIAL , "Device %s%d : File system detected, %s\n" , root_device->device_driver->driver_name , root_device->id , root_file->mount_loc_info.fs_driver->fs_string);
-    GLOBAL_OBJECT(VirtualFileSystemManager)->init(root_file , root_device , '/');
+    vfs_mgr->init(root_file , root_device , '/');
 }
 
-file_info *vfs::get_root_directory(void) { return GLOBAL_OBJECT(VirtualFileSystemManager)->fs_root_dir; }
+file_info *vfs::get_root_directory(void) { return vfs_mgr->fs_root_dir; }
 
 file_info *vfs::create_file_info_struct(
         const physical_file_location file_loc ,
@@ -165,7 +167,7 @@ bool vfs::mount(file_info *file , blockdev::block_device *device) {
 
 static void get_highest_level_file_name(const char *original_name , char *output) {
     int len = strlen(original_name);
-    char identifier = GLOBAL_OBJECT(vfs::VirtualFileSystemManager)->dir_identifier;
+    char identifier = vfs_mgr->dir_identifier;
     char *str;
 
     int i = len-1;
@@ -184,7 +186,6 @@ static void get_highest_level_file_name(const char *original_name , char *output
 /// @param file_list the resulting file list
 /// @return Number of parsed names
 static int get_file_name_list(const general_file_name file_path , char **(&file_list)) {
-    vfs::VirtualFileSystemManager *vfs_mgr = GLOBAL_OBJECT(vfs::VirtualFileSystemManager);
     int lvl_count = vfs_mgr->auto_parse_dir_count(file_path.file_name);
     file_list = (char **)memory::pmem_alloc(lvl_count*sizeof(char*));
     vfs_mgr->auto_parse_name(file_path.file_name , file_list);
@@ -198,7 +199,6 @@ static int get_file_name_list(const general_file_name file_path , char **(&file_
 /// @param levels_to_exclude Number of directory levels to exclude from searching
 /// @return file_info handle, if failed searching(file does not exist), return 0x00
 static file_info *get_file_by_cache_and_phys(const general_file_name file_path , int levels_to_exclude) {
-    vfs::VirtualFileSystemManager *vfs_mgr = GLOBAL_OBJECT(vfs::VirtualFileSystemManager);
     char **file_list;
     int level_count;
     int last_hit_loc = 0;
@@ -391,7 +391,6 @@ bool vfs::close(file_info *file) {
 bool vfs::remove(const general_file_name file_path) {
     file_info *parent_dir = get_file_by_cache_and_phys(file_path , 1);
     physical_file_location *parent_loc = fsdev::get_physical_loc_info(parent_dir);
-    VirtualFileSystemManager *vfs_mgr = GLOBAL_OBJECT(VirtualFileSystemManager);
 
     if(parent_dir == 0x00) return false;
     char base_file_name[strlen(file_path.file_name)+2];

@@ -5,6 +5,8 @@
 
 #include <string.hpp>
 
+segmentation::SegmentationManager *segment_mgr;
+
 bool segmentation::SegmentationManager::register_segment(const char *segment_name , segment_t segment_value , word segment_type , max_t task_id) {
     max_t index = this->add_empty_space();
     if(index == INVALID) return false;
@@ -49,7 +51,7 @@ void segmentation::init(void) {
     // default kernel segments
     struct kernel_segments_info kseginfo;
     struct kernel_segments_value ksegvalue;
-    SegmentationManager *segment_mgr = SegmentationManager::get_self();
+    segment_mgr = memory::new_global_object<segmentation::SegmentationManager>();
     segment_mgr->init(CONFIG_SEGMENTATION_SEGMENT_MAXCOUNT);
     
     /* Use 1-to-1 correspondence for kernel segment */
@@ -74,7 +76,6 @@ void segmentation::init(void) {
 }
     
 bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) {
-    SegmentationManager *segment_mgr = SegmentationManager::get_self();
     max_t id = segment_mgr->search(
         [segment_name](segment_info_t &data) { return (bool)(strcmp(data.name , segment_name) == 0); }
     );
@@ -84,7 +85,6 @@ bool segmentation::get_segment_info(const char *segment_name , segmentation::seg
 }
     
 bool segmentation::get_segment_info(segment_t segment_value , segmentation::segment_info_t &segment_info) {
-    SegmentationManager *segment_mgr = SegmentationManager::get_self();
     max_t id = segment_mgr->search(
         [segment_value](segment_info_t &data){ return (bool)(data.value == segment_value); }
     );
@@ -94,7 +94,6 @@ bool segmentation::get_segment_info(segment_t segment_value , segmentation::segm
 }
 
 segment_t segmentation::get_segment_value(const char *segment_name) {
-    SegmentationManager *segment_mgr = SegmentationManager::get_self();
     max_t id = segment_mgr->search(
         [segment_name](segment_info_t &data){ return (bool)(strcmp(data.name , segment_name) == 0); } 
     );
@@ -113,11 +112,11 @@ bool segmentation::register_segment(const char *segment_name , max_t start_addre
     if(segment == SEGMENT_VALUE_INVALID) {
         return false;
     }
-    return GLOBAL_OBJECT(SegmentationManager)->register_segment(segment_name , segment , segment_type , task_id);
+    return segment_mgr->register_segment(segment_name , segment , segment_type , task_id);
 }
 
 bool segmentation::discard_segment(const char *segment_name) {
-    segment_t segment = GLOBAL_OBJECT(SegmentationManager)->discard_segment(segment_name);
+    segment_t segment = segment_mgr->discard_segment(segment_name);
     if(segment == SEGMENT_VALUE_INVALID) {
         return false;
     }
@@ -126,13 +125,13 @@ bool segmentation::discard_segment(const char *segment_name) {
 }
 
 void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) {
-    segment_t segment = GLOBAL_OBJECT(SegmentationManager)->search_segment(segment_name);
+    segment_t segment = segment_mgr->search_segment(segment_name);
     if(new_point == ARCHITECTURE_LIMIT) segmentation::hardware::set_to_code_segment(segment);
     else segmentation::hardware::set_to_code_segment(segment , new_point);
 }
 
 void segmentation::set_to_data_segment(const char *segment_name) {
-    segment_t segment = GLOBAL_OBJECT(SegmentationManager)->search_segment(segment_name);
+    segment_t segment = segment_mgr->search_segment(segment_name);
     segmentation::hardware::set_to_data_segment(segment);
 }
 

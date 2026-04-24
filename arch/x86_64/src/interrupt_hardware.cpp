@@ -18,6 +18,7 @@
 #include <string.hpp>
 
 static qword ist_address[7];
+x86_64::IDTContainer *idt_container;
 
 void interrupt::hardware::enable(void) {
     __asm__ ("sti");
@@ -29,8 +30,8 @@ void interrupt::hardware::disable(void) {
 
 void interrupt::hardware::init(void) {
     interrupt::hardware::disable();
-
-    x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
+    
+    idt_container = memory::new_global_object<x86_64::IDTContainer>();
     idt_container->init(IDT_ENTRYCOUNT);
     // Register IDTR
     max_t idtr_ptr = (max_t)&idt_container->reg;
@@ -46,7 +47,6 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     word flags = IDT_FLAGS_P;
     byte type = 0;
     word privilege = 0;
-    x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
     if(number >= CONFIG_INTERRUPT_GENERAL_MAXCOUNT) return false;
     idt_container->entries[number].base_low = handler_ptr & 0xFFFF;
     idt_container->entries[number].base_high = handler_ptr >> 16;
@@ -68,8 +68,9 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     return true;
 }
 
+extern x86_64::GDTContainer *gdt_container;
+
 void interrupt::hardware::init_ist(void) {
-    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
     struct x86_64::TSS *tss = (struct x86_64::TSS *)memory::kstruct_alloc(sizeof(struct x86_64::TSS));
     int index = x86_64::gdt::register_ldt((qword)tss , sizeof(struct x86_64::TSS)-1 , GDT_TYPE_32BIT_TSS_AVAILABLE , GDT_FLAGS_P|GDT_FLAGS_DPL0|GDT_FLAGS_G);
     gdt_container->tss_segment = (index << 3)|0; // RPL : 0
@@ -88,7 +89,6 @@ void interrupt::hardware::init_ist(void) {
 }
 
 bool interrupt::hardware::discard_interrupt(int number) {
-    x86_64::IDTContainer *idt_container = x86_64::IDTContainer::get_self();
     if(number >= CONFIG_INTERRUPT_GENERAL_MAXCOUNT) return false;
     memset(&(idt_container->entries[number]) , 0 , sizeof(x86_64::IDTEntry));
     return true;

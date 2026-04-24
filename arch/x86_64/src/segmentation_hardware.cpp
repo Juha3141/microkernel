@@ -18,13 +18,15 @@
 
 #include <string.hpp>
 
+extern x86_64::GDTContainer *gdt_container;
+
 /// @brief Hardware-level segmentation initialization, based on kseginfo and ksegvalues
 /// @param kseginfo Information for Default kernel segment 
 /// @param ksegvalues Actual segment value(or anything like that) of the default kernel segment
 void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segments_value &ksegvalues) {
     interrupt::hardware::disable();
-
-    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
+    
+    gdt_container = memory::new_global_object<x86_64::GDTContainer>();
     gdt_container->init(GDT_ENTRYCOUNT);
 
     ksegvalues.kernel_code = register_system_segment(kseginfo.kernel_code.start_address , kseginfo.kernel_code.length , kseginfo.kernel_code.segment_type);
@@ -42,7 +44,6 @@ void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segment
 
 segment_t segmentation::hardware::register_system_segment(max_t start_address , max_t length , word segment_type) {
     segment_t segment_value = 0x00;
-    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
     
     // Determine type according to segment_type
     byte type , flags , rpl;
@@ -59,7 +60,6 @@ segment_t segmentation::hardware::register_system_segment(max_t start_address , 
 
 segment_t segmentation::hardware::register_task_segment(max_t start_address , max_t length , word segment_type) {
     segment_t segment_value = 0x00;
-    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
     
     // Determine type according to segment_type
     byte type , flags , rpl;
@@ -76,7 +76,6 @@ segment_t segmentation::hardware::register_task_segment(max_t start_address , ma
 
 void segmentation::hardware::discard_segment(segment_t segment) {
     size_t segment_size;
-    x86_64::GDTContainer *gdt_container = x86_64::GDTContainer::get_self();
     int index = x86_64::gdt::get_segment_index(segment);
     if((gdt_container->entries[index].type & GDT_TYPE_LDT) == GDT_TYPE_LDT) {
         segment_size = sizeof(x86_64::LDTEntry);

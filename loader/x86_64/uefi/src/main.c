@@ -105,7 +105,6 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
 
     UINT64 kernel_location = CONFIG_KERNEL_ADDRESS , 
            kernel_stack_location = 0x00 , 
-           kstruct_mem_location = 0x00 , 
            loader_argument_location = 0x00 , 
            kernel_memmap_location = 0x00 ,  
            kernel_ramdisk_location = 0x00;
@@ -121,8 +120,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     if((kernel_memory_chunk->NumberOfPages*4096) >= kernel_file_size+kernel_misc_area_size) {
         kernel_memmap_location   = kernel_location+kernel_file_size;
         loader_argument_location = kernel_memmap_location+kernel_memmap_size;
-        kstruct_mem_location     = loader_argument_location+LOADER_ARGUMENT_LENGTH;
-        kernel_stack_location    = kstruct_mem_location+CONFIG_KERNEL_KSTRUCT_SIZE;
+        kernel_stack_location    = loader_argument_location+LOADER_ARGUMENT_LENGTH;
         kernel_ramdisk_location  = kernel_stack_location+CONFIG_KERNEL_STACK_SIZE;
         Print(L"Miscellaneous area next to the kernel\n");
     }
@@ -130,8 +128,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
         kernel_stack_memory_chunk = find_available_memory_entry(memory_descriptor , memmap_size , memmap_descriptor_size , kernel_memory_chunk->PhysicalStart+kernel_file_size , kernel_misc_area_size , kernel_memory_chunk);
         kernel_memmap_location   = kernel_stack_memory_chunk->PhysicalStart;
         loader_argument_location = kernel_memmap_location+kernel_memmap_size;
-        kstruct_mem_location     = loader_argument_location+LOADER_ARGUMENT_LENGTH;
-        kernel_stack_location    = kstruct_mem_location+CONFIG_KERNEL_KSTRUCT_SIZE;
+        kernel_stack_location    = loader_argument_location+LOADER_ARGUMENT_LENGTH;
         kernel_ramdisk_location  = kernel_stack_location+CONFIG_KERNEL_STACK_SIZE;
     }
     
@@ -145,8 +142,6 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     loader_argument->kernel_stack_size        = CONFIG_KERNEL_STACK_SIZE;
     loader_argument->loader_argument_location = loader_argument;
     loader_argument->loader_argument_size     = LOADER_ARGUMENT_LENGTH;
-    loader_argument->kstruct_mem_location     = kstruct_mem_location;
-    loader_argument->kstruct_mem_size         = CONFIG_KERNEL_KSTRUCT_SIZE;
     loader_argument->ramdisk_location         = kernel_ramdisk_location;
     loader_argument->ramdisk_size             = ramdisk_file_size;
     loader_argument->is_ramdisk_available     = 1;
@@ -186,7 +181,6 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     Print(L"loader argument location = 0x%X\n" , loader_argument_location);
     Print(L"kernel_memmap_location   = 0x%X~0x%X\n" , kernel_memmap_location , kernel_memmap_location+kernel_memmap_size);
     Print(L"loader_argument_location = 0x%X~0x%X\n" , loader_argument_location , loader_argument_location+LOADER_ARGUMENT_LENGTH);
-    Print(L"kstruct_mem_location     = 0x%X~0x%X\n" , kstruct_mem_location , kstruct_mem_location+CONFIG_KERNEL_KSTRUCT_SIZE);
     Print(L"kernel_stack_location    = 0x%X~0x%X\n" , kernel_stack_location , kernel_stack_location+CONFIG_KERNEL_STACK_SIZE);
     Print(L"kernel_ramdisk_location  = 0x%X~0x%X\n" , kernel_ramdisk_location , kernel_ramdisk_location+ramdisk_file_size);
     memmap_size = 16384;

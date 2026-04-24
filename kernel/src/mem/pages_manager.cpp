@@ -5,21 +5,15 @@ __kernel_setup_data__ struct {
     max_t start_addr;
     max_t end_addr;
     max_t current_addr;
-
 }kernel_pt_space_manager;
 
 __kernel_setup_text__ 
-static inline bool is_inside_boundary(max_t addr , const memory::Boundary &boundary) {
+static inline bool is_inside_boundary(max_t addr , const Boundary &boundary) {
     return (boundary.start_address <= addr && addr <= boundary.end_address);
 }
 
-/// @brief Initialize the allocator that governs the space for kernel's page table
-///        The kernel will choose the biggest memory chunk from the global kernel memory map 
-///        and set the start of the page table allocator's heap to the chunk's start address
-///        The size of this heap will be the size of one large page. If large page is not available, 
-///        the system uses the default CONFIG_PAGE_SIZE
-__kernel_setup_text__ 
-bool page::init_pt_space_allocator(LoaderArgument *loader_argument) {
+__kernel_setup_text__
+Boundary get_largest_memory_chunk(LoaderArgument *loader_argument) {
     KernelMemoryMap essential_memmap_boundaries[] = essential_kernel_mem_boundaries(loader_argument);
     LoaderMemoryMap *lmemmap = (LoaderMemoryMap *)((max_t)loader_argument->memmap_location);
     max_t chunk_start = 0;
@@ -44,20 +38,25 @@ bool page::init_pt_space_allocator(LoaderArgument *loader_argument) {
             chunk_end   = addr+len;
         }
     }
-    if(chunk_start == 0 && chunk_end == 0) {
-        return false;
-    }
-    kernel_pt_space_manager.start_addr = chunk_start;
-    kernel_pt_space_manager.end_addr   = chunk_start+
-#if CONFIG_USE_LARGE_PAGE == yes
-            CONFIG_LARGE_PAGE_SIZE;
-#else
-            CONFIG_PAGE_SIZE;
-#endif;
-    kernel_pt_space_manager.current_addr = chunk_start;
+    return {chunk_start , chunk_end};
+}
 
+/// @brief Initialize the allocator that governs the space for kernel's page table
+///        The kernel will choose the biggest memory chunk from the global kernel memory map 
+///        and set the start of the page table allocator's heap to the chunk's start address
+///        The size of this heap will be the size of one large page. If large page is not available, 
+///        the system uses the default CONFIG_PAGE_SIZE
+__kernel_setup_text__ 
+bool page::init_pt_space_allocator(LoaderArgument *loader_argument) {
+    auto [chunk_start , chunk_end] = get_largest_memory_chunk(loader_argument);
+    kernel_pt_space_manager.start_addr = chunk_start;
+    kernel_pt_space_manager.end_addr   = chunk_end;
+    kernel_pt_space_manager.current_addr = chunk_start+PAGETABLE_SIZE;
     return true;
 }
+
+__kernel_setup_text__
+max_t page::kernel_page_table() { return TO_VMEM(kernel_pt_space_manager.start_addr); }
 
 /// @brief Rudimentary allocator for kernel's page table
 __kernel_setup_text__
@@ -65,21 +64,24 @@ void *page::alloc_pt_space(max_t size , max_t alignment) {
 	max_t addr = align_round_up(kernel_pt_space_manager.current_addr , alignment); // Align address
 	kernel_pt_space_manager.current_addr = addr+size; // increment address
     if(kernel_pt_space_manager.current_addr >= kernel_pt_space_manager.end_addr) {
-        // double the size
-        kernel_pt_space_manager.end_addr += (kernel_pt_space_manager.end_addr-kernel_pt_space_manager.start_addr);
+        return nullptr;
     }
 
 	return (void *)addr;
 }
 __kernel_setup_text__
-memory::Boundary page::get_pt_space_boundary(void) {
-    return {kernel_pt_space_manager.start_addr , kernel_pt_space_manager.end_addr};
-}
+Boundary page::get_pt_space_boundary(void) { return {kernel_pt_space_manager.start_addr , kernel_pt_space_manager.current_addr}; }
 
+__kernel_setup_data__ bool higherhalf_configured;
+
+__kernel_setup_text__
+bool is_higherhalf_configured() { return higherhalf_configured; }
+__kernel_setup_text__
+void page::higherhalf_is_now_configured() { higherhalf_configured = true; }
 
 // To-do : create something similar to kmemmap_manager that manages what memory is mapped to which
 // Maybe it would be a good idea to store it in the page_table_data? or centralized system?
-__kernel_setup_text__ bool page::map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
+__kernel_setup_text__ bool page::map_pages(max_t page_table_address , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
      , func_alloc_pt_space_t alloc_func) {
     if(linear_addr%page_size != 0)      {
         debug::out::printf("Warning : linear address %013llx is not aligned to ps=%d\n" , linear_addr , page_size);
@@ -90,7 +92,7 @@ __kernel_setup_text__ bool page::map_pages(PageTableData &page_table_data , max_
         return false;
     }
     for(max_t i = 0; i < page_count; i++) {
-        if(!map_one_page(page_table_data , linear_addr+(i*page_size) , page_size , physical_address+(i*page_size) , flags , alloc_func)) return false;
+        if(!map_one_page(page_table_address , linear_addr+(i*page_size) , page_size , physical_address+(i*page_size) , flags , alloc_func)) return false;
     }
     return true;
 }

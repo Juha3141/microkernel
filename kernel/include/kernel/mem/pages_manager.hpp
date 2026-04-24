@@ -32,28 +32,33 @@ constexpr int DEFAULT_PAGE_SIZE =
 namespace page {
     typedef void* (* func_alloc_pt_space_t)(max_t size , max_t alignment);
     bool init_pt_space_allocator(LoaderArgument *loader_argument);
-    void *alloc_pt_space(max_t size , max_t alignment);
-    memory::Boundary get_pt_space_boundary(void);
     
-    // In case we need to initialize the page table data before we use it
-    void ARCHDEP init_page_table_data(PageTableData &page_table_data);
+    /// @brief Returns the physical/linear address of the global kernel page table
+    ///        Both physical and linear address is identical, since the page table is identity-mapped
+    max_t kernel_page_table();
+
+    void *alloc_pt_space(max_t size , max_t alignment);
+    Boundary get_pt_space_boundary(void);
+    
+    void higherhalf_is_now_configured();
+    
     /// @brief Set one page entry corresponding to the linear address/page size by provided physical address and flags
-    /// @param page_table_data Architecture-dependent page table metadata 
+    /// @param page_table_addr Page table address (Could be linear address or physical address)
     /// @param linear_address 
     /// @param page_size Size of one page
     /// @param physical_address Physical address that the corresponding page entry will be mapped
-    /// @param flags Flags
+    /// @param flags Flags for the page table
     /// @param alloc_func The allocator that will be used to allocate memory space for page tables
     /// @return Returns true if successfully mapped, false if the page size is the size that's not supported
-    bool ARCHDEP map_one_page(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t physical_address , max_t flags
+    bool ARCHDEP map_one_page(max_t page_table_addr , max_t linear_addr , max_t page_size , max_t physical_address , max_t flags
      , func_alloc_pt_space_t alloc_func);
     
     /// @brief Register the page table into the system.
-    /// @param page_table_data the page table data that will be registered
-    void ARCHDEP register_page_table(PageTableData &page_table_data);
+    /// @param page_table_addr Page table address
+    void ARCHDEP register_page_table(max_t page_table_addr);
 
-    // helps things
-    bool map_pages(PageTableData &page_table_data , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
+    /// @brief Helper function, calls map_one_page() by page_count times
+    bool map_pages(max_t page_table_addr , max_t linear_addr , max_t page_size , max_t page_count , max_t physical_address , max_t flags
      , func_alloc_pt_space_t alloc_func);
 };
 

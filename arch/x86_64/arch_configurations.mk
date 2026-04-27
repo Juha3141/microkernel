@@ -22,7 +22,7 @@ KASAN_OPTIONS += -mllvm -asan-mapping-offset=$(KASAN_OFFSET)
 
 
 COMMON_CCOPTIONS := --target=x86_64-pc-linux-gnu
-COMMON_CCOPTIONS += -march=x86-64 
+COMMON_CCOPTIONS += -march=x86-64 -Werror=vla-cxx-extension
 COMMON_CCOPTIONS += -ffreestanding -fno-builtin -nostdlib -mno-mmx -mno-sse -mno-sse2 -mno-red-zone -nostdinc++ 
 COMMON_CCOPTIONS += -fno-pic -fno-pie -fno-common
 COMMON_CCOPTIONS += -fpack-struct=1 -masm=intel -std=c++20 -fno-stack-protector

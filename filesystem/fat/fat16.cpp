@@ -150,9 +150,10 @@ max_t fat16::fat16_driver::allocate_new_cluster_to_file(file_info *file) {
     fat::write_cluster_info(file_loc->block_device , file_last_cluster , new_cluster , ginfo);
 
     max_t sz = vbr.bytes_per_sector*vbr.sectors_per_cluster;
-    char zero_buffer[sz];
+    char *zero_buffer = (char *)memory::pmem_alloc(sz);
     memset(zero_buffer , 0 , sz);
     file_loc->block_device->device_driver->write(file_loc->block_device , fat::cluster_to_sector(new_cluster , ginfo) , vbr.sectors_per_cluster , zero_buffer);
+    memory::pmem_free(zero_buffer);
     return fat::cluster_to_sector(new_cluster , ginfo);
 }
 

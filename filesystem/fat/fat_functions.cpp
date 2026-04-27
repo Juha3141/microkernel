@@ -2,6 +2,9 @@
 
 #include <kernel/vfs/virtual_file_system.hpp>
 
+#define LFN_MAXLENGTH      256
+#define LFN_ENTRY_MAXCOUNT 32
+
 file_info *fat::write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
     int file_type = 0;
     switch(sfn_entry.attribute) {
@@ -199,13 +202,14 @@ static void fat16_write_cluster_info(blockdev::block_device *device , dword clus
     dword sector_addr = (dword)((cluster/cluster_info_per_sector)+ginfo.data_area_loc);
     common_vbr_t *c_vbr = (common_vbr_t *)ginfo.vbr;
 
-    byte fat_area[c_vbr->bytes_per_sector];
+    byte *fat_area = (byte *)memory::pmem_alloc(c_vbr->bytes_per_sector);
     device->device_driver->read(device , sector_addr , 1 , fat_area);
     // possibly dangerous!
     memcpy(fat_area+((cluster%cluster_info_per_sector)*2) , &(cluster_info) , 2);
 
     device->device_driver->write(device , sector_addr , 1 , fat_area);
     device->device_driver->write(device , sector_addr+ginfo.fat_size , 1 , fat_area);
+    memory::pmem_free(fat_area);
 }
 
 static void fat32_write_cluster_info(blockdev::block_device *device , dword cluster , word cluster_info , fat::general_fat_info_t &ginfo) {
@@ -213,13 +217,14 @@ static void fat32_write_cluster_info(blockdev::block_device *device , dword clus
     dword sector_addr = (dword)((cluster/cluster_info_per_sector)+ginfo.data_area_loc);
     common_vbr_t *c_vbr = (common_vbr_t *)ginfo.vbr;
 
-    byte fat_area[c_vbr->bytes_per_sector];
+    byte *fat_area = (byte *)memory::pmem_alloc(c_vbr->bytes_per_sector);
     device->device_driver->read(device , sector_addr , 1 , fat_area);
     // possibly dangerous!
     memcpy(fat_area+((cluster%cluster_info_per_sector)*2) , &(cluster_info) , 2);
 
     device->device_driver->write(device , sector_addr , 1 , fat_area);
     device->device_driver->write(device , sector_addr+ginfo.fat_size , 1 , fat_area);
+    memory::pmem_free(fat_area);
 }
 
 void fat::write_cluster_info(blockdev::block_device *device , dword cluster , max_t cluster_info , fat::general_fat_info_t &ginfo) {
@@ -327,7 +332,7 @@ void fat::create_sfn_name(char *sfn_name , const char *lfn_name , int num) {
     int j;
     bool dot_exist = false;
     int dot_index = strlen(lfn_name);
-    char buffer[strlen(lfn_name)+1];
+    char buffer[LFN_MAXLENGTH];
     char number_str[32];
     char base_name[16];
     // Get index of dot
@@ -373,8 +378,9 @@ void fat::create_sfn_name(char *sfn_name , const char *lfn_name , int num) {
 void fat::create_volume_label_name(char *sfn_name , const char *lfn_name) {
     int i;
     int j;
-    char buffer[strlen(lfn_name)+1];
-    if(strlen(lfn_name) == 0) return;
+    char buffer[LFN_MAXLENGTH];
+    int lfn_length  = strlen(lfn_name);
+    if(lfn_length == 0||lfn_length > LFN_MAXLENGTH) return;
     memset(sfn_name , ' ' , 11);
     for(i = j = 0; lfn_name[i] != 0; i++) {
         if(lfn_name[i] != ' ') {
@@ -412,7 +418,7 @@ bool fat::write_sfn_entry(blockdev::block_device *device , dword directory_addr 
     int directory_entry_count;
     common_vbr_t *vbr = (common_vbr_t *)ginfo.vbr;
 
-    byte cluster[vbr->sectors_per_cluster*vbr->bytes_per_sector];
+    byte *cluster = (byte *)memory::pmem_alloc(vbr->sectors_per_cluster*vbr->bytes_per_sector);
 
 // sector for root directory
     dword sector_addr = directory_addr;
@@ -447,6 +453,7 @@ bool fat::write_sfn_entry(blockdev::block_device *device , dword directory_addr 
         write_cluster(device , cluster_address+cluster_number , 1 , cluster , ginfo);
     }
     
+    memory::pmem_free(cluster);
     return true;
 }
 
@@ -456,7 +463,7 @@ bool fat::write_lfn_entry(blockdev::block_device *device , dword directory_addr 
     int name_offset = 0;
     byte checksum;
     int required_lfn_entry = (strlen(file_name)/13)+((strlen(file_name)%13 == 0) ? 0 : 1);
-    lfn_entry_t lfn_entry[required_lfn_entry];
+    lfn_entry_t lfn_entry[LFN_ENTRY_MAXCOUNT];
     char sfn_name[13];
 
 // cluster for other directory
@@ -764,7 +771,7 @@ bool fat::get_sfn_entry(blockdev::block_device *device , dword directory_addr , 
         read_cluster(device , sector_to_cluster(directory_addr , ginfo) , dir_cluster_size , directory , ginfo);
     }
     debug::out::printf("dumping directory... size : %d\n" , vbr->bytes_per_sector);
-    char temp_file_name[(entry_count*(5+6+2))+1];
+    char temp_file_name[(LFN_ENTRY_MAXCOUNT*(5+6+2))+1];
     create_sfn_name(temp_file_name , file_name , 1);
     /*
     if((strlen(FileName) <= 11)) { // bug
@@ -837,7 +844,7 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
     }
     
     int file_count = 0;
-    char temp_file_name[(entry_count*(5+6+2))+1];
+    char temp_file_name[(LFN_ENTRY_MAXCOUNT*(5+6+2))+1];
     
     debug::out::printf("directory location : %d\n" , dir_location->block_location);
     for(i = 0; i < entry_count; i++) {

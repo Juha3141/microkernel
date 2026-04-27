@@ -165,6 +165,11 @@ bool vfs::mount(file_info *file , blockdev::block_device *device) {
     return true;
 }
 
+/// @brief Given a name with directory, give the name at the top directory
+///        E.g. if the given name is "/test/hello/world", output will be "world".
+///        (Directory identifier in the example is '/')
+/// @param original_name Original name with directory paths included
+/// @param output 
 static void get_highest_level_file_name(const char *original_name , char *output) {
     int len = strlen(original_name);
     char identifier = vfs_mgr->dir_identifier;
@@ -235,20 +240,29 @@ static file_info *get_file_by_cache_and_phys(const general_file_name file_path ,
     return tree_file;
 }
 
+// Warning: this function used to have variable length string. The string is temporarily replaced with pmem allocated object, 
+// until an allocator that reduces the memory fragmentation in this kind of situation is implemented.
 bool vfs::create(const general_file_name file_path , word file_type) {
     file_info *directory;
     physical_file_location *physical_loc;
-    char top_name[strlen(file_path.file_name)+1];
+    char *temp_name = (char *)memory::pmem_alloc(strlen(file_path.file_name)+1);
 
     directory = get_file_by_cache_and_phys(file_path , 1);
-    if(directory == 0x00) return false;
+        if(directory == 0x00) {
+        memory::pmem_free(temp_name);
+        return false;
+    }
 
     physical_loc = fsdev::get_physical_loc_info(directory);
-    get_highest_level_file_name(file_path.file_name , top_name);
-    debug::out::printf("top_name : %s\n" , top_name);
+    get_highest_level_file_name(file_path.file_name , temp_name);
 
-    if(physical_loc->fs_driver == 0x00) return false;
-    return physical_loc->fs_driver->create({top_name , directory} , file_type);
+    if(physical_loc->fs_driver == 0x00) {
+        memory::pmem_free(temp_name);
+        return false;
+    }
+    bool res = physical_loc->fs_driver->create({temp_name , directory} , file_type);
+    memory::pmem_free(temp_name);
+    return res;
 }
 
 file_info *vfs::open(const general_file_name file_path , int option) {
@@ -393,26 +407,26 @@ bool vfs::remove(const general_file_name file_path) {
     physical_file_location *parent_loc = fsdev::get_physical_loc_info(parent_dir);
 
     if(parent_dir == 0x00) return false;
-    char base_file_name[strlen(file_path.file_name)+2];
+    char *base_file_name = (char *)memory::pmem_alloc(strlen(file_path.file_name)+2);
     vfs_mgr->get_file_base_name(file_path.file_name , base_file_name);
 
     debug::out::printf("base_file_name : %s\n" , base_file_name);
 
-    if(parent_loc->fs_driver->remove({base_file_name , parent_dir}) == false) return false;
+    if(parent_loc->fs_driver->remove({base_file_name , parent_dir}) == false) {
+        memory::pmem_free(base_file_name);
+        return false;
+    }
     vfs_mgr->remove_object(base_file_name , parent_dir);
 
+    memory::pmem_free(base_file_name);
     return true;
 }
 
 bool vfs::rename(const general_file_name file_path , const char *new_name) {
-    file_path;
-    new_name;
     return false;
 }
 
 bool vfs::move(const general_file_name file_path , const general_file_name new_directory) {
-    file_path;
-    new_directory;
     return 0x00;
 }
 
@@ -455,7 +469,7 @@ static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr ,
     unsigned char *temp_buffer = (unsigned char *)memory::pmem_alloc(cluster_size*block_size);
     file_loc->block_device->device_driver->read(file_loc->block_device , cluster_start_phys_location , cluster_size , temp_buffer);
     
-    block_cache_t *caches_ptr[cluster_size];
+    block_cache_t **caches_ptr = (block_cache_t **)memory::pmem_alloc(cluster_size*sizeof(block_cache_t *));
     for(max_t i = 0; i < cluster_size; i++) {
         cache = (block_cache_t *)memory::pmem_alloc(sizeof(block_cache_t));
         cache->block = (void *)memory::pmem_alloc(block_size);
@@ -471,8 +485,10 @@ static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr ,
         caches_ptr[i] = cache;
     }
 
+    block_cache_t *ptr_ret = caches_ptr[linear_block_addr%cluster_size];
     memory::pmem_free(temp_buffer);
-    return caches_ptr[linear_block_addr%cluster_size];
+    memory::pmem_free(caches_ptr);
+    return ptr_ret;
 }
 
 long vfs::read(file_info *file , max_t size , void *buffer) {
@@ -512,7 +528,7 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
     debug::out::printf("block_start : %ld\n" , block_start);
     debug::out::printf("block_end   : %ld\n" , block_end);
 */
-    block_cache_t *caches[block_count];
+    block_cache_t **caches = (block_cache_t **)memory::pmem_alloc(block_count*sizeof(block_cache_t*));
 
     // Calculate & Copy
     max_t off = open_offset;
@@ -530,6 +546,8 @@ long vfs::read(file_info *file , max_t size , void *buffer) {
     }
     who_opened->object->open_offset += read_size;
     debug::out::printf("read_size : %d\n" , read_size);
+
+    memory::pmem_free(caches);
     return read_size;
 }
 
@@ -602,7 +620,7 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
     max_t off = open_offset;
     max_t buffer_offset = 0; 
     max_t write_size = 0;
-    block_cache_t *caches[block_count];
+    block_cache_t **caches = (block_cache_t **)memory::pmem_alloc(block_count*sizeof(block_cache_t *));
     debug::out::printf("block_start : %d\n" , block_start);
     debug::out::printf("block_end   : %d\n" , block_end);
     for(max_t b = block_start; b <= block_end; b++) {
@@ -624,6 +642,7 @@ long vfs::write(file_info *file , max_t size , const void *buffer) {
     debug::out::printf("write_size : %d\n" , write_size);
     who_opened->object->open_offset += write_size;
     who_opened->object->maximum_offset = max(who_opened->object->open_offset , who_opened->object->maximum_offset);
+    memory::pmem_free(caches);
     return write_size;
 }
 

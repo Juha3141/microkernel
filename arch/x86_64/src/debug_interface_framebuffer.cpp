@@ -114,7 +114,7 @@ static void draw_character(int x , int y , debug_color_t background_color , debu
 }
 
 void debug_interface_framebuffer::init(LoaderArgument *loader_argument) {
-    scrinfo.vmem = (max_t)loader_argument->dbg_graphic_framebuffer_start;
+    scrinfo.vmem = TO_VMEM((max_t)loader_argument->dbg_graphic_framebuffer_start);
     scrinfo.width = loader_argument->dbg_graphic_framebuffer_width;
     scrinfo.height = loader_argument->dbg_graphic_framebuffer_height;
     scrinfo.depth = loader_argument->dbg_graphic_framebuffer_depth;

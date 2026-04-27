@@ -197,7 +197,7 @@ char *strncpy(char *dest , const char *src , size_t n) {
     return dest;
 }
 
-char *strcat(char *dest , char *src) {
+char *strcat(char *dest , const char *src) {
     size_t i;
     size_t dest_sz = strlen(dest);
     size_t src_sz = strlen(src);

@@ -69,7 +69,7 @@ void kasan::report_bug(max_t addr , max_t size , byte is_write , max_t pc , bool
     debug::out::printf(DEBUG_ERROR , "------------- kasan::report_bug() -------------\n");
     debug::out::printf(DEBUG_ERROR , "From trying to access 0x%llx sz=%d   " , addr , size);
     
-    debug::out::printf(DEBUG_ERROR , "(%s)\n"  , pc , is_write ? "Write" : "Read");
+    debug::out::printf(DEBUG_ERROR , "(%s)\n"  , is_write ? "Write" : "Read");
     // debug::out::printf(DEBUG_ERROR , "Type : %s\n" , shadow_byte_to_str(*((byte *)buggy_shadow_address)));
 
     max_t buggy_shadow_address = get_poisoned_shadow_address(addr , size);

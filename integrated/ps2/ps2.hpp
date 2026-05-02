@@ -7,24 +7,27 @@
 #define PS2_STATUS_PORT  0x64
 #define PS2_DATA_PORT    0x60
 
-struct ps2_keyboard_driver : chardev::char_device_driver {
+struct ps2_keyboard_driver : char_device_driver {
     bool prepare(void) override;
-    bool open(chardev::char_device *device) override;
-    bool close(chardev::char_device *device) override;
-    max_t read(chardev::char_device *device , void *buffer , max_t size) override;
-    max_t write(chardev::char_device *device , void *buffer , max_t size) override;
-    bool io_read(chardev::char_device *device , max_t command , max_t argument , max_t &data_out) override;
-    bool io_write(chardev::char_device *device , max_t command , max_t argument) override;
+    
+    bool open(char_device *device) override;
+    bool close(char_device *device) override;
+    max_t read(char_device *device , void *buffer , max_t size) override;
+    max_t write(char_device *device , void *buffer , max_t size) override;
+
+    bool io_read(general_device *device , max_t command , max_t argument , max_t &data_out) override;
+    bool io_write(general_device *device , max_t command , max_t argument) override;
 };
 
-struct ps2_mouse_driver : chardev::char_device_driver {
+struct ps2_mouse_driver : char_device_driver {
     bool prepare(void) override;
-    bool open(chardev::char_device *device) override;
-    bool close(chardev::char_device *device) override;
-    max_t read(chardev::char_device *device , void *buffer , max_t size) override;
-    max_t write(chardev::char_device *device , void *buffer , max_t size) override;
-    bool io_read(chardev::char_device *device , max_t command , max_t argument , max_t &data_out) override;
-    bool io_write(chardev::char_device *device , max_t command , max_t argument) override;
+    bool open(char_device *device) override;
+    bool close(char_device *device) override;
+    max_t read(char_device *device , void *buffer , max_t size) override;
+    max_t write(char_device *device , void *buffer , max_t size) override;
+    
+    bool io_read(general_device *device , max_t command , max_t argument , max_t &data_out) override;
+    bool io_write(general_device *device , max_t command , max_t argument) override;
 };
 
 #define PS2_EMPTY 0

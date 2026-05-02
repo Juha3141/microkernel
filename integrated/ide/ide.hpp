@@ -53,35 +53,36 @@
 // ide_cd --- io_read & io_write
 #define IDE_CD_IO_READ_GET_MODEL 0x01
 
-struct ide_driver : blockdev::block_device_driver {
+struct ide_driver : block_device_driver {
     bool prepare(void) override;
-    bool open(blockdev::block_device *device) override;
-    bool close(blockdev::block_device *device) override;
-    max_t read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
-    max_t write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
-    bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;
-    bool io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) override;
-    bool io_write(blockdev::block_device *device , max_t command , max_t argument) override;
+    bool open(block_device *device) override;
+    bool close(block_device *device) override;
+    max_t read(block_device *device , max_t block_address , max_t count , void *buffer) override;
+    max_t write(block_device *device , max_t block_address , max_t count , void *buffer) override;
+    bool get_geometry(block_device *device , device_geometry &geometry) override;
+    
+    bool io_read(general_device *device , max_t command , max_t argument , max_t &data_out) override;
+    bool io_write(general_device *device , max_t command , max_t argument) override;
 
     static bool wait(io_port base_port);
     static bool primary_interrupt_flag;
     static bool secondary_interrupt_flag;
 };
 
-struct ide_cd_driver : blockdev::block_device_driver { // inherit from IDEDriver or StorageDriver??
+struct ide_cd_driver : block_device_driver { // inherit from IDEDriver or StorageDriver??
     static void register_driver(void);
     
     bool prepare(void) override;
-    bool open(blockdev::block_device *device) override;
-    bool close(blockdev::block_device *device) override;
-    max_t read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
-    max_t write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) override;
-    bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;
-    bool io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) override;
-    bool io_write(blockdev::block_device *device , max_t command , max_t argument) override;
+    bool open(block_device *device) override;
+    bool close(block_device *device) override;
+    max_t read(block_device *device , max_t block_address , max_t count , void *buffer) override;
+    max_t write(block_device *device , max_t block_address , max_t count , void *buffer) override;
+    bool get_geometry(block_device *device , device_geometry &geometry) override;
+    bool io_read(general_device *device , max_t command , max_t argument , max_t &data_out) override;
+    bool io_write(general_device *device , max_t command , max_t argument) override;
 
     static bool send_command(io_port base_port , byte *command);
-    static bool get_cdrom_size(blockdev::block_device *device , blockdev::device_geometry &geometry);
+    static bool get_cdrom_size(block_device *device , device_geometry &geometry);
 };
 
 namespace ide {

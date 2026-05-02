@@ -33,7 +33,7 @@ namespace fat16 {
     }fat16_vbr_t;
     
     struct fat16_driver : file_device_driver {
-        bool check(blockdev::block_device *device);
+        bool check(block_device *device);
         bool get_root_directory(physical_file_location &file_loc);
 
         bool create(const general_file_name file_name , word file_type);
@@ -56,7 +56,7 @@ namespace fat16 {
 
     void register_driver(void);
 
-    void write_vbr(fat16_vbr_t *vbr , blockdev::block_device *device , const char *oem_id , const char *volume_label , const char *fs);
+    void write_vbr(fat16_vbr_t *vbr , block_device *device , const char *oem_id , const char *volume_label , const char *fs);
     
     void get_ginfo(fat::general_fat_info_t &ginfo , fat16_vbr_t *vbr);
 
@@ -68,7 +68,7 @@ namespace fat16 {
     int get_file_name_from_lfn(char *file_name , lfn_entry_t *entries);
     
     // deprecated??
-    dword get_directory_location(blockdev::block_device *device , const char *file_name);
+    dword get_directory_location(block_device *device , const char *file_name);
 };
 
 #endif

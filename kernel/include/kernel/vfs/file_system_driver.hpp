@@ -19,7 +19,7 @@
 namespace fsdev {
     struct file_system_driver {
         // check whether the device has file system
-        virtual bool check(blockdev::block_device *device) = 0;
+        virtual bool check(block_device *device) = 0;
         // Get the physical location of root directory
         virtual bool get_root_directory(physical_file_location &file_loc) = 0;
 
@@ -82,7 +82,7 @@ namespace fsdev {
     file_system_driver *search_driver(const char *fs_name);
     file_system_driver *search_driver(max_t driver_id);
 
-    file_system_driver *detect_fs(blockdev::block_device *device);
+    file_system_driver *detect_fs(block_device *device);
 
     max_t discard_driver(const char *fs_name);
     max_t discard_driver(max_t driver_id);

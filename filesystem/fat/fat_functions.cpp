@@ -46,11 +46,12 @@ file_info *fat::write_file_info_by_sfn(const physical_file_location *rootdir_loc
 
 /*********************** Cluster Related ***********************/
 
-void fat::get_vbr(blockdev::block_device *device , void *vbr , int vbr_sz) {
+void fat::get_vbr(block_device *device , void *vbr , int vbr_sz) {
     int i;
     byte boot_sector[512];
     memset(boot_sector , 0 , 512);
-    device->device_driver->read(device , 0 , 1 , boot_sector);
+    block_device_driver *bdevdrv = (block_device_driver *)device->driver;
+    bdevdrv->read(device , 0 , 1 , boot_sector);
 
     memcpy(vbr , boot_sector , vbr_sz);
 }
@@ -58,7 +59,7 @@ void fat::get_vbr(blockdev::block_device *device , void *vbr , int vbr_sz) {
 dword fat::cluster_to_sector(dword cluster_num , fat::general_fat_info_t &ginfo) { return ((cluster_num-2)*((common_vbr_t *)ginfo.vbr)->sectors_per_cluster)+ginfo.data_area_loc; }
 dword fat::sector_to_cluster(dword sector_num , fat::general_fat_info_t &ginfo) { return ((sector_num-ginfo.data_area_loc)/((common_vbr_t *)ginfo.vbr)->sectors_per_cluster)+2; }
 
-dword fat::read_cluster(blockdev::block_device *device , max_t cluster_number , max_t cluster_count , void *data , fat::general_fat_info_t &ginfo) {
+dword fat::read_cluster(block_device *device , max_t cluster_number , max_t cluster_count , void *data , fat::general_fat_info_t &ginfo) {
     max_t i;
     max_t next_cluster_addr = cluster_number;
     common_vbr_t *c_vbr = (common_vbr_t *)ginfo.vbr;
@@ -67,7 +68,7 @@ dword fat::read_cluster(blockdev::block_device *device , max_t cluster_number , 
     debug::out::printf("Sector Address : %d\n" , cluster_to_sector(cluster_number , ginfo));
     for(i = 0; i < cluster_count; i++) {
         
-        if(device->device_driver->read(device , cluster_to_sector(next_cluster_addr , ginfo) , c_vbr->sectors_per_cluster , (void *)((max_t)data+(i*c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector))) != c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector) break;
+        if(device->driver->read(device , cluster_to_sector(next_cluster_addr , ginfo) , c_vbr->sectors_per_cluster , (void *)((max_t)data+(i*c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector))) != c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector) break;
         next_cluster_addr = find_next_cluster(device , next_cluster_addr , ginfo);
         
         // not available?
@@ -76,12 +77,12 @@ dword fat::read_cluster(blockdev::block_device *device , max_t cluster_number , 
     return i;
 }
 
-dword fat::write_cluster(blockdev::block_device *device , max_t cluster_number , max_t cluster_count , void *data , fat::general_fat_info_t &ginfo) {
+dword fat::write_cluster(block_device *device , max_t cluster_number , max_t cluster_count , void *data , fat::general_fat_info_t &ginfo) {
     max_t i;
     max_t next_cluster_addr = cluster_number;
     common_vbr_t *c_vbr = (common_vbr_t *)ginfo.vbr;
     for(i = 0; i < cluster_count; i++) {
-        if(device->device_driver->write(device , cluster_to_sector(next_cluster_addr , ginfo) , c_vbr->sectors_per_cluster , (void *)((max_t)data+(i*c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector))) != c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector) {
+        if(device->driver->write(device , cluster_to_sector(next_cluster_addr , ginfo) , c_vbr->sectors_per_cluster , (void *)((max_t)data+(i*c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector))) != c_vbr->sectors_per_cluster*c_vbr->bytes_per_sector) {
             break;
         }
         next_cluster_addr = find_next_cluster(device , next_cluster_addr , ginfo);
@@ -90,12 +91,12 @@ dword fat::write_cluster(blockdev::block_device *device , max_t cluster_number ,
     return i;
 }
 
-static dword fat12_find_next_cluster(blockdev::block_device *device , dword cluster , fat::general_fat_info_t &ginfo) {
+static dword fat12_find_next_cluster(block_device *device , dword cluster , fat::general_fat_info_t &ginfo) {
     max_t index = ((cluster/2)*3)+(cluster%2);
     max_t sector_address = ((max_t)(index/((common_vbr_t *)ginfo.vbr)->bytes_per_sector))+ginfo.fat_area_loc;
     byte fat_area[512];
     word ret_cluster;
-    device->device_driver->read(device , sector_address , 1 , fat_area);
+    device->driver->read(device , sector_address , 1 , fat_area);
     max_t b_index = (max_t)(index%((common_vbr_t *)ginfo.vbr)->bytes_per_sector);
     
     ret_cluster = fat_area[b_index]|(fat_area[b_index+1] << 8);
@@ -106,27 +107,27 @@ static dword fat12_find_next_cluster(blockdev::block_device *device , dword clus
     return ret_cluster;
 }
 
-static dword fat16_find_next_cluster(blockdev::block_device *device , dword cluster , fat::general_fat_info_t &ginfo) {
+static dword fat16_find_next_cluster(block_device *device , dword cluster , fat::general_fat_info_t &ginfo) {
     max_t cluster_info_per_sector = (((common_vbr_t *)ginfo.vbr)->bytes_per_sector/2);
     max_t sector_address = (max_t)(cluster/cluster_info_per_sector)+ginfo.fat_area_loc;
     byte fat_area[512];
-    device->device_driver->read(device , sector_address , 1 , fat_area);
+    device->driver->read(device , sector_address , 1 , fat_area);
     return (fat_area[((cluster%cluster_info_per_sector)*2)])
           +(fat_area[((cluster%cluster_info_per_sector)*2)+1] << 8);
 }
 
-static dword fat32_find_next_cluster(blockdev::block_device *device , dword cluster , fat::general_fat_info_t &ginfo) {
+static dword fat32_find_next_cluster(block_device *device , dword cluster , fat::general_fat_info_t &ginfo) {
     max_t cluster_info_per_sector = (((common_vbr_t *)ginfo.vbr)->bytes_per_sector/4);
     max_t sector_address = (max_t)(cluster/4)+ginfo.fat_area_loc;
     byte fat_area[512];
-    device->device_driver->read(device , sector_address , 1 , fat_area);
+    device->driver->read(device , sector_address , 1 , fat_area);
     return (fat_area[((cluster%cluster_info_per_sector)*4)])
           +(fat_area[((cluster%cluster_info_per_sector)*4)+1] << 8)
           +(fat_area[((cluster%cluster_info_per_sector)*4)+2] << 16)
           +(fat_area[((cluster%cluster_info_per_sector)*4)+3] << 24);
 }
 
-dword fat::find_next_cluster(blockdev::block_device *device , dword cluster , fat::general_fat_info_t &ginfo) {
+dword fat::find_next_cluster(block_device *device , dword cluster , fat::general_fat_info_t &ginfo) {
     switch(ginfo.fat_type) {
         case GINFO_FAT_TYPE_12:
             return fat12_find_next_cluster(device , cluster , ginfo);
@@ -150,7 +151,7 @@ static max_t get_total_cluster_count(fat::general_fat_info_t &ginfo , max_t byte
     return 0x00;
 }
 
-dword fat::find_first_empty_cluster(blockdev::block_device *device , fat::general_fat_info_t &ginfo) {
+dword fat::find_first_empty_cluster(block_device *device , fat::general_fat_info_t &ginfo) {
     common_vbr_t *c_vbr = (common_vbr_t *)ginfo.vbr;
     max_t total_cluster_count = get_total_cluster_count(ginfo , c_vbr->bytes_per_sector);
     for(int i = 3; i < total_cluster_count; i++) { // starting from Cluster #3
@@ -160,7 +161,7 @@ dword fat::find_first_empty_cluster(blockdev::block_device *device , fat::genera
 }
 
 // Filter out the root directory before using it!
-dword fat::get_file_cluster_count(blockdev::block_device *device , dword sector_number , fat::general_fat_info_t &ginfo) {
+dword fat::get_file_cluster_count(block_device *device , dword sector_number , fat::general_fat_info_t &ginfo) {
     max_t i;
     max_t next_cluster_addr;
     dword cluster_count = 0;
@@ -178,11 +179,11 @@ dword fat::get_file_cluster_count(blockdev::block_device *device , dword sector_
     return cluster_count;
 }
 
-static void fat12_write_cluster_info(blockdev::block_device *device , dword cluster , word cluster_info , fat::general_fat_info_t &ginfo) {
+static void fat12_write_cluster_info(block_device *device , dword cluster , word cluster_info , fat::general_fat_info_t &ginfo) {
     max_t index = ((cluster/2)*3)+(cluster%2);
     max_t sector_address = ((max_t)(index/((common_vbr_t *)ginfo.vbr)->bytes_per_sector))+ginfo.fat_area_loc;
     byte fat_area[512];
-    device->device_driver->read(device , sector_address , 1 , fat_area);
+    device->driver->read(device , sector_address , 1 , fat_area);
     max_t b_index = (max_t)(index%((common_vbr_t *)ginfo.vbr)->bytes_per_sector);
     
     word cluster_data = fat_area[b_index]|(fat_area[b_index+1] << 8); 
@@ -193,41 +194,41 @@ static void fat12_write_cluster_info(blockdev::block_device *device , dword clus
     fat_area[b_index] = cluster_data & 0xFF;
     fat_area[b_index+1] = (cluster_data >> 8) & 0xFF;
 
-    device->device_driver->write(device , sector_address , 1 , fat_area);
-    device->device_driver->write(device , sector_address+ginfo.fat_size , 1 , fat_area);
+    device->driver->write(device , sector_address , 1 , fat_area);
+    device->driver->write(device , sector_address+ginfo.fat_size , 1 , fat_area);
 }
 
-static void fat16_write_cluster_info(blockdev::block_device *device , dword cluster , word cluster_info , fat::general_fat_info_t &ginfo) {
+static void fat16_write_cluster_info(block_device *device , dword cluster , word cluster_info , fat::general_fat_info_t &ginfo) {
     int cluster_info_per_sector = ((common_vbr_t *)ginfo.vbr)->bytes_per_sector/2;
     dword sector_addr = (dword)((cluster/cluster_info_per_sector)+ginfo.data_area_loc);
     common_vbr_t *c_vbr = (common_vbr_t *)ginfo.vbr;
 
     byte *fat_area = (byte *)memory::pmem_alloc(c_vbr->bytes_per_sector);
-    device->device_driver->read(device , sector_addr , 1 , fat_area);
+    device->driver->read(device , sector_addr , 1 , fat_area);
     // possibly dangerous!
     memcpy(fat_area+((cluster%cluster_info_per_sector)*2) , &(cluster_info) , 2);
 
-    device->device_driver->write(device , sector_addr , 1 , fat_area);
-    device->device_driver->write(device , sector_addr+ginfo.fat_size , 1 , fat_area);
+    device->driver->write(device , sector_addr , 1 , fat_area);
+    device->driver->write(device , sector_addr+ginfo.fat_size , 1 , fat_area);
     memory::pmem_free(fat_area);
 }
 
-static void fat32_write_cluster_info(blockdev::block_device *device , dword cluster , word cluster_info , fat::general_fat_info_t &ginfo) {
+static void fat32_write_cluster_info(block_device *device , dword cluster , word cluster_info , fat::general_fat_info_t &ginfo) {
     int cluster_info_per_sector = ((common_vbr_t *)ginfo.vbr)->bytes_per_sector/2;
     dword sector_addr = (dword)((cluster/cluster_info_per_sector)+ginfo.data_area_loc);
     common_vbr_t *c_vbr = (common_vbr_t *)ginfo.vbr;
 
     byte *fat_area = (byte *)memory::pmem_alloc(c_vbr->bytes_per_sector);
-    device->device_driver->read(device , sector_addr , 1 , fat_area);
+    device->driver->read(device , sector_addr , 1 , fat_area);
     // possibly dangerous!
     memcpy(fat_area+((cluster%cluster_info_per_sector)*2) , &(cluster_info) , 2);
 
-    device->device_driver->write(device , sector_addr , 1 , fat_area);
-    device->device_driver->write(device , sector_addr+ginfo.fat_size , 1 , fat_area);
+    device->driver->write(device , sector_addr , 1 , fat_area);
+    device->driver->write(device , sector_addr+ginfo.fat_size , 1 , fat_area);
     memory::pmem_free(fat_area);
 }
 
-void fat::write_cluster_info(blockdev::block_device *device , dword cluster , max_t cluster_info , fat::general_fat_info_t &ginfo) {
+void fat::write_cluster_info(block_device *device , dword cluster , max_t cluster_info , fat::general_fat_info_t &ginfo) {
     switch(ginfo.fat_type) {
         case GINFO_FAT_TYPE_12:
             return fat12_write_cluster_info(device , cluster , cluster_info , ginfo);
@@ -244,7 +245,7 @@ void fat::write_cluster_info(blockdev::block_device *device , dword cluster , ma
 /// @param end_cluster Location of target cluster
 /// @param cluster_count Number of cluster to add
 /// @param ginfo ginfo
-void fat::extend_cluster(blockdev::block_device *device , dword end_cluster , dword cluster_count , fat::general_fat_info_t &ginfo) {
+void fat::extend_cluster(block_device *device , dword end_cluster , dword cluster_count , fat::general_fat_info_t &ginfo) {
     int i;
     dword current_cluster = end_cluster;
     dword next_cluster;
@@ -285,7 +286,7 @@ int fat::get_filename_from_lfn(char *file_name , lfn_entry_t *entries) {
 /// @param directory_sector_addr Sector address of the directory
 /// @param dir_cluster_size (Return) the cluster size of directory
 /// @return Number of entries that the directory has
-dword fat::get_directory_info(blockdev::block_device *device , dword directory_sector_addr , fat::general_fat_info_t &ginfo) {
+dword fat::get_directory_info(block_device *device , dword directory_sector_addr , fat::general_fat_info_t &ginfo) {
     int entry_count = 0;
     int cluster_count;
     int offset = 0;
@@ -297,7 +298,7 @@ dword fat::get_directory_info(blockdev::block_device *device , dword directory_s
     if(directory_sector_addr == ginfo.root_dir_loc) {
         directory = (byte *)memory::pmem_alloc(ginfo.root_dir_size*vbr->bytes_per_sector);
         
-        device->device_driver->read(device , directory_sector_addr , ginfo.root_dir_size , directory);
+        device->driver->read(device , directory_sector_addr , ginfo.root_dir_size , directory);
         while(1) {
             if(offset >= (ginfo.root_dir_size*vbr->bytes_per_sector)) break;
             entry = (sfn_entry_t *)((max_t)(directory+offset));
@@ -411,7 +412,7 @@ byte fat::get_sfn_checksum(const char *sfn_name) {
     return sum;
 }
 
-bool fat::write_sfn_entry(blockdev::block_device *device , dword directory_addr , sfn_entry_t *entry , fat::general_fat_info_t &ginfo) {
+bool fat::write_sfn_entry(block_device *device , dword directory_addr , sfn_entry_t *entry , fat::general_fat_info_t &ginfo) {
     dword cluster_address;
     dword cluster_number;
     dword directory_cluster_size;
@@ -438,10 +439,9 @@ bool fat::write_sfn_entry(blockdev::block_device *device , dword directory_addr 
     if(directory_addr == ginfo.root_dir_loc) {
         sector_number = (directory_entry_count*sizeof(sfn_entry_t))/vbr->bytes_per_sector;
         
-        // error, device->Driver->ReadSector -> Invalid Opcode
-        device->device_driver->read(device , sector_addr+sector_number , 1 , cluster);
+        device->driver->read(device , sector_addr+sector_number , 1 , cluster);
         memcpy((cluster+((directory_entry_count*sizeof(sfn_entry_t))%vbr->bytes_per_sector)) , entry , sizeof(sfn_entry_t));
-        device->device_driver->write(device , sector_addr+sector_number , 1 , cluster);
+        device->driver->write(device , sector_addr+sector_number , 1 , cluster);
     }
     else {
         cluster_address = sector_to_cluster(directory_addr , ginfo);
@@ -457,7 +457,7 @@ bool fat::write_sfn_entry(blockdev::block_device *device , dword directory_addr 
     return true;
 }
 
-bool fat::write_lfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , general_fat_info_t &ginfo) {
+bool fat::write_lfn_entry(block_device *device , dword directory_addr , const char *file_name , general_fat_info_t &ginfo) {
     int i;
     int j;
     int name_offset = 0;
@@ -518,11 +518,11 @@ bool fat::write_lfn_entry(blockdev::block_device *device , dword directory_addr 
                      +(((required_lfn_entry*sizeof(sfn_entry_t))%vbr->bytes_per_sector == 0) ? 0 : 1);
         // Convert the offset of Entry number to sector number
         cluster = (byte *)memory::pmem_alloc(vbr->bytes_per_sector*sector_count);
-        device->device_driver->read(device , sector_address+sector_number , sector_count , cluster);
+        device->driver->read(device , sector_address+sector_number , sector_count , cluster);
 
         memcpy(&(cluster[(DirectoryEntryCount*sizeof(sfn_entry_t))%(vbr->bytes_per_sector)]) , 
         lfn_entry , sizeof(sfn_entry_t)*required_lfn_entry);
-        device->device_driver->write(device , sector_address+sector_number , sector_count , cluster);
+        device->driver->write(device , sector_address+sector_number , sector_count , cluster);
     }
     else {
         cluster_address = sector_to_cluster(directory_addr , ginfo);
@@ -546,7 +546,7 @@ bool fat::write_lfn_entry(blockdev::block_device *device , dword directory_addr 
     return true;
 }
 
-bool fat::rewrite_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *sfn_name , sfn_entry_t *new_sfn_entry , fat::general_fat_info_t &ginfo) {
+bool fat::rewrite_sfn_entry(block_device *device , dword directory_addr , const char *sfn_name , sfn_entry_t *new_sfn_entry , fat::general_fat_info_t &ginfo) {
     int i;
     int offset = 0;
     int cluster_number = 0;
@@ -559,11 +559,11 @@ bool fat::rewrite_sfn_entry(blockdev::block_device *device , dword directory_add
     dir_cluster_size = get_file_cluster_count(device , directory_addr , ginfo);
     if(directory_addr == ginfo.root_dir_loc) {
         directory = (byte *)memory::pmem_alloc(ginfo.root_dir_size*vbr->bytes_per_sector);
-        device->device_driver->read(device , directory_addr , ginfo.root_dir_size , directory);
+        device->driver->read(device , directory_addr , ginfo.root_dir_size , directory);
         for(i = 0; i < ginfo.root_dir_size*vbr->bytes_per_sector/sizeof(sfn_entry_t); i++) {
             if(memcmp(((sfn_entry_t *)(directory+(offset)))->file_name , sfn_name , 11) == 0) {
                 memcpy((sfn_entry_t *)(directory+(offset)) , new_sfn_entry , sizeof(sfn_entry_t));
-                device->device_driver->write(device , directory_addr , ginfo.root_dir_size , directory);
+                device->driver->write(device , directory_addr , ginfo.root_dir_size , directory);
                 memory::pmem_free(directory);
                 return true;
             }
@@ -598,7 +598,7 @@ bool fat::rewrite_sfn_entry(blockdev::block_device *device , dword directory_add
 /// @param device Target storage
 /// @param directory_addr Sector address of the directory
 /// @param offset Absolute offset from the start of the directory
-static void remove_entry_by_sfn_offset(blockdev::block_device *device , dword directory_addr , int offset , fat::general_fat_info_t &ginfo) {
+static void remove_entry_by_sfn_offset(block_device *device , dword directory_addr , int offset , fat::general_fat_info_t &ginfo) {
     int sequence_number;
     int previous_cluster_number;
     int cluster_number;
@@ -656,7 +656,7 @@ static void remove_entry_by_sfn_offset(blockdev::block_device *device , dword di
     return;
 }
 
-bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_addr , const char *sfn_name , general_fat_info_t &ginfo) {
+bool fat::mark_entry_removed(block_device *device , dword directory_addr , const char *sfn_name , general_fat_info_t &ginfo) {
     int i;
     int j;
     int lfn_start_offset;
@@ -680,7 +680,7 @@ bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_ad
     if(directory_addr == ginfo.root_dir_loc) {
         // Root directory is small; we can just get entire root directory and process it(straightforward!)
         directory = (byte *)memory::pmem_alloc(ginfo.root_dir_loc*vbr->bytes_per_sector);
-        device->device_driver->read(device , directory_addr , ginfo.root_dir_loc , directory);
+        device->driver->read(device , directory_addr , ginfo.root_dir_loc , directory);
 
         // printf("sfn_name : %s\n" , sfn_name);
         for(i = 0; i < ginfo.root_dir_loc*vbr->bytes_per_sector/sizeof(sfn_entry_t); i++) {
@@ -690,7 +690,7 @@ bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_ad
                 if(((sfn_entry_t *)(directory+offset-sizeof(sfn_entry_t)))->attribute != FAT_ATTRIBUTE_LFN) {
                     // Current entry : Offsets
                     ((sfn_entry_t *)(directory+offset))->file_name[0] = FAT_FILENAME_REMOVED;
-                    device->device_driver->write(device , directory_addr , ginfo.root_dir_loc , directory);
+                    device->driver->write(device , directory_addr , ginfo.root_dir_loc , directory);
                     memory::pmem_free(directory);
                     return true;
                 }
@@ -711,7 +711,7 @@ bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_ad
                     ((sfn_entry_t *)(directory+j))->file_name[0] = FAT_FILENAME_REMOVED;
                 }
                 // Write the modified version of directory
-                device->device_driver->write(device , directory_addr , ginfo.root_dir_size , directory);
+                device->driver->write(device , directory_addr , ginfo.root_dir_size , directory);
                 memory::pmem_free(directory);
                 return true;
             }
@@ -748,7 +748,7 @@ bool fat::mark_entry_removed(blockdev::block_device *device , dword directory_ad
     return false;
 }
 
-bool fat::get_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info_t &ginfo) {
+bool fat::get_sfn_entry(block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info_t &ginfo) {
     int i;
     int offset = 0;
     int entry_count;
@@ -765,7 +765,7 @@ bool fat::get_sfn_entry(blockdev::block_device *device , dword directory_addr , 
     debug::out::printf("entry_count   : %d\n" , entry_count);
     debug::out::printf("cluster count : %d\n" , dir_cluster_size);
     if(directory_addr == ginfo.root_dir_loc) {
-        device->device_driver->read(device , directory_addr , ginfo.root_dir_size , directory);
+        device->driver->read(device , directory_addr , ginfo.root_dir_size , directory);
     }
     else {
         read_cluster(device , sector_to_cluster(directory_addr , ginfo) , dir_cluster_size , directory , ginfo);
@@ -837,7 +837,7 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
     debug::out::printf("root dir size : %lld\n" , ginfo.root_dir_size);
     debug::out::printf("allocation size = %lld\n" , dir_cluster_size*vbr->sectors_per_cluster*vbr->bytes_per_sector);
     if(dir_location->block_location == ginfo.root_dir_loc) {
-        dir_location->block_device->device_driver->read(dir_location->block_device , dir_location->block_location , ginfo.root_dir_size , directory);
+        dir_location->block_device->driver->read(dir_location->block_device , dir_location->block_location , ginfo.root_dir_size , directory);
     }
     else {
         read_cluster(dir_location->block_device , sector_to_cluster(dir_location->block_location , ginfo) , dir_cluster_size , directory , ginfo);

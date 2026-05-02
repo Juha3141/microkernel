@@ -5,13 +5,13 @@
 
 //////////////// FAT16 ////////////////
 
-bool fat16::fat16_driver::check(blockdev::block_device *device) {
+bool fat16::fat16_driver::check(block_device *device) {
     byte buffer[512];
     fat16::fat16_vbr_t *boot_sector;
     debug::out::printf("device->geometry.block_size : %d\n" , device->geometry.block_size);
     if(device->geometry.block_size != 512) return false;
     debug::out::printf("checking whether device is fat16...\n");
-    if(device->device_driver->read(device , 0 , 1 , buffer) != 512) return false;
+    if(device->driver->read(device , 0 , 1 , buffer) != 512) return false;
     
     boot_sector = (fat16::fat16_vbr_t *)buffer;
     byte jump_code[3] = {0xEB , 0x3C , 0x90};
@@ -152,7 +152,7 @@ max_t fat16::fat16_driver::allocate_new_cluster_to_file(file_info *file) {
     max_t sz = vbr.bytes_per_sector*vbr.sectors_per_cluster;
     char *zero_buffer = (char *)memory::pmem_alloc(sz);
     memset(zero_buffer , 0 , sz);
-    file_loc->block_device->device_driver->write(file_loc->block_device , fat::cluster_to_sector(new_cluster , ginfo) , vbr.sectors_per_cluster , zero_buffer);
+    file_loc->block_device->driver->write(file_loc->block_device , fat::cluster_to_sector(new_cluster , ginfo) , vbr.sectors_per_cluster , zero_buffer);
     memory::pmem_free(zero_buffer);
     return fat::cluster_to_sector(new_cluster , ginfo);
 }
@@ -231,13 +231,13 @@ int fat16::fat16_driver::read_directory(file_info *file , LinkedList<file_info*>
 
 ////////////////// FAT12 //////////////////
 
-bool fat12::fat12_driver::check(blockdev::block_device *device) {
+bool fat12::fat12_driver::check(block_device *device) {
     byte buffer[512];
     fat16::fat16_vbr_t *boot_sector;
     debug::out::printf("device->geometry.block_size : %d\n" , device->geometry.block_size);
     if(device->geometry.block_size != 512) return false;
     debug::out::printf("checking whether device is fat12...\n");
-    if(device->device_driver->read(device , 0 , 1 , buffer) != 512) return false;
+    if(device->driver->read(device , 0 , 1 , buffer) != 512) return false;
     
     boot_sector = (fat16::fat16_vbr_t *)buffer;
     byte jump_code[3] = {0xEB , 0x3C , 0x90};
@@ -246,7 +246,7 @@ bool fat12::fat12_driver::check(blockdev::block_device *device) {
 
 ////////////////// FAT16 //////////////////
 
-void fat16::write_vbr(fat16::fat16_vbr_t *vbr , blockdev::block_device *device , const char *oem_id , const char *volume_label , const char *fs) {
+void fat16::write_vbr(fat16::fat16_vbr_t *vbr , block_device *device , const char *oem_id , const char *volume_label , const char *fs) {
     dword total_sector_count = device->geometry.lba_total_block_count;
     dword root_dir_sector_count;
     vbr->bytes_per_sector = device->geometry.block_size;

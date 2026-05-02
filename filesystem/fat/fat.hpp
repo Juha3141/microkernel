@@ -82,7 +82,7 @@ typedef struct lfn_entry_s {
 #define GINFO_FAT_TYPE_32 3
 
 namespace fat {
-    void get_vbr(blockdev::block_device *device , void *vbr , int vbr_sz);
+    void get_vbr(block_device *device , void *vbr , int vbr_sz);
 
     typedef struct general_fat_info_s {
         /* fat12 : 1
@@ -106,16 +106,16 @@ namespace fat {
     dword cluster_to_sector(dword cluster_num , general_fat_info_t &ginfo);
     dword sector_to_cluster(dword sector_num , general_fat_info_t &ginfo);
 
-    dword read_cluster(blockdev::block_device *device , max_t cluster_number , max_t cluster_count , void *data , general_fat_info_t &ginfo);
-    dword write_cluster(blockdev::block_device *device , max_t cluster_number , max_t cluster_count , void *data , general_fat_info_t &ginfo);
+    dword read_cluster(block_device *device , max_t cluster_number , max_t cluster_count , void *data , general_fat_info_t &ginfo);
+    dword write_cluster(block_device *device , max_t cluster_number , max_t cluster_count , void *data , general_fat_info_t &ginfo);
     
-    dword find_next_cluster(blockdev::block_device *device , dword cluster , general_fat_info_t &ginfo);
-    dword find_first_empty_cluster(blockdev::block_device *device , general_fat_info_t &ginfo);
-    dword get_file_cluster_count(blockdev::block_device *device , dword cluster , general_fat_info_t &ginfo);
-    void write_cluster_info(blockdev::block_device *device , dword cluster , max_t cluster_info , general_fat_info_t &ginfo);
-    void extend_cluster(blockdev::block_device *device , dword end_cluster , dword extend_count , general_fat_info_t &ginfo);
+    dword find_next_cluster(block_device *device , dword cluster , general_fat_info_t &ginfo);
+    dword find_first_empty_cluster(block_device *device , general_fat_info_t &ginfo);
+    dword get_file_cluster_count(block_device *device , dword cluster , general_fat_info_t &ginfo);
+    void write_cluster_info(block_device *device , dword cluster , max_t cluster_info , general_fat_info_t &ginfo);
+    void extend_cluster(block_device *device , dword end_cluster , dword extend_count , general_fat_info_t &ginfo);
 
-    dword get_directory_info(blockdev::block_device *device , dword directory_sector_addr , general_fat_info_t &ginfo);
+    dword get_directory_info(block_device *device , dword directory_sector_addr , general_fat_info_t &ginfo);
 
     // string operation
     int get_filename_from_lfn(char *file_name , lfn_entry_t *entries);
@@ -123,11 +123,11 @@ namespace fat {
     void create_volume_label_name(char *sfn_nam , const char *lfn_name);
     byte get_sfn_checksum(const char *sfn_name);
 
-    bool write_sfn_entry(blockdev::block_device *device , dword directory_addr , sfn_entry_t *entry , general_fat_info_t &ginfo);
-    bool write_lfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , general_fat_info_t &ginfo);
-    bool rewrite_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *sfn_name , sfn_entry_t *new_sfn_entry , general_fat_info_t &ginfo);
-    bool mark_entry_removed(blockdev::block_device *device , dword directory_addr , const char *sfn_name , general_fat_info_t &ginfo);
-    bool get_sfn_entry(blockdev::block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info_t &ginfo);
+    bool write_sfn_entry(block_device *device , dword directory_addr , sfn_entry_t *entry , general_fat_info_t &ginfo);
+    bool write_lfn_entry(block_device *device , dword directory_addr , const char *file_name , general_fat_info_t &ginfo);
+    bool rewrite_sfn_entry(block_device *device , dword directory_addr , const char *sfn_name , sfn_entry_t *new_sfn_entry , general_fat_info_t &ginfo);
+    bool mark_entry_removed(block_device *device , dword directory_addr , const char *sfn_name , general_fat_info_t &ginfo);
+    bool get_sfn_entry(block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info_t &ginfo);
     
     int get_file_list(physical_file_location *dir_location , LinkedList<file_info*> &file_list , general_fat_info_t &ginfo);
 };

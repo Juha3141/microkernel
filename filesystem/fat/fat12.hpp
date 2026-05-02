@@ -9,7 +9,7 @@
 
 namespace fat12 {
     struct fat12_driver : fat16::fat16_driver {
-        bool check(blockdev::block_device *device);
+        bool check(block_device *device);
     };
     
     void register_driver(void);

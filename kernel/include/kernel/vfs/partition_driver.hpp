@@ -21,23 +21,23 @@
 
 namespace storage_system {
     struct PartitionDriver {
-        virtual bool identify(blockdev::block_device *device) = 0;
-	    virtual int get_partitions_count(blockdev::block_device *device) = 0;
-    	virtual int get_partitions_list(blockdev::block_device *device , LinkedList<blockdev::partition_info_t> &partition_info_list) = 0;
-    	virtual bool create_partition(blockdev::block_device *device , blockdev::partition_info_t partition) = 0;
-        virtual bool remove_partition(blockdev::block_device *device , blockdev::partition_info_t partition) = 0;
-        virtual bool modify_partition(blockdev::block_device *device , blockdev::partition_info_t old_partition , blockdev::partition_info_t new_partition_info) = 0;
+        virtual bool identify(block_device *device) = 0;
+	    virtual int get_partitions_count(block_device *device) = 0;
+    	virtual int get_partitions_list(block_device *device , LinkedList<partition_info_t> &partition_info_list) = 0;
+    	virtual bool create_partition(block_device *device , partition_info_t partition) = 0;
+        virtual bool remove_partition(block_device *device , partition_info_t partition) = 0;
+        virtual bool modify_partition(block_device *device , partition_info_t old_partition , partition_info_t new_partition_info) = 0;
 
         char driver_name[16];
     };
 
     struct PartitionDriverContainer : FixedArray<PartitionDriver*> {
-        friend max_t identify_partition_driver(blockdev::block_device *device);
+        friend max_t identify_partition_driver(block_device *device);
     };
 
     max_t register_partition_driver(PartitionDriver *partition_driver , const char *driver_name);
-    max_t identify_partition_driver(blockdev::block_device *device);
-    PartitionDriver *get_partition_identifier(blockdev::block_device *device);
+    max_t identify_partition_driver(block_device *device);
+    PartitionDriver *get_partition_identifier(block_device *device);
     PartitionDriver *get_partition_identifier(max_t identifier_id);
 }
 

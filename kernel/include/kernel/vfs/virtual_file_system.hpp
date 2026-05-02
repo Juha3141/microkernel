@@ -33,7 +33,7 @@ namespace fsdev { struct file_system_driver; }
 
 struct physical_file_location {
     max_t block_location;
-    blockdev::block_device *block_device;
+    block_device *block_device;
     fsdev::file_system_driver *fs_driver;
 };
 
@@ -102,7 +102,7 @@ typedef struct directory_cache_info_s {
 
 namespace vfs {
     struct VirtualFileSystemManager { // General VFS manager
-        void init(file_info *rdir , blockdev::block_device *root_device , char dir_ident);
+        void init(file_info *rdir , block_device *root_device , char dir_ident);
         void add_object(file_info *file , file_info *directory);
         bool remove_object(const char *file_name , file_info *directory);
 
@@ -115,7 +115,7 @@ namespace vfs {
         // root directory
         file_info *fs_root_dir;
         // root device
-        blockdev::block_device *root_dev;
+        block_device *root_dev;
         // directory identifier, default '/'
         char dir_identifier;
 
@@ -123,7 +123,7 @@ namespace vfs {
         bool is_initialized_properly; 
     };
 
-    void init(blockdev::block_device *root_device); 
+    void init(block_device *root_device); 
 
     file_info *get_root_directory(void);
 
@@ -133,8 +133,8 @@ namespace vfs {
         int file_type ,
         int file_size);
 
-    bool mount(file_info *file , blockdev::block_device *device);
-    bool unmount(file_info *file , blockdev::block_device *device);
+    bool mount(file_info *file , block_device *device);
+    bool unmount(file_info *file , block_device *device);
 
     // general function for general purpose
     bool create(const general_file_name file_path , word file_type);

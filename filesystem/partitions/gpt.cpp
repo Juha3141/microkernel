@@ -2,36 +2,36 @@
 
 #include <kernel/debug.hpp>
 
-bool GPTPartitionDriver::identify(blockdev::block_device *device) {
+bool GPTPartitionDriver::identify(block_device *device) {
     byte buffer[512];
-    if((device->device_driver == 0x00)
+    if((device->driver == 0x00)
     ||(device->geometry.block_size != 512)) return false;
     
     gpt_header *header = (gpt_header *)buffer;
-    if(device->device_driver->read(device , 1 , 1 , buffer) != 512) return false;
+    if(device->driver->read(device , 1 , 1 , buffer) != 512) return false;
 
     // Signature of Primary GPT Header
     if(memcmp(header->signature , "EFI PART" , 8) != 0) {
         return false;
     }
-    debug::out::printf(DEBUG_INFO , "device %s%d : GPT detected\n" , device->device_driver->driver_name , device->id);
+    debug::out::printf(DEBUG_INFO , "device %s%d : GPT detected\n" , device->driver->driver_name , device->id);
     return true;
 }
 
-int GPTPartitionDriver::get_partitions_count(blockdev::block_device *device) {
+int GPTPartitionDriver::get_partitions_count(block_device *device) {
     int partition_count = 0;
     dword table_entry_size;
     unsigned char buffer[512];
     gpt_header *header = (gpt_header *)buffer;
     gpt_partition_table_entry *partition_entry;
     
-    if(device->device_driver->read(device , 1 , 1 , buffer) != 512) return 0;
+    if(device->driver->read(device , 1 , 1 , buffer) != 512) return 0;
     table_entry_size = header->partition_table_entry_count*sizeof(gpt_partition_table_entry);
     
     table_entry_size = (table_entry_size%512 == 0) ? ((dword)(table_entry_size/512)+1)*512 : table_entry_size;
     partition_entry = (gpt_partition_table_entry *)memory::pmem_alloc(table_entry_size);
     
-    device->device_driver->read(device , header->partition_table_entry_lba ,  table_entry_size/512 , partition_entry);
+    device->driver->read(device , header->partition_table_entry_lba ,  table_entry_size/512 , partition_entry);
     for(int i = 0; i < header->partition_table_entry_count; i++) {
         if((partition_entry[i].partition_type_guid[0] == 0) && (partition_entry[i].partition_type_guid[1] == 0)
         && (partition_entry[i].partition_type_guid[2] == 0) && (partition_entry[i].partition_type_guid[3] == 0)) {
@@ -44,7 +44,7 @@ int GPTPartitionDriver::get_partitions_count(blockdev::block_device *device) {
     return partition_count;
 }
 
-int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , LinkedList<blockdev::partition_info_t> &partition_info_list) {
+int GPTPartitionDriver::get_partitions_list(block_device *device , LinkedList<partition_info_t> &partition_info_list) {
     int i;
     unsigned char buffer[512];
     int partition_count = 0;
@@ -52,13 +52,13 @@ int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , Lin
     gpt_header *header = (gpt_header *)buffer;
     gpt_partition_table_entry *partition_entry;
 
-    if(device->device_driver->read(device , 1 , 1 , buffer) != 512) return 0;
+    if(device->driver->read(device , 1 , 1 , buffer) != 512) return 0;
     table_entry_size = header->partition_table_entry_count*sizeof(gpt_partition_table_entry);
     
     table_entry_size = (table_entry_size%512 == 0) ? ((dword)(table_entry_size/512)+1)*512 : table_entry_size;
     partition_entry = (gpt_partition_table_entry *)memory::pmem_alloc(table_entry_size);
     
-    device->device_driver->read(device , header->partition_table_entry_lba ,  table_entry_size/512 , partition_entry);
+    device->driver->read(device , header->partition_table_entry_lba ,  table_entry_size/512 , partition_entry);
     for(i = 0; i < header->partition_table_entry_count; i++) {
         if((partition_entry[i].partition_type_guid[0] == 0) && (partition_entry[i].partition_type_guid[1] == 0)
         && (partition_entry[i].partition_type_guid[2] == 0) && (partition_entry[i].partition_type_guid[3] == 0)) {
@@ -75,17 +75,17 @@ int GPTPartitionDriver::get_partitions_list(blockdev::block_device *device , Lin
     return partition_count;
 }
 
-bool GPTPartitionDriver::create_partition(blockdev::block_device *device , blockdev::partition_info_t partition) {
+bool GPTPartitionDriver::create_partition(block_device *device , partition_info_t partition) {
     // Not implemented yet
     return false;
 }
 
-bool GPTPartitionDriver::remove_partition(blockdev::block_device *device , blockdev::partition_info_t partition) {
+bool GPTPartitionDriver::remove_partition(block_device *device , partition_info_t partition) {
     // Not implemented yet
     return false;
 }
 
-bool GPTPartitionDriver::modify_partition(blockdev::block_device *device , blockdev::partition_info_t old_partition , blockdev::partition_info_t new_partition_info) {
+bool GPTPartitionDriver::modify_partition(block_device *device , partition_info_t old_partition , partition_info_t new_partition_info) {
     return false;
 }
 

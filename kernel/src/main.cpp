@@ -84,15 +84,14 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     debug::out::printf(DEBUG_INFO , "----- Initializing interrupt system..\n");
     interrupt::init();
     exception::init();
-    debug::out::printf(DEBUG_INFO , "----- Initializing block device driver..\n");
-    blockdev::init();
+    debug::out::printf(DEBUG_INFO , "----- Initializing general device driver system..\n");
+    dev::init();
     storage_system::init();
     debug::out::printf(DEBUG_INFO , "----- Initializing file system driver..\n");
     fsdev::init();
-    debug::out::printf(DEBUG_INFO , "----- Initializing character device driver..\n");
-    chardev::init();
-    register_file_system_drivers();
-    register_kernel_drivers();
+    pci::probe_all_pci_devices();
+    dev::register_file_system_drivers();
+    dev::register_kernel_drivers();
 
     interrupt::hardware::enable();
 
@@ -100,11 +99,8 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , loader_argument->ramdisk_location , loader_argument->ramdisk_location+loader_argument->ramdisk_size);
     // find the ramdisk driver
     if(loader_argument->is_ramdisk_available) {
-        blockdev::block_device *device = ramdisk_driver::create(loader_argument->ramdisk_size/512 , 512 , loader_argument->ramdisk_location);
-        if(blockdev::register_device(device->device_driver->driver_id , device) != INVALID) {
-            // mount to the root device
-            vfs::init(device);
-        }
+        block_device *root_device = ramdisk_driver::create(loader_argument->ramdisk_size/512 , 512 , loader_argument->ramdisk_location);
+        vfs::init(root_device);
     }
     else {
         debug::out::printf("no ramdisk found!\n");
@@ -120,7 +116,6 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
         fp = fp->next;
     }
     
-    pci::probe_all_pci_devices();
     debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
 }
 

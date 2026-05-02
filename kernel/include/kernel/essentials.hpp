@@ -37,7 +37,12 @@ extern "C" bool is_higherhalf_configured();
     : (addr))
 #define TO_PMEM(addr) (((addr) < CONFIG_KERNEL_VMADDRESS) ? (addr) : (addr-CONFIG_KERNEL_VMADDRESS))
 
-
 #define __no_sanitize_address__ __attribute__((no_sanitize("address")))
+
+
+#define CALL_FPTR_FROM_SECTION(section_start , section_end) for(qword func_ptr_ptr = (qword)&section_start; func_ptr_ptr < (qword)&section_end; func_ptr_ptr += sizeof(void *)) { \
+        qword func_ptr = *((qword *)func_ptr_ptr); \
+        ((void(*)(void))func_ptr)(); \
+    }
 
 #endif

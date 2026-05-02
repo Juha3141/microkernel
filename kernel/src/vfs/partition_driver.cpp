@@ -14,7 +14,7 @@ max_t storage_system::register_partition_driver(storage_system::PartitionDriver 
 /// @brief Identify what partition driver block device uese
 /// @param device pointer of the block device
 /// @return id of using partition driver
-max_t storage_system::identify_partition_driver(blockdev::block_device *device) {
+max_t storage_system::identify_partition_driver(block_device *device) {
     for(max_t id = 0; id < partitiondrv_container->get_max_size(); id++) {
         if((*partitiondrv_container->container[id]) == 0x00) continue;
 
@@ -27,7 +27,7 @@ max_t storage_system::identify_partition_driver(blockdev::block_device *device) 
     return INVALID;
 }
 
-storage_system::PartitionDriver *storage_system::get_partition_identifier(blockdev::block_device *device) {
+storage_system::PartitionDriver *storage_system::get_partition_identifier(block_device *device) {
     return partitiondrv_container->get(device->storage_info.partition_driver_id);
 }
 

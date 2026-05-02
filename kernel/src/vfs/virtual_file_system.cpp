@@ -7,7 +7,7 @@ vfs::VirtualFileSystemManager *vfs_mgr;
 
 ////// VirtualFileSystemManager
 
-void vfs::VirtualFileSystemManager::init(file_info *rdir , blockdev::block_device *root_device , char dir_ident)  {
+void vfs::VirtualFileSystemManager::init(file_info *rdir , block_device *root_device , char dir_ident)  {
     fs_root_dir = rdir;
     fs_root_dir->parent_dir = 0x00;
     fs_root_dir->file_list = 0x00;
@@ -112,7 +112,7 @@ void vfs::VirtualFileSystemManager::get_file_base_name(const char *full_file_pat
 
 /// Standard vfs functions
 
-void vfs::init(blockdev::block_device *root_device) {
+void vfs::init(block_device *root_device) {
     file_info *root_file = create_file_info_struct({0x00 , 0x00 , 0x00} , "@" , FILE_TYPE_DIRECTORY , 0);
     vfs_mgr = memory::new_global_object<VirtualFileSystemManager>();
     // mount the file
@@ -123,7 +123,7 @@ void vfs::init(blockdev::block_device *root_device) {
     }
     
     debug::out::printf(DEBUG_SPECIAL , "fs_driver : 0x%lx\n" , root_file->mount_loc_info.fs_driver);
-    debug::out::printf(DEBUG_SPECIAL , "Device %s%d : File system detected, %s\n" , root_device->device_driver->driver_name , root_device->id , root_file->mount_loc_info.fs_driver->fs_string);
+    debug::out::printf(DEBUG_SPECIAL , "Device %s%d : File system detected, %s\n" , root_device->driver->driver_name , root_device->id , root_file->mount_loc_info.fs_driver->fs_string);
     vfs_mgr->init(root_file , root_device , '/');
 }
 
@@ -153,7 +153,7 @@ file_info *vfs::create_file_info_struct(
     return new_file;
 }
 
-bool vfs::mount(file_info *file , blockdev::block_device *device) {
+bool vfs::mount(file_info *file , block_device *device) {
     fsdev::file_system_driver *fs_driver = fsdev::detect_fs(device);
     if(fs_driver == 0x00) return false;
     
@@ -308,7 +308,7 @@ static bool flush_preexisting_caches(HashTable<block_cache_t , max_t>*preexist_c
             }
             debug::out::printf("flushing preexisting cache : addr %d\n" , block_loc);
             node_ptr->object->object->flushed = true;
-            if(file_loc->block_device->device_driver->write(file_loc->block_device , block_loc , 1 , node_ptr->object->object->block)
+            if(file_loc->block_device->driver->write(file_loc->block_device , block_loc , 1 , node_ptr->object->object->block)
                != file_loc->block_device->geometry.block_size) node_ptr->object->object->flushed = false;
 
             node_ptr = node_ptr->next;
@@ -346,7 +346,7 @@ static bool flush_new_caches(LinkedList<block_cache_t*>*new_caches , file_info *
             if(ptr == 0x00) {
                 break;
             }
-            if(file_loc->block_device->device_driver->write(file_loc->block_device , physical_loc+i , 1 , ptr->object->block) 
+            if(file_loc->block_device->driver->write(file_loc->block_device , physical_loc+i , 1 , ptr->object->block) 
                 != blockdev_bs) succeed = false;
             
             LinkedList<block_cache_t*>::node_s *node_to_remove = ptr;
@@ -467,7 +467,7 @@ static block_cache_t *get_cache_data(file_info *file , max_t linear_block_addr ,
     debug::out::printf("cluster location : %d\n" , cluster_start_phys_location);
     
     unsigned char *temp_buffer = (unsigned char *)memory::pmem_alloc(cluster_size*block_size);
-    file_loc->block_device->device_driver->read(file_loc->block_device , cluster_start_phys_location , cluster_size , temp_buffer);
+    file_loc->block_device->driver->read(file_loc->block_device , cluster_start_phys_location , cluster_size , temp_buffer);
     
     block_cache_t **caches_ptr = (block_cache_t **)memory::pmem_alloc(cluster_size*sizeof(block_cache_t *));
     for(max_t i = 0; i < cluster_size; i++) {

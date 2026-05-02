@@ -26,10 +26,7 @@ extern qword __debug_interface_end__;
 typedef void debug_interface_init_func_t(void);
 
 __no_sanitize_address__ void init_debug_interface_initializers(void) {
-    for(qword func_ptr_ptr = (qword)&__debug_interface_start__; func_ptr_ptr < (qword)&__debug_interface_end__; func_ptr_ptr += sizeof(debug_interface_init_func_ptr_t)) {
-        qword func_ptr = *((qword *)func_ptr_ptr);
-        ((void(*)(void))func_ptr)();
-    }
+    CALL_FPTR_FROM_SECTION(__debug_interface_start__ , __debug_interface_end__);
 }
 
 __no_sanitize_address__ void debug::init(LoaderArgument *loader_argument) {

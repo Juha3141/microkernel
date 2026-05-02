@@ -25,18 +25,18 @@ bool ide_driver::prepare(void) {
         {IDE_SECONDARY_BASE , IDE_DEVICECONTROL_SECONDARY_BASE} , 
         {IDE_SECONDARY_BASE , IDE_DEVICECONTROL_SECONDARY_BASE} , 
     };
-    blockdev::block_device *devices[4]; // Four devices, Two primary, Two secondary
+    block_device *devices[4]; // Four devices, Two primary, Two secondary
 
     debug::out::printf(DEBUG_INFO , "Searching every ide drives...\n");
     for(i = 0; i < 4; i++) {
-        devices[i] = create_empty_device<blockdev::block_device>();
-        designate_resources_count<blockdev::block_device>(devices[i] , 2 , 0 , 1 , 0);
+        devices[i] = create_empty_device<block_device>();
+        designate_resources_count<block_device>(devices[i] , 2 , 0 , 1 , 0);
 
         devices[i]->resources.io_ports[0] = io_port_info[i][0];
         devices[i]->resources.io_ports[1] = io_port_info[i][1];
         devices[i]->resources.flags[0] = is_master_info[i];
 
-        if(blockdev::register_device(this , devices[i]) == INVALID) {
+        if(dev::register_block_device(this , devices[i]) == INVALID) {
             debug::out::printf(DEBUG_WARNING , "Device not found in idehd%d\n" , i);
         }
         else {
@@ -58,15 +58,15 @@ bool ide_driver::wait(io_port base_port) {
     return true;
 }
 
-bool ide_driver::open(blockdev::block_device *device) {
+bool ide_driver::open(block_device *device) {
     return true;
 }
 
-bool ide_driver::close(blockdev::block_device *device) {
+bool ide_driver::close(block_device *device) {
     return true;
 }
 
-bool ide_driver::get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) {
+bool ide_driver::get_geometry(block_device *device , device_geometry &geometry) {
     // Seperate to one getting CDROM, one getting HDD
     word status;
     word data[256];
@@ -103,7 +103,7 @@ bool ide_driver::get_geometry(blockdev::block_device *device , blockdev::device_
     return true;
 }
 
-max_t ide_driver::read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) {
+max_t ide_driver::read(block_device *device , max_t block_address , max_t count , void *buffer) {
     bool use_28bit_pio = true;
     io_port base_port = device->resources.io_ports[0];
     word status;
@@ -141,7 +141,7 @@ max_t ide_driver::read(blockdev::block_device *device , max_t block_address , ma
     return count*512;
 }
 
-max_t ide_driver::write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) {
+max_t ide_driver::write(block_device *device , max_t block_address , max_t count , void *buffer) {
     bool use_28bit_pio = true;
     io_port base_port = device->resources.io_ports[0];
     word status;
@@ -177,11 +177,11 @@ max_t ide_driver::write(blockdev::block_device *device , max_t block_address , m
     return count*512;
 }
 
-bool ide_driver::io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) {
+bool ide_driver::io_read(general_device *device , max_t command , max_t argument , max_t &data_out) {
     return false;
 }
 
-bool ide_driver::io_write(blockdev::block_device *device , max_t command , max_t argument) {
+bool ide_driver::io_write(general_device *device , max_t command , max_t argument) {
     return false;
 }
 
@@ -204,18 +204,18 @@ bool ide_cd_driver::prepare(void) {
         {IDE_SECONDARY_BASE , IDE_DEVICECONTROL_SECONDARY_BASE} , 
         {IDE_SECONDARY_BASE , IDE_DEVICECONTROL_SECONDARY_BASE} , 
     };
-    blockdev::block_device *devices[4]; // Four devices, Two primary, Two secondary
+    block_device *devices[4]; // Four devices, Two primary, Two secondary
 
     debug::out::printf(DEBUG_INFO , "Searching every ide cd drives...\n");
     for(int i = 0; i < 4; i++) {
-        devices[i] = create_empty_device<blockdev::block_device>();
-        designate_resources_count<blockdev::block_device>(devices[i] , 2 , 0 , 1 , 0);
+        devices[i] = create_empty_device<block_device>();
+        designate_resources_count<block_device>(devices[i] , 2 , 0 , 1 , 0);
 
         devices[i]->resources.io_ports[0] = io_port_info[i][0];
         devices[i]->resources.io_ports[1] = io_port_info[i][1];
         devices[i]->resources.flags[0] = is_master_info[i];
 
-        if(blockdev::register_device(this , devices[i]) == INVALID) {
+        if(dev::register_block_device(this , devices[i]) == INVALID) {
             debug::out::printf(DEBUG_WARNING , "Device not found in idecd%d\n" , i);
         }
         else {
@@ -235,16 +235,16 @@ bool ide_cd_driver::send_command(word base_port , byte *command) {
     return true;
 }
 
-bool ide_cd_driver::open(blockdev::block_device *device) {
+bool ide_cd_driver::open(block_device *device) {
     return true;
 }
 
-bool ide_cd_driver::close(blockdev::block_device *device) {
+bool ide_cd_driver::close(block_device *device) {
     return true;
 }
 
 // We need to detect two device types, ATA HDD Drive and ATA CDROM 
-bool ide_cd_driver::get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) {
+bool ide_cd_driver::get_geometry(block_device *device , device_geometry &geometry) {
     // Seperate to one getting CDROM, one getting HDD
     word status;
     word data[256];
@@ -277,7 +277,7 @@ bool ide_cd_driver::get_geometry(blockdev::block_device *device , blockdev::devi
     return get_cdrom_size(device , geometry);
 }
 
-bool ide_cd_driver::get_cdrom_size(blockdev::block_device *device , blockdev::device_geometry &geometry) {
+bool ide_cd_driver::get_cdrom_size(block_device *device , device_geometry &geometry) {
     byte command[12] = {0x25 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00};
     io_port base_port = device->resources.io_ports[0];
     byte received_data[8] = {0 , };
@@ -303,7 +303,7 @@ bool ide_cd_driver::get_cdrom_size(blockdev::block_device *device , blockdev::de
     return true;
 }
 
-max_t ide_cd_driver::read(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) {
+max_t ide_cd_driver::read(block_device *device , max_t block_address , max_t count , void *buffer) {
     dword transfered_size;
     dword bytes_per_sector = 2048; // temporary!
     byte command[12] = {0xA8 , 0
@@ -337,15 +337,15 @@ max_t ide_cd_driver::read(blockdev::block_device *device , max_t block_address ,
     return count*bytes_per_sector;
 }
 
-max_t ide_cd_driver::write(blockdev::block_device *device , max_t block_address , max_t count , void *buffer) {
+max_t ide_cd_driver::write(block_device *device , max_t block_address , max_t count , void *buffer) {
     return 0;
 }
 
-bool ide_cd_driver::io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) {
+bool ide_cd_driver::io_read(general_device *device , max_t command , max_t argument , max_t &data_out) {
     return false;
 }
 
-bool ide_cd_driver::io_write(blockdev::block_device *device , max_t command , max_t argument) {
+bool ide_cd_driver::io_write(general_device *device , max_t command , max_t argument) {
     return false;
 }
 
@@ -354,8 +354,8 @@ static void init_ide_driver(void) {
     io_write_byte(IDE_DEVICECONTROL_SECONDARY_BASE+IDE_PORT_DIGITAL_OUTPUT , 0);
     interrupt::general::register_interrupt(32+14 , ide::interrupt_handler_irq14 , INTERRUPT_HANDLER_LEVEL_KERNEL|INTERRUPT_HANDLER_HARDWARE);
     interrupt::general::register_interrupt(32+15 , ide::interrupt_handler_irq15 , INTERRUPT_HANDLER_LEVEL_KERNEL|INTERRUPT_HANDLER_HARDWARE);
-    blockdev::register_driver(new ide_driver , "idehd");
-    blockdev::register_driver(new ide_cd_driver , "idecd");
+    dev::register_driver(new ide_driver , "idehd" , block);
+    dev::register_driver(new ide_cd_driver , "idecd" , block);
 }
 
 REGISTER_DRIVER(init_ide_driver)

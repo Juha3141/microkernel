@@ -1,13 +1,18 @@
 #include "ramdisk.hpp"
 #include <kernel/mem/kmem_manager.hpp>
 
-static max_t ramdisk_driver_id = 0x00;
+#define RAMDISK_DRIVER_NAME "ramdisk"
 
-struct blockdev::block_device *ramdisk_driver::create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr) {
+/// @brief Creates a new ramdisk device and register it into the ramdisk driver
+/// @param total_sector_count
+/// @param bytes_per_sectors
+/// @param physical_addr Physical(not linear) address to the RAMDisk image
+/// @return Pointer to the created(and registered) block device
+struct block_device *ramdisk_driver::create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr) {
     // Write some basic informations
-    blockdev::block_device *new_device = create_empty_device<blockdev::block_device>();
-    designate_resources_count<blockdev::block_device>(new_device , 0 , 0 , 0 , 1);
-    new_device->device_driver = blockdev::search_driver(ramdisk_driver_id);
+    block_device *new_device = create_empty_device<block_device>();
+    designate_resources_count<block_device>(new_device , 0 , 0 , 0 , 1);
+    new_device->driver = (block_device_driver *)dev::search_driver(RAMDISK_DRIVER_NAME);
     ramdisk_info_s *disk_info = (ramdisk_info_s *)memory::pmem_alloc(sizeof(ramdisk_info_s));
 
     // Write resource informations
@@ -18,6 +23,7 @@ struct blockdev::block_device *ramdisk_driver::create(max_t total_sector_count ,
     // Resource 0 : ramdisk_info_s *
     new_device->resources.etc_resources[0] = (etc_resource_t)disk_info;
 
+    if(dev::register_block_device(new_device->driver , new_device) == INVALID) return nullptr;
     return new_device;
 }
 
@@ -25,15 +31,15 @@ bool ramdisk_driver::prepare(void) {
     return true; // There's actually nothing we have to do!
 }
 
-bool ramdisk_driver::open(blockdev::block_device *device) {
+bool ramdisk_driver::open(block_device *device) {
     return true;
 }
 
-bool ramdisk_driver::close(blockdev::block_device *device) {
+bool ramdisk_driver::close(block_device *device) {
     return true;
 }
 
-max_t ramdisk_driver::read(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) {
+max_t ramdisk_driver::read(block_device *device , max_t sector_address , max_t count , void *buffer) {
     ramdisk_info_s *info = (ramdisk_info_s *)device->resources.etc_resources[0];
     max_t offset = 0 , mem_addr , tmp;
     max_t linear_addr = TO_VMEM(info->physical_address);
@@ -46,7 +52,7 @@ max_t ramdisk_driver::read(blockdev::block_device *device , max_t sector_address
     return (mem_addr-start_addr);
 }
 
-max_t ramdisk_driver::write(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) {
+max_t ramdisk_driver::write(block_device *device , max_t sector_address , max_t count , void *buffer) {
     ramdisk_info_s *info = (ramdisk_info_s *)device->resources.etc_resources[0];
     max_t offset = 0 , mem_addr , tmp;
     max_t linear_addr = TO_VMEM(info->physical_address);
@@ -59,7 +65,7 @@ max_t ramdisk_driver::write(blockdev::block_device *device , max_t sector_addres
     return (mem_addr-start_addr);
 }
 
-bool ramdisk_driver::get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) {
+bool ramdisk_driver::get_geometry(block_device *device , device_geometry &geometry) {
     ramdisk_info_s *info = (ramdisk_info_s *)device->resources.etc_resources[0];
     geometry.is_chs = false;
 
@@ -68,12 +74,12 @@ bool ramdisk_driver::get_geometry(blockdev::block_device *device , blockdev::dev
     return true;
 }
 
-bool ramdisk_driver::io_read(blockdev::block_device *device , max_t command , max_t arguments , max_t &data_out) { return false; }
+bool ramdisk_driver::io_read(general_device *device , max_t command , max_t arguments , max_t &data_out) { return false; }
 
-bool ramdisk_driver::io_write(blockdev::block_device *device , max_t command , max_t arguments) { return false; }
+bool ramdisk_driver::io_write(general_device *device , max_t command , max_t arguments) { return false; }
 
 static void init_ramdisk_driver(void) {
-    ramdisk_driver_id = blockdev::register_driver(new ramdisk_driver , "rd");
+    dev::register_driver(new ramdisk_driver , RAMDISK_DRIVER_NAME , block);
 }
 
 REGISTER_DRIVER(init_ramdisk_driver)

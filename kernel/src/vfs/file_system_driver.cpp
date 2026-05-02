@@ -24,7 +24,7 @@ fsdev::file_system_driver *fsdev::search_driver(const char *fs_name) {
 
 fsdev::file_system_driver *fsdev::search_driver(max_t driver_id) { return fsdriver_container->get(driver_id); }
 
-fsdev::file_system_driver *fsdev::detect_fs(blockdev::block_device *device) {
+fsdev::file_system_driver *fsdev::detect_fs(block_device *device) {
     max_t id = fsdriver_container->search(
         [device](fsdev::file_system_driver *&fdev) {
             // breakpoint

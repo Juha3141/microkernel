@@ -20,6 +20,10 @@ __attribute__ ((used)) __attribute__ ((section(section_name))) driver_init_func_
 typedef max_t resource_flag_t;
 typedef max_t etc_resource_t;
 
+enum driver_type_t {
+    block, character
+};
+
 struct device_resources {
     int io_port_count;
     io_port *io_ports;
@@ -34,19 +38,59 @@ struct device_resources {
     etc_resource_t *etc_resources;
 };
 
-// Template : Device driver
-template <typename T> struct general_device {
-    max_t id;
-    T *device_driver;
-    device_resources resources;
-};
+
+struct general_device;
 
 // Template : Device container
-template <typename T> struct general_device_driver {
+struct device_driver {
+    virtual bool prepare(void) = 0;
+    virtual bool io_read(general_device *device , max_t command , max_t argument , max_t &data_out) = 0;
+    virtual bool io_write(general_device *device , max_t command , max_t argument) = 0;
+    
     max_t driver_id;
-    T *device_container;
+    FixedArray<general_device*> *device_container;
     char driver_name[24];
+
+    driver_type_t type;
 };
+
+// When inheriting the device class, add the driver field, the pointer to the device's driver
+struct general_device {
+    max_t id;
+    device_resources resources;
+
+    device_driver *driver;
+};
+
+namespace dev {
+    void init();
+    void register_kernel_drivers(void);
+    void register_file_system_drivers(void);
+
+    template <typename T>
+    max_t register_driver(T *driver , const char *driver_name , const driver_type_t &type);
+    device_driver *search_driver(const char *driver_name);
+    device_driver *search_driver(max_t driver_id);
+
+    max_t discard_driver(const char *driver_name);
+    max_t discard_driver(max_t driver_id);
+    
+    template <typename T>
+    max_t register_device(T *driver , general_device *device);
+    max_t register_device(const char *driver_name , general_device *device);
+    max_t register_device(max_t driver_id , general_device *device);
+
+    template <typename T>
+    general_device *search_device(T *driver , max_t device_id);
+    general_device *search_device(const char *driver_name , max_t device_id);
+    general_device *search_device(max_t driver_id , max_t device_id);
+
+    bool discard_device(general_device *device);
+}
+
+//////////////// Template Function Implementations ////////////////
+
+extern FixedArray<device_driver *> *device_driver_container;
 
 /// @brief Create empty device with essential informations
 /// @param driver driver for device
@@ -77,7 +121,40 @@ template <typename T> void designate_resources_count(T *device , int io_port_cou
     }
 }
 
-void register_kernel_drivers(void);
-void register_file_system_drivers(void);
+template <typename T>
+general_device *dev::search_device(T *driver , max_t device_id) {
+    return driver->device_container->get(device_id);
+}
+
+template <typename T>
+max_t dev::register_device(T *driver , general_device *device) {
+    device->id = driver->device_container->add(device);
+    if(device->id == INVALID) { debug::out::printf(DEBUG_ERROR , "invalid id!\n"); return INVALID; }
+    
+    device->driver = driver;
+    return device->id;
+}
+
+/// @brief Register the block device driver
+/// @param driver Driver structure
+/// @param driver_name Name of the driver
+/// @return Return the id of driver
+template <typename T>
+max_t dev::register_driver(T *driver , const char *driver_name , const driver_type_t &type) {
+    max_t id = device_driver_container->add(driver); // register driver to global container
+    driver->driver_id = id;
+    driver->type      = type;
+    strncpy(driver->driver_name , driver_name , 24);
+    if(id == INVALID) { return INVALID; }
+    
+    driver->device_container = new FixedArray<general_device *>();
+    driver->device_container->init(256);
+    // assign new local device container
+    // Driver contains its devices
+    driver->prepare();
+    
+    debug::out::printf("Registered device driver, id : %d name : \"%s\"\n" , driver->driver_id , driver->driver_name);
+    return driver->driver_id;
+}
 
 #endif

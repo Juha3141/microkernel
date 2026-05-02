@@ -11,7 +11,7 @@ struct mouse_data {
 };
 
 bool ps2_mouse_driver::prepare(void) {
-    chardev::char_device *device = create_empty_device<chardev::char_device>();
+    char_device *device = create_empty_device<char_device>();
     // interrupt : 1 (IRQ 12)
     // etc resource : data queue, phase
     designate_resources_count(device , 0 , 1 , 0 , 3);
@@ -26,7 +26,7 @@ bool ps2_mouse_driver::prepare(void) {
     device->resources.etc_resources[1] = (max_t)mouse_data_queue;
     device->resources.etc_resources[2] = (max_t)phase;
     
-    chardev::register_device(this , device);
+    dev::register_device(this , device);
     debug::out::printf("device id = 0x%X\n" , device->id);
     return true;
 }
@@ -35,7 +35,7 @@ void ps2::ps2_interrupt_handler_irq12(struct Registers *regs) {
     byte data = io_read_byte(PS2_DATA_PORT);
     if(data == 0xFA) return; // Ignore ACK
 
-    chardev::char_device *device = chardev::search_device(ps2_mouse_driver_id , 0x00); // since the ps/2 mouse driver has only one device
+    char_device *device = (char_device *)dev::search_device(ps2_mouse_driver_id , 0x00); // since the ps/2 mouse driver has only one device
     Queue<byte>*queue_1 = (Queue<byte>*)device->resources.etc_resources[0];
     StructQueue<struct mouse_data>*queue_2 = (StructQueue<struct mouse_data>*)device->resources.etc_resources[1];
     int *phase = (int *)device->resources.etc_resources[2];
@@ -54,34 +54,34 @@ void ps2::ps2_interrupt_handler_irq12(struct Registers *regs) {
     }
 }
 
-bool ps2_mouse_driver::open(chardev::char_device *device) {
+bool ps2_mouse_driver::open(char_device *device) {
     return 0;
 }
 
-bool ps2_mouse_driver::close(chardev::char_device *device) { 
+bool ps2_mouse_driver::close(char_device *device) { 
     return 0;
 }
 
-max_t ps2_mouse_driver::read(chardev::char_device *device , void *buffer , max_t size) {
+max_t ps2_mouse_driver::read(char_device *device , void *buffer , max_t size) {
     return 0;
 }
 
-max_t ps2_mouse_driver::write(chardev::char_device *device , void *buffer , max_t size) { 
+max_t ps2_mouse_driver::write(char_device *device , void *buffer , max_t size) { 
     return 0;
 }
 
-bool ps2_mouse_driver::io_read(chardev::char_device *device , max_t command , max_t argument , max_t &data_out) { 
+bool ps2_mouse_driver::io_read(general_device *device , max_t command , max_t argument , max_t &data_out) { 
     return 0;
 }
 
-bool ps2_mouse_driver::io_write(chardev::char_device *device , max_t command , max_t argument) { 
+bool ps2_mouse_driver::io_write(general_device *device , max_t command , max_t argument) { 
     return 0;
 }
 
 
 static void init_ps2_mouse_driver(void) {
     ps2::initialize();
-    ps2_mouse_driver_id = chardev::register_driver(new ps2_mouse_driver , "ps2mouse");
+    ps2_mouse_driver_id = dev::register_driver(new ps2_mouse_driver , "ps2mouse" , character);
 }
 
 REGISTER_DRIVER(init_ps2_mouse_driver)

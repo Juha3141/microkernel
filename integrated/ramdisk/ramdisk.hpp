@@ -4,18 +4,18 @@
 #include <kernel/essentials.hpp>
 #include <kernel/driver/block_device_driver.hpp>
 
-struct ramdisk_driver : public blockdev::block_device_driver {
-    static struct blockdev::block_device *create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr = 0x00);
+struct ramdisk_driver : public block_device_driver {
+    static struct block_device *create(max_t total_sector_count , max_t bytes_per_sectors , max_t physical_addr = 0x00);
     bool prepare(void) override;
     
-    bool open(blockdev::block_device *device);
-    bool close(blockdev::block_device *device);
-    max_t read(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) override;
-    max_t write(blockdev::block_device *device , max_t sector_address , max_t count , void *buffer) override;
-    bool get_geometry(blockdev::block_device *device , blockdev::device_geometry &geometry) override;
+    bool open(block_device *device);
+    bool close(block_device *device);
+    max_t read(block_device *device , max_t sector_address , max_t count , void *buffer) override;
+    max_t write(block_device *device , max_t sector_address , max_t count , void *buffer) override;
+    bool get_geometry(block_device *device , device_geometry &geometry) override;
 
-    bool io_read(blockdev::block_device *device , max_t command , max_t argument , max_t &data_out) override;
-    bool io_write(blockdev::block_device *device , max_t command , max_t arguments) override;
+    bool io_read(general_device *device , max_t command , max_t argument , max_t &data_out) override;
+    bool io_write(general_device *device , max_t command , max_t arguments) override;
 };
 
 struct ramdisk_info_s {

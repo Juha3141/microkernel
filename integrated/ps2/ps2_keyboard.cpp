@@ -5,7 +5,7 @@
 static max_t ps2_keyboard_driver_id;
 
 bool ps2_keyboard_driver::prepare(void) {
-    chardev::char_device *device = create_empty_device<chardev::char_device>();
+    char_device *device = create_empty_device<char_device>();
     // interrupt : 1 (IRQ 1)
     // etc resource : scan code queue
     designate_resources_count(device , 0 , 1 , 0 , 1);
@@ -16,7 +16,7 @@ bool ps2_keyboard_driver::prepare(void) {
     device->resources.etc_resources[0] = (max_t)scan_code_queue;
     // device->resources.etc_resources[1] = (max_t)key_pressed_status;
 
-    chardev::register_device(ps2_keyboard_driver_id , device);
+    dev::register_device(ps2_keyboard_driver_id , device);
     return true;
 }
 
@@ -24,7 +24,8 @@ void ps2::ps2_interrupt_handler_irq1(struct Registers *regs) {
     byte data = io_read_byte(PS2_DATA_PORT);
     if(data == 0xFA) return;
 
-    chardev::char_device *dev = chardev::search_device(ps2_keyboard_driver_id , 0);
+    // PS/2 has only one device
+    char_device *dev = (char_device *)dev::search_device(ps2_keyboard_driver_id , 0);
     if(dev == 0x00) return;
     debug::out::printf("K : 0x%02x\n" , data);
 
@@ -32,36 +33,36 @@ void ps2::ps2_interrupt_handler_irq1(struct Registers *regs) {
     scan_code_queue->enqueue(data);
 }
 
-bool ps2_keyboard_driver::open(chardev::char_device *device) { 
+bool ps2_keyboard_driver::open(char_device *device) { 
     return true;
 }
 
-bool ps2_keyboard_driver::close(chardev::char_device *device) {
+bool ps2_keyboard_driver::close(char_device *device) {
     return true;
 }
 
-max_t ps2_keyboard_driver::read(chardev::char_device *device , void *buffer , max_t size) { 
+max_t ps2_keyboard_driver::read(char_device *device , void *buffer , max_t size) { 
     
     return 0;
 }
 
 // you cannot write to keyboard
-max_t ps2_keyboard_driver::write(chardev::char_device *device , void *buffer , max_t size) { 
+max_t ps2_keyboard_driver::write(char_device *device , void *buffer , max_t size) { 
     return 0;
 }
 
-bool ps2_keyboard_driver::io_read(chardev::char_device *device , max_t command , max_t argument , max_t &data_out) { 
+bool ps2_keyboard_driver::io_read(general_device *device , max_t command , max_t argument , max_t &data_out) { 
     return 0;
 }
 
-bool ps2_keyboard_driver::io_write(chardev::char_device *device , max_t command , max_t argument) { 
+bool ps2_keyboard_driver::io_write(general_device *device , max_t command , max_t argument) { 
     return 0;
 }
 
 
 static void init_ps2_keyboard_driver(void) {
     ps2::initialize();
-    ps2_keyboard_driver_id = chardev::register_driver(new ps2_keyboard_driver , "ps2kbd");
+    ps2_keyboard_driver_id = dev::register_driver(new ps2_keyboard_driver , "ps2kbd" , character);
 }
 
 REGISTER_DRIVER(init_ps2_keyboard_driver)

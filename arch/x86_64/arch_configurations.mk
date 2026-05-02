@@ -32,5 +32,5 @@ COMMON_CCOPTIONS += -fno-use-cxa-atexit -fno-rtti -fno-exceptions -fno-threadsaf
 KERNEL_SETUP_CCOPTIONS = -fno-sanitize=kernel-address
 KERNEL_CCOPTIONS       = $(KASAN_OPTIONS)
 
-KERNEL_LDOPTIONS = -nostartfiles -nodefaultlibs --target=x86_64-elf -nostdlib -ffreestanding
+KERNEL_LDOPTIONS = -nostartfiles -nodefaultlibs --target=x86_64-elf -nostdlib -ffreestanding -z noexecstack
 KERNEL_ASOPTIONS = 

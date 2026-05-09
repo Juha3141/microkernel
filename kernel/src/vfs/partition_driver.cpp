@@ -4,6 +4,7 @@ storage_system::PartitionDriverContainer *partitiondrv_container;
 
 void storage_system::init(void) {
     partitiondrv_container = memory::new_global_object<storage_system::PartitionDriverContainer>();
+    partitiondrv_container->init(256);
 }
 
 max_t storage_system::register_partition_driver(storage_system::PartitionDriver *partition_driver , const char *driver_name) {

@@ -7,7 +7,6 @@
 .gdb_history
 bochsrc.txt
 custom_vsprintf*
-*.code-workspace
 qemulog.txt
 dummyfiles
 dummyfiles/*
@@ -21,6 +20,9 @@ stub-module
 mount
 *.iso
 *.img
+*.vhd
+*.vdi
+*.vmdk
 Kernel.elf
 Kernel.krn
 image

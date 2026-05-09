@@ -57,12 +57,12 @@ public:
     bool discard(T matching_data) {
         for(max_t i = 0; i < max_count; i++) {
             if((*container[i]) == matching_data) {
-                return discard_space(i);
+                return discard(i);
             }
         }
         return false;
     }
-    bool discard_space(max_t id) {
+    bool discard(max_t id) {
         if(container[id].occupied != true) return false;
 
         container[id].occupied = false;
@@ -81,6 +81,12 @@ public:
     // Warning: this function doesn't check for the id range
     T &get(max_t id) const {
         return *container[id];
+    }
+    bool get(max_t id , T& obj) const {
+        if(id >= max_count) return false;
+
+        obj = *container[id];
+        return true;
     }
     T &operator[](max_t id) const { return *container[id]; }
 

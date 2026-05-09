@@ -93,8 +93,7 @@ namespace dev {
 extern FixedArray<device_driver *> *device_driver_container;
 
 /// @brief Create empty device with essential informations
-/// @param driver driver for device
-/// @param storage_type type of storage
+/// @param T device driver type(general_device/block_device/char_device)
 /// @return new empty device
 template <typename T> T *create_empty_device(void) {
     T *device = (T *)memory::pmem_alloc(sizeof(T));

@@ -83,18 +83,19 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
             ;
         }
     }
+    int ramdisk_available = 1;
     status = uefi_call_wrapper(volume->Open , 5 , volume , &ramdisk_file_handle , L"ramdisk.img" , EFI_FILE_MODE_READ , EFI_FILE_READ_ONLY|EFI_FILE_HIDDEN|EFI_FILE_SYSTEM);
-    if(EFI_ERROR(status)) {
-        Print(L"RAM disk image not found!\n");
-        while(1) {
-            ;
-        }
-    }
+    if(EFI_ERROR(status)) { ramdisk_available = 0; }
+
     kernel_file_info = LibFileInfo(kernel_file_handle);
-    ramdisk_file_info = LibFileInfo(ramdisk_file_handle);
+    UINT64 ramdisk_file_size = 0;
+    if(ramdisk_available) {
+        Print(L"RAM disk file size : %d\n" , ramdisk_file_info->FileSize);
+        ramdisk_file_info = LibFileInfo(ramdisk_file_handle);
+        ramdisk_file_size = ramdisk_file_info->FileSize;
+    }
     Print(L"kernel file size : %d\n" , kernel_file_info->FileSize);
-    Print(L"RAM disk file size : %d\n" , ramdisk_file_info->FileSize);
-    UINT64 ramdisk_file_size = ramdisk_file_info->FileSize;
+
     UINT64 kernel_file_size = kernel_file_info->FileSize;
     UINT64 kernel_misc_area_size = kernel_memmap_size+CONFIG_KERNEL_KSTRUCT_SIZE+CONFIG_KERNEL_STACK_SIZE+LOADER_ARGUMENT_LENGTH+ramdisk_file_size;
 
@@ -121,7 +122,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
         kernel_memmap_location   = kernel_location+kernel_file_size;
         loader_argument_location = kernel_memmap_location+kernel_memmap_size;
         kernel_stack_location    = loader_argument_location+LOADER_ARGUMENT_LENGTH;
-        kernel_ramdisk_location  = kernel_stack_location+CONFIG_KERNEL_STACK_SIZE;
+        if(ramdisk_available) kernel_ramdisk_location  = kernel_stack_location+CONFIG_KERNEL_STACK_SIZE;
         Print(L"Miscellaneous area next to the kernel\n");
     }
     else {
@@ -129,7 +130,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
         kernel_memmap_location   = kernel_stack_memory_chunk->PhysicalStart;
         loader_argument_location = kernel_memmap_location+kernel_memmap_size;
         kernel_stack_location    = loader_argument_location+LOADER_ARGUMENT_LENGTH;
-        kernel_ramdisk_location  = kernel_stack_location+CONFIG_KERNEL_STACK_SIZE;
+        if(ramdisk_available) kernel_ramdisk_location  = kernel_stack_location+CONFIG_KERNEL_STACK_SIZE;
     }
     
     memcpy(((void *)kernel_memmap_location) , kernel_memmap , kernel_memmap_size);
@@ -144,7 +145,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE image_handle , EFI_SYSTEM_TABLE *system_ta
     loader_argument->loader_argument_size     = LOADER_ARGUMENT_LENGTH;
     loader_argument->ramdisk_location         = kernel_ramdisk_location;
     loader_argument->ramdisk_size             = ramdisk_file_size;
-    loader_argument->is_ramdisk_available     = 1;
+    loader_argument->is_ramdisk_available     = ramdisk_available;
     loader_argument->video_mode = LOADER_ARGUMENT_VIDEOMODE_GRAPHIC;
 
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;

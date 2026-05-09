@@ -31,8 +31,9 @@ segment_t segmentation::SegmentationManager::discard_segment(const char *segment
     max_t id = search(
         [segment_name](segment_info_t &data){ return (bool)(strcmp(data.name , segment_name) == 0); }
     );
+    if(id == INVALID) return 0x00;
     value = this->get(id).value;
-    if(discard_space(id) == false) return 0x00;
+    if(discard(id) == false) return 0x00;
 
     return value;
 }

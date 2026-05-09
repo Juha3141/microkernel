@@ -101,7 +101,7 @@ namespace fat {
         dword invalid_cluster_info;
     }general_fat_info_t;
 
-    file_info *write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo);
+    file_info *write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , const sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo);
 
     dword cluster_to_sector(dword cluster_num , general_fat_info_t &ginfo);
     dword sector_to_cluster(dword sector_num , general_fat_info_t &ginfo);
@@ -119,6 +119,7 @@ namespace fat {
 
     // string operation
     int get_filename_from_lfn(char *file_name , lfn_entry_t *entries);
+    void get_filename_from_sfn(char *filename , const sfn_entry_t *entry);
     void create_sfn_name(char *sfn_name , const char *lfn_name , int num);
     void create_volume_label_name(char *sfn_nam , const char *lfn_name);
     byte get_sfn_checksum(const char *sfn_name);

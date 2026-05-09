@@ -7,6 +7,7 @@
 // pre
 struct block_device_driver;
 struct block_device;
+namespace fsdev { struct file_system_driver; }
 
 typedef struct partition_info_s {
     max_t physical_sector_start;
@@ -29,14 +30,16 @@ struct device_geometry {
 
 struct storage_info_t {
     max_t partition_driver_id;
-    storage_type_t storage_type;
+    storage_type_t storage_type; // physical/logical
     
     /* For logical storage */
     max_t partition_id;
     // If physical_sector_start == 0 --> Physical disk, "physical_sector_end" describes the total sector count
     // If physical_sector_start != 0 --> Logical disk
     partition_info_t partition_info; 
+
     /* Common */
+    fsdev::file_system_driver *fs_driver;
     FixedArray<block_device*> *logical_block_devs;
 };
 

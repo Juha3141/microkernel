@@ -32,8 +32,8 @@ extern "C" bool is_higherhalf_configured();
 
 // If it's already in virtual memory space, don't change. It not, add/subtract the offset (and vice versa)
 // Also, for TO_VMEM, check if higherhalf kernel is configured. If not, do not change the address.
-#define TO_VMEM(addr) (((addr) < CONFIG_KERNEL_VMADDRESS) ? \
-    (is_higherhalf_configured() ? ((addr)+CONFIG_KERNEL_VMADDRESS) : (addr)) \
+#define TO_VMEM(addr) ((((max_t)(addr)) < CONFIG_KERNEL_VMADDRESS) ? \
+    (is_higherhalf_configured() ? (((max_t)(addr))+CONFIG_KERNEL_VMADDRESS) : (addr)) \
     : (addr))
 #define TO_PMEM(addr) (((addr) < CONFIG_KERNEL_VMADDRESS) ? (addr) : (addr-CONFIG_KERNEL_VMADDRESS))
 

@@ -1,6 +1,7 @@
 #include <kernel/driver/block_device_driver.hpp>
 #include <linked_list.hpp>
 #include <kernel/vfs/storage_system.hpp>
+#include <kernel/vfs/file_system_driver.hpp>
 
 #include <kernel/mem/kmem_manager.hpp>
 
@@ -12,11 +13,15 @@
 /// @return Return the id of the device
 max_t dev::register_block_device(block_device_driver *driver , block_device *device) {
     if(driver->get_geometry(device , device->geometry) == false) return INVALID;
-    storage_system::detect_partitions(device);
+    device->driver = driver;
+    
+    // Detect partitions
     device->id = driver->device_container->add(device);
     if(device->id == INVALID) { debug::out::printf(DEBUG_ERROR , "invalid id!\n"); return INVALID; }
-    
-    device->driver = driver;
+    storage_system::detect_partitions(device);
+
+    // Detect file system
+    device->storage_info.fs_driver = fsdev::detect_fs(device);
     return device->id;
 }
 

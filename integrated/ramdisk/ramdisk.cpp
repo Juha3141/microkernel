@@ -12,7 +12,6 @@ struct block_device *ramdisk_driver::create(max_t total_sector_count , max_t byt
     // Write some basic informations
     block_device *new_device = create_empty_device<block_device>();
     designate_resources_count<block_device>(new_device , 0 , 0 , 0 , 1);
-    new_device->driver = (block_device_driver *)dev::search_driver(RAMDISK_DRIVER_NAME);
     ramdisk_info_s *disk_info = (ramdisk_info_s *)memory::pmem_alloc(sizeof(ramdisk_info_s));
 
     // Write resource informations
@@ -23,7 +22,7 @@ struct block_device *ramdisk_driver::create(max_t total_sector_count , max_t byt
     // Resource 0 : ramdisk_info_s *
     new_device->resources.etc_resources[0] = (etc_resource_t)disk_info;
 
-    if(dev::register_block_device(new_device->driver , new_device) == INVALID) return nullptr;
+    if(dev::register_block_device(RAMDISK_DRIVER_NAME , new_device) == INVALID) return nullptr;
     return new_device;
 }
 

@@ -5,7 +5,7 @@
 #define LFN_MAXLENGTH      256
 #define LFN_ENTRY_MAXCOUNT 32
 
-file_info *fat::write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
+file_info *fat::write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , const sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
     int file_type = 0;
     switch(sfn_entry.attribute) {
         case FAT_ATTRIBUTE_READONLY:
@@ -281,6 +281,22 @@ int fat::get_filename_from_lfn(char *file_name , lfn_entry_t *entries) {
     return lfn_entry_count;
 }
 
+void fat::get_filename_from_sfn(char *filename , const sfn_entry_t *entry) {
+    int l = 0;
+    for(; l < 8; l++) {
+        if(entry->file_name[l] == ' ') break;
+        filename[l] = entry->file_name[l];
+    }
+    // extension
+    if(entry->extension[0] != ' ') { filename[l++] = '.'; }
+    int k = 0;
+    for(; k < 3; k++) {
+        if(entry->extension[l] == ' ') break;
+        filename[l+k] = entry->extension[k];
+    }
+    filename[l+k] = '\0';
+}
+
 /// @brief Provide the basic information of a directory, specified by DirectorySectorAddress
 /// @param device Targetted device
 /// @param directory_sector_addr Sector address of the directory
@@ -398,7 +414,7 @@ void fat::create_volume_label_name(char *sfn_name , const char *lfn_name) {
 }
 
 byte fat::get_sfn_checksum(const char *sfn_name) {
-    byte sum = 0;
+    int sum = 0;
     int check = 0;
     for(int i = 0; sfn_name[i] != 0; i++) {
         check = (check & 0x01) ? 0x80 : 0x00;
@@ -409,7 +425,7 @@ byte fat::get_sfn_checksum(const char *sfn_name) {
         }
         check = sum;
     }
-    return sum;
+    return (byte)sum;
 }
 
 bool fat::write_sfn_entry(block_device *device , dword directory_addr , sfn_entry_t *entry , fat::general_fat_info_t &ginfo) {
@@ -857,17 +873,22 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
                 continue;
             }
             
-            // increment the offset
-            offset += lfn_entry_count*sizeof(lfn_entry_t);
+            // increment the offset, lfn entries + one sfn entry
+            offset += lfn_entry_count*sizeof(lfn_entry_t)+sizeof(sfn_entry_t);
             file_count++;
 
-            sfn_entry_t entry;
-            // copy the entry
-            memcpy(&entry , (sfn_entry_t *)(directory+offset) , sizeof(sfn_entry_t));
-            file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , entry , ginfo);
+            file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , *((sfn_entry_t *)(directory+offset)) , ginfo);
             file_list.add_rear(new_file_info);
         }
-        else offset += sizeof(sfn_entry_t);
+        else if(sfn_entry->attribute == FAT_ATTRIBUTE_VOLUMELABEL) {
+            offset += sizeof(sfn_entry_t);
+        }
+        else {
+            get_filename_from_sfn(temp_file_name , sfn_entry);
+            file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , *sfn_entry , ginfo);
+            file_list.add_rear(new_file_info);
+            offset += sizeof(sfn_entry_t);
+        }
     }
     memory::pmem_free(directory);
     return file_count;

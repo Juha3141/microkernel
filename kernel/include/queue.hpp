@@ -25,15 +25,20 @@ template <typename T> class Queue { // circular queue
         
         void enqueue(T obj) {
             queue_list[front] = obj;            // Stores data
+            if(capacity == 0) {
+                debug::out::printf("capacity = 0!!\n");
+                return;
+            }
             front = (front+1)%capacity;
         }
-        T dequeue(void) {
-            T result;
-            if(is_empty() == true) return 0x00;
-            result = queue_list[rear];
+        bool dequeue(T &res) {
+            if(is_empty()) return false;
+
+            res = queue_list[rear];
             rear = (rear+1)%capacity;
-            return result;
+            return true;
         }
+        void flush() { front = rear = 0; }
         
     private:
         T *queue_list;

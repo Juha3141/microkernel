@@ -1,8 +1,13 @@
 #include <ps2.hpp>
+#include <kernel/driver/general_input_system.hpp>
 #include <kernel/interrupt/interrupt.hpp>
 #include <queue.hpp>
 
-static max_t ps2_keyboard_driver_id;
+#define DRIVER_NAME "ps2kbd"
+
+const char scancode_map[] = {
+
+};
 
 bool ps2_keyboard_driver::prepare(void) {
     char_device *device = create_empty_device<char_device>();
@@ -14,9 +19,9 @@ bool ps2_keyboard_driver::prepare(void) {
     scan_code_queue->init(1024);
 
     device->resources.etc_resources[0] = (max_t)scan_code_queue;
-    // device->resources.etc_resources[1] = (max_t)key_pressed_status;
 
-    dev::register_device(ps2_keyboard_driver_id , device);
+    dev::register_device(this , device);
+    input::register_input_device(device , "keyboard");
     return true;
 }
 
@@ -25,26 +30,19 @@ void ps2::ps2_interrupt_handler_irq1(struct Registers *regs) {
     if(data == 0xFA) return;
 
     // PS/2 has only one device
-    char_device *dev = (char_device *)dev::search_device(ps2_keyboard_driver_id , 0);
+    char_device *dev = (char_device *)dev::search_device(DRIVER_NAME , 0);
     if(dev == 0x00) return;
-    debug::out::printf("K : 0x%02x\n" , data);
 
-    Queue<byte>*scan_code_queue = (Queue<byte>*)dev->resources.etc_resources[0];
-    scan_code_queue->enqueue(data);
+    input_event event = {
+        .data = 0 , 
+        .type = 0
+    };
+    input::report_input(dev , event);
 }
 
-bool ps2_keyboard_driver::open(char_device *device) { 
-    return true;
-}
-
-bool ps2_keyboard_driver::close(char_device *device) {
-    return true;
-}
-
-max_t ps2_keyboard_driver::read(char_device *device , void *buffer , max_t size) { 
-    
-    return 0;
-}
+bool ps2_keyboard_driver::open(char_device *device) { return true; }
+bool ps2_keyboard_driver::close(char_device *device) { return true; }
+max_t ps2_keyboard_driver::read(char_device *device , void *buffer , max_t size) {  return 0; }
 
 // you cannot write to keyboard
 max_t ps2_keyboard_driver::write(char_device *device , void *buffer , max_t size) { 
@@ -62,7 +60,7 @@ bool ps2_keyboard_driver::io_write(general_device *device , max_t command , max_
 
 static void init_ps2_keyboard_driver(void) {
     ps2::initialize();
-    ps2_keyboard_driver_id = dev::register_driver(new ps2_keyboard_driver , "ps2kbd" , character);
+    dev::register_driver(new ps2_keyboard_driver , DRIVER_NAME , character);
 }
 
 REGISTER_DRIVER(init_ps2_keyboard_driver)

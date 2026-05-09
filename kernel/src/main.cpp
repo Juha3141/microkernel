@@ -6,8 +6,10 @@
 #include <kernel/interrupt/interrupt.hpp>
 #include <kernel/interrupt/exception.hpp>
 #include <kernel/io_port.hpp>
-#include <kernel/driver/block_device_driver.hpp>
+#include <kernel/driver/device_driver.hpp>
+#include <kernel/driver/general_input_system.hpp>
 #include <kernel/driver/pci.hpp>
+
 #include <ramdisk/ramdisk.hpp>
 #include <kernel/vfs/storage_system.hpp>
 #include <kernel/vfs/file_system_driver.hpp>
@@ -79,6 +81,7 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     storage_system::init();
     debug::out::printf(DEBUG_INFO , "----- Initializing file system driver..\n");
     fsdev::init();
+    input::init();
     pci::probe_all_pci_devices();
     dev::register_file_system_drivers();
     dev::register_kernel_drivers();

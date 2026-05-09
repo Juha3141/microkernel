@@ -149,13 +149,13 @@ file_info *vfs::create_file_info_struct(
     new_file->who_open_list = new LinkedList<open_info_t*>;
     new_file->who_open_list->init();
 
-    new_file->file_list = 0x00;
+    new_file->file_list = nullptr;
     return new_file;
 }
 
 bool vfs::mount(file_info *file , block_device *device) {
-    fsdev::file_system_driver *fs_driver = fsdev::detect_fs(device);
-    if(fs_driver == 0x00) return false;
+    fsdev::file_system_driver *fs_driver = device->storage_info.fs_driver;
+    if(device->storage_info.fs_driver == nullptr) return false;
     
     file->mount_loc_info.fs_driver = fs_driver;
     file->mount_loc_info.block_device = device;

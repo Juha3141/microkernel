@@ -46,7 +46,9 @@ typedef max_t ptr_t;
 
 typedef unsigned long size_t;
 
-typedef void (*interrupt_handler_t)(struct Registers *regs);
+#include <registers.hpp>
+
+typedef Registers *(*interrupt_handler_t)(Registers *regs);
 
 #define ARCHDEP // indicates that the function is architecture-dependent
 #define INVALID ARCHITECTURE_LIMIT

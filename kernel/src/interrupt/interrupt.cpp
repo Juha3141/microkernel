@@ -34,6 +34,7 @@ void interrupt::HardwareSpecifiedInterruptManager::init(int maxcount) {
     INTERRUPT_HARDWARE_SPECIFIED_WRAPPER_ARRAY
     interrupt_maxcount = maxcount;
     interrupt_list = (SpecialInterrupt *)memory::pmem_alloc(maxcount*sizeof(SpecialInterrupt));
+    debug::out::printf("interrupt_list : 0x%llx\n" , interrupt_list);
     for(int i = 0; i < maxcount; i++) {
         interrupt_list[i].occupied = false;
         interrupt_list[i].assigned_interrupt_handler = hardware_specified_wrapper_array[i];
@@ -201,26 +202,27 @@ bool interrupt::hardware_specified::discard_interrupt(const char *name) {
     return hwspecific_int_mgr->discard_interrupt_name(name);
 }
 
-
-extern "C" void archindep_general_interrupt_handler(int handler_num , Registers *regs_ptr) {
+extern "C" Registers *archindep_general_interrupt_handler(int handler_num , Registers *regs_ptr) {
     interrupt_handler_t handler;
     if((handler = interrupt::general::get_interrupt_handler(handler_num)) == 0x00) {
         debug::panic("Unhandled interrupt invoked, handler_num = %d\n" , handler_num);
     }
 
-    handler(regs_ptr);
+    Registers *regs = handler(regs_ptr);
     interrupt::controller::interrupt_received(handler_num);
+    return regs;
 }
 
-extern "C" void archindep_hardware_specified_interrupt_handler(int handler_num , Registers *regs_ptr) {
+extern "C" Registers *archindep_hardware_specified_interrupt_handler(int handler_num , Registers *regs_ptr) {
     interrupt_handler_t handler;
     if((handler = interrupt::handler::get_hardware_specified_int_wrapper(handler_num)) == 0x00) {
         char *name = hwspecific_int_mgr->interrupt_list[handler_num].name;
         debug::panic("Unhandled special interrupt invoked, handler_num = %d, name = \"%s\"\n" , handler_num , name);
     }
     
-    handler(regs_ptr);
+    Registers *regs = handler(regs_ptr);
     interrupt::controller::interrupt_received(handler_num);
+    return regs;
 }
 
 #else 

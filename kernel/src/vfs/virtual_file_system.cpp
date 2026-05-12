@@ -123,7 +123,11 @@ void vfs::init(block_device *root_device) {
     }
     
     debug::out::printf(DEBUG_SPECIAL , "fs_driver : 0x%lx\n" , root_file->mount_loc_info.fs_driver);
-    debug::out::printf(DEBUG_SPECIAL , "Device %s%d : File system detected, %s\n" , root_device->driver->driver_name , root_device->id , root_file->mount_loc_info.fs_driver->fs_string);
+    debug::out::printf(DEBUG_SPECIAL , "Device %s%d" , root_device->driver->driver_name , root_device->id);
+    if(root_device->storage_info.storage_type == storage_logical) {
+        debug::out::printf(DEBUG_SPECIAL , "part%d" , root_device->storage_info.partition_id);
+    }
+    debug::out::printf(DEBUG_SPECIAL , " : File system detected, %s\n" , root_file->mount_loc_info.fs_driver->fs_string);
     vfs_mgr->init(root_file , root_device , '/');
 }
 

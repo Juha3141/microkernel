@@ -50,7 +50,6 @@ namespace memory {
             static max_t get_node_size(struct Node *node);
 
             struct Node *node_start;
-            max_t maximum_node_addr;
 
             bool allocation_available;
     };

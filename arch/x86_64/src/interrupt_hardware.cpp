@@ -78,7 +78,7 @@ void interrupt::hardware::init_ist(void) {
     memset(tss , 0 , sizeof(struct x86_64::TSS));
 
     // Temporary Interrupt Stack Table
-    tss->ist[0] = (qword)memory::pmem_alloc(512*1024 , 4096)+(512*1024);
+    tss->ist[0] = (qword)memory::pmem_alloc(2*1024*1024 , 4096)+(2*1024*1024)-8;
     debug::out::printf(DEBUG_INFO , "tss->ist[0] : 0x%X\n" , tss->ist[0]);
     tss->iopb_offset = 0xFFFF;
     ist_address[0] = (qword)tss->ist[0];

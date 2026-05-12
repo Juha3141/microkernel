@@ -5,9 +5,13 @@
 #include <kernel/driver/char_device_driver.hpp>
 #include <queue.hpp>
 
+// Normal ascii-code data key-up event
 #define INPUT_TYPE_KEYUP   1
+// Normal ascii-code data key-down event
 #define INPUT_TYPE_KEYDOWN 2
+// Special keys key-up event
 #define INPUT_TYPE_KEYUP_SPECIAL   3
+// Special keys key-down event
 #define INPUT_TYPE_KEYDOWN_SPECIAL 4
 
 #include <kernel/input/keyboard_codes.hpp>

@@ -58,6 +58,7 @@ void input::report_input(const char *input_type , const input_event &event) {
     max_t collection_id = inputdev_collection_mgr->search([input_type](const input_device_collection *col) {
         return (strcmp(col->name , input_type) == 0);
     });
+    if(collection_id == INVALID) return;
 
     auto collection = inputdev_collection_mgr->get(collection_id);
     report_input(collection , event);
@@ -127,6 +128,7 @@ bool InputReader::open(max_t driver_id , max_t device_id) {
     this->inputdev = idev;
 
     this->node_ptr = idev->registered_input_readers.add_rear(this);
+    event_queue.init(512);
     return true;
 }
 
@@ -136,6 +138,7 @@ bool InputReader::open(max_t inputdev_id) {
     this->inputdev = idev;
 
     this->node_ptr = idev->registered_input_readers.add_rear(this);
+    event_queue.init(512);
     return true;
 }
 
@@ -148,6 +151,7 @@ bool InputReader::open(const char *input_type) {
 
     this->inputdev_collection = inputdev_collection_mgr->get(idev_id);
     this->node_ptr = this->inputdev_collection->registered_input_readers.add_rear(this);
+    event_queue.init(512);
     return true;
 }
 

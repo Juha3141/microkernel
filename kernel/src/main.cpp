@@ -86,7 +86,7 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     dev::register_file_system_drivers();
     dev::register_kernel_drivers();
 
-    // interrupt::hardware::enable();
+    interrupt::hardware::enable();
 
     debug::out::printf(DEBUG_INFO , "----- Initializing vfs..\n");
     debug::out::printf(DEBUG_INFO , "Setting root directory to the provided ramdisk : 0x%lx-0x%lx\n" , loader_argument->ramdisk_location , loader_argument->ramdisk_location+loader_argument->ramdisk_size);
@@ -112,6 +112,15 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
 
         debug::out::printf("%s\n" , file->file_name);
         fp = fp->next;
+    }
+    
+    InputReader kbd_reader;
+    kbd_reader.open("keyboard");
+    while(1) {
+        input_event event;
+        if(kbd_reader.read(event)) {
+            debug::out::printf("event received : 0x%x(%d)\n" , event.data , event.type);
+        }
     }
     
     debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);

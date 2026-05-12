@@ -19,7 +19,7 @@ image/
 stub-module
 mount
 *.iso
-*.img
+ramdisk.img
 *.vhd
 *.vdi
 *.vmdk

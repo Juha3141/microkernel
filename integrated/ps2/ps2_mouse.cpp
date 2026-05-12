@@ -25,7 +25,7 @@ Registers *ps2::ps2_interrupt_handler_irq12(Registers *regs) {
     byte data = io_read_byte(PS2_DATA_PORT);
     if(data == 0xFA) return regs; // Ignore ACK
 
-    debug::out::printf("M : %X\n" , data);
+    
     return regs;
 }
 

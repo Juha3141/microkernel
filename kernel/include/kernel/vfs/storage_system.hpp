@@ -17,8 +17,9 @@ namespace storage_system {
     struct logical_block_device_driver : public block_device_driver {
         void set_super_driver(struct block_device_driver *driver) {
             super_driver = driver;
-            super_driver->driver_id = driver->driver_id;
-            strcpy(super_driver->driver_name , driver->driver_name);
+            
+            block_device_driver::driver_id = driver->driver_id;
+            strcpy(block_device_driver::driver_name , driver->driver_name);
         }
         bool init(void) { return false; }
         bool prepare(void) override { debug::out::printf(DEBUG_WARNING , "logical_storage_device_driver::prepare : not allowed\n"); return false; }

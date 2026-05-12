@@ -34,18 +34,18 @@ void memory::SegmentsManager::init() {
 }
 
 void memory::SegmentsManager::add_nodes_manager(const Boundary &mem_boundary) {
-	NodesManager new_node_mgr;
-	new_node_mgr.init(mem_boundary.start_address , mem_boundary.end_address);
+	NodesManager *new_node_mgr = memory::new_global_object<NodesManager>();
+	new_node_mgr->init(mem_boundary.start_address , mem_boundary.end_address);
 	nodes_managers.add_rear(new_node_mgr);
 }
 
 memory::NodesManager *memory::SegmentsManager::get_nodes_manager(max_t address) {
-	auto *mgr = nodes_managers.search([&address](const NodesManager& mgr) {
-		return (bool)((mgr.mem_start_address <= address) && (address <= mgr.mem_end_address));
+	auto *mgr = nodes_managers.search([&address](NodesManager* mgr) {
+		return (bool)((mgr->mem_start_address <= address) && (address <= mgr->mem_end_address));
 	});
 	if(mgr == nullptr) return nullptr;
 
-	return &(mgr->object);
+	return mgr->object;
 }
 
 void memory::pmem_init() {
@@ -70,7 +70,7 @@ max_t memory::SegmentsManager::get_currently_using_mem(void) {
 	max_t currently_using_mem = 0;
 	auto *ptr = nodes_managers.get_start_node();
 	while(ptr != nullptr) {
-		currently_using_mem += ptr->object.memory_usage;
+		currently_using_mem += ptr->object->memory_usage;
 		ptr = ptr->next;
 	}
 	return currently_using_mem;
@@ -81,9 +81,11 @@ static void *pmem_alloc_main(max_t size , max_t alignment) {
 	void *ptr = nullptr;
 	auto *node_s_ptr = pmem_segments_mgr->nodes_managers.get_start_node();
 
+	// debug::out::printf("pmem_alloc_main invoked, size=%d\n" , size);
 	while(node_s_ptr != nullptr) {
-		if(node_s_ptr->object.available()) {
-			if(ptr = (void *)node_s_ptr->object.allocate(size , alignment)) break;
+		// debug::out::printf("node manager : 0x%llx (0x%llx ~ 0x%llx), available:%b\n" , node_s_ptr , node_s_ptr->object->mem_start_address , node_s_ptr->object->mem_end_address , node_s_ptr->object->available());
+		if(node_s_ptr->object->available()) {
+			if((ptr = (void *)node_s_ptr->object->allocate(size , alignment))) break;
 		}
 
 		node_s_ptr = node_s_ptr->next;

@@ -48,8 +48,8 @@ namespace ps2 {
     void write_controller_configuration_byte(byte configuration_byte);
 
     
-    void ps2_interrupt_handler_irq1(struct Registers *regs);
-    void ps2_interrupt_handler_irq12(struct Registers *regs);
+    Registers *ps2_interrupt_handler_irq1(Registers *regs);
+    Registers *ps2_interrupt_handler_irq12(Registers *regs);
 }
 
 #endif

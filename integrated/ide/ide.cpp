@@ -8,13 +8,15 @@
 static bool primary_interrupt_flag = false;
 static bool secondary_interrupt_flag = false;
 
-void ide::interrupt_handler_irq14(struct Registers *regs) {
+Registers *ide::interrupt_handler_irq14(Registers *regs) {
     main_int_handler(true);
-};
+    return regs;
+}
 
-void ide::interrupt_handler_irq15(struct Registers *regs) { 
+Registers *ide::interrupt_handler_irq15(Registers *regs) { 
     main_int_handler(false);
-};
+    return regs;
+}
 
 bool ide_driver::prepare(void) {
     int i;

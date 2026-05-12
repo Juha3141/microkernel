@@ -106,8 +106,8 @@ namespace ide {
         word model[20];
         word reserved_3[210];
     }cd_geometry_t;
-    void interrupt_handler_irq14(struct Registers *regs);
-    void interrupt_handler_irq15(struct Registers *regs);
+    Registers *interrupt_handler_irq14(Registers *regs);
+    Registers *interrupt_handler_irq15(Registers *regs);
     
     void main_int_handler(bool Primary);
 }

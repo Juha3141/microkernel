@@ -171,6 +171,8 @@ Boundary setup_kasan_shadowmem(max_t kernel_size , max_t kernel_stack_size) {
     max_t mapped_memory_size = (res.end_address - res.start_address);
     // debug::out::printf("Total mapped size           : %dkB (%d.%d%d%%)\n" , mapped_memory_size/1024 , 
         // ((mapped_memory_size*100)/kernel_memory_pool_size) , ((mapped_memory_size*1000)/kernel_memory_pool_size)%10 , ((mapped_memory_size*10000)/kernel_memory_pool_size)%10);
+    
+    memset((void *)res.start_address , 0 , mapped_memory_size);
     return res;
 }
 

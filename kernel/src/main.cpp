@@ -7,8 +7,9 @@
 #include <kernel/interrupt/exception.hpp>
 #include <kernel/io_port.hpp>
 #include <kernel/driver/device_driver.hpp>
-#include <kernel/driver/general_input_system.hpp>
 #include <kernel/driver/pci.hpp>
+
+#include <kernel/input/general_input_system.hpp>
 
 #include <ramdisk/ramdisk.hpp>
 #include <kernel/vfs/storage_system.hpp>
@@ -119,7 +120,14 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
     while(1) {
         input_event event;
         if(kbd_reader.read(event)) {
-            debug::out::printf("event received : 0x%x(%d)\n" , event.data , event.type);
+            if(event.type == INPUT_TYPE_KEYDOWN) {
+                debug::out::printf("%c" , event.data);
+            }
+            else {
+                debug::out::printf("event received : %d(%s)\n" , event.data , 
+                (event.type == INPUT_TYPE_KEYDOWN_SPECIAL) ? "KEYDOWN_SPECIAL" : 
+                (event.type == INPUT_TYPE_KEYUP_SPECIAL   ? "KEYUP_SPECIAL" : "KEYUP"));
+            }
         }
     }
     
@@ -141,9 +149,10 @@ block_device *find_root_block_device(block_device *ramdisk) {
         debug::out::printf("Number of partitions : %d\n" , ramdisk->storage_info.logical_block_devs->size());
         for(int i = 0; i < ramdisk->storage_info.logical_block_devs->size(); i++) {
             block_device *bdev_logical = ramdisk->storage_info.logical_block_devs->get(i);
-            debug::out::printf("fs_driver : %llx\n" , bdev_logical->storage_info.fs_driver);
+            debug::out::printf("fs_driver : 0x%llx\n" , bdev_logical->storage_info.fs_driver);
             if(bdev_logical->storage_info.fs_driver) {
-                debug::out::printf("Logical block device found(%s%d, partition=%d) : %s\n" , 
+                debug::out::printf("Logical block device found, 0x%llx(%s%d, partition=%d) : %s\n" , 
+                    bdev_logical , 
                     bdev_logical->driver->driver_name , 
                     bdev_logical->id , 
                     bdev_logical->storage_info.partition_id , 

@@ -12,32 +12,27 @@ const char scancode_map[] = {
 bool ps2_keyboard_driver::prepare(void) {
     char_device *device = create_empty_device<char_device>();
     // interrupt : 1 (IRQ 1)
-    // etc resource : scan code queue
-    designate_resources_count(device , 0 , 1 , 0 , 1);
-    Queue<byte>*scan_code_queue = (Queue<byte>*)memory::pmem_alloc(sizeof(Queue<byte>));
+    designate_resources_count(device , 0 , 1 , 0 , 0);
     
-    scan_code_queue->init(1024);
-
-    device->resources.etc_resources[0] = (max_t)scan_code_queue;
-
     dev::register_device(this , device);
     input::register_input_device(device , "keyboard");
     return true;
 }
 
-void ps2::ps2_interrupt_handler_irq1(struct Registers *regs) {
+Registers *ps2::ps2_interrupt_handler_irq1(Registers *regs) {
     byte data = io_read_byte(PS2_DATA_PORT);
-    if(data == 0xFA) return;
+    if(data == 0xFA) return regs;
 
     // PS/2 has only one device
     char_device *dev = (char_device *)dev::search_device(DRIVER_NAME , 0);
-    if(dev == 0x00) return;
+    if(dev == 0x00) return regs;
 
     input_event event = {
         .data = 0 , 
         .type = 0
     };
     input::report_input(dev , event);
+    return regs;
 }
 
 bool ps2_keyboard_driver::open(char_device *device) { return true; }

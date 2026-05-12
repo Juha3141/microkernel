@@ -1,8 +1,8 @@
 #ifndef _SWITCH_CONTEXT_HPP_
 #define _SWITCH_CONTEXT_HPP_
 
-#include <registers.hpp>
+#include <kernel/types.hpp>
 
-extern "C" void ARCHDEP switch_context(struct Registers *current_context , struct Registers *next_context);
+extern "C" void ARCHDEP switch_context(Registers *current_context , Registers *next_context);
 
 #endif

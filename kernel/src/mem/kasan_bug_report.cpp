@@ -79,8 +79,6 @@ void kasan::report_bug(max_t addr , max_t size , byte is_write , max_t pc , bool
     debug::out::printf(DEBUG_ERROR , "Shadow address : 0x%llx\n" , buggy_shadow_address);
     debug::out::printf(DEBUG_ERROR , "Error type     : %s(%02x)\n" , shadow_byte_to_str(*((byte *)buggy_shadow_address)) , *((byte *)buggy_shadow_address));
 
-    debug::out::printf(DEBUG_ERROR , "&__kernel_main_start__ : 0x%llx\n" , &__kernel_main_start__);
-    debug::out::printf(DEBUG_ERROR , "&__kernel_main_end__   : 0x%llx\n" , &__kernel_main_end__);
     debug::out::printf(DEBUG_ERROR , "------ Stack trace : \n");
     dump_stack_until_main();
     debug::out::printf(DEBUG_ERROR , "------ Shadow memory : \n");

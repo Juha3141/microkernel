@@ -16,8 +16,11 @@ bool MBRPartitionDriver::identify(block_device *device) {
 		if(partition_table.entries[i].partition_type == 0xEE) return false;
 
 		// MBR
-        if(partition_table.entries[i].partition_type != 0x00) return true;
+        if(partition_table.entries[i].partition_type != 0x00) {
+            debug::out::printf(DEBUG_INFO , "device %s%d is MBR\n" , device->driver->driver_name , device->id);
+        }
     }
+    debug::out::printf(DEBUG_INFO , "device %s%d is not MBR\n" , device->driver->driver_name , device->id);
     return false;
 }
 

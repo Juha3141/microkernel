@@ -12,6 +12,7 @@ bool GPTPartitionDriver::identify(block_device *device) {
 
     // Signature of Primary GPT Header
     if(memcmp(header->signature , "EFI PART" , 8) != 0) {
+        debug::out::printf(DEBUG_INFO , "device %s%d is not GPT\n" , device->driver->driver_name , device->id);
         return false;
     }
     debug::out::printf(DEBUG_INFO , "device %s%d : GPT detected\n" , device->driver->driver_name , device->id);
@@ -64,6 +65,8 @@ int GPTPartitionDriver::get_partitions_list(block_device *device , LinkedList<pa
         && (partition_entry[i].partition_type_guid[2] == 0) && (partition_entry[i].partition_type_guid[3] == 0)) {
             continue;
         }
+        debug::out::printf("(GPT) partition_start : %lld\n" , partition_entry[i].start_address_lba);
+        debug::out::printf("(GPT) partition_end   : %lld\n" , partition_entry[i].end_address_lba);
         partition_info_list.add_rear({
             .physical_sector_start = partition_entry[i].start_address_lba , 
             .physical_sector_end = partition_entry[i].end_address_lba , 

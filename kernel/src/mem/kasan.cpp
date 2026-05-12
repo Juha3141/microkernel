@@ -82,20 +82,20 @@ KASAN_INTERNALS_INTERFACE void __asan_after_dynamic_init() {}
 KASAN_INTERNALS_INTERFACE void __asan_handle_no_return() {}
 
 __no_sanitize_address__
-/// @brief Note: linear address should always be aligned to shadow size!
-/// @param laddr 8-byte aligned address
-/// @param size 
-/// @param value 
+/// @brief 
+/// @param laddr linear address
+/// @param size size
+/// @param value value
 void kasan::poison_address(max_t laddr , max_t size , byte value) {
     if(!kasan::is_enabled()) return;
     if(size < KASAN_GRANUL_SIZE) {
         debug::out::printf(DEBUG_WARNING , "Unsupported poisoning size : %lld\n" , size);
         debug::out::printf(DEBUG_WARNING , "Caller = 0x%llx\n" , CALLER_PC);
         return;
-    } 
+    }
 
     if(!is_aligned(laddr , KASAN_GRANUL_SIZE)) {
-        *((byte *)KASAN_LADDR_TO_SHADOW(laddr)) = value == KASAN_SHADOW_MAGIC_HEAP_FREE ? value : (laddr & KASAN_SHADOW_MASK);
+        *((byte *)KASAN_LADDR_TO_SHADOW(laddr)) = ((value == KASAN_SHADOW_MAGIC_UNPOISONED) ? value : (laddr & KASAN_SHADOW_MASK));
         laddr = align_round_up(laddr , KASAN_GRANUL_SIZE);
         size--;
     }
@@ -112,7 +112,7 @@ void kasan::poison_address(max_t laddr , max_t size , byte value) {
 __no_sanitize_address__
 void kasan::unpoison_address(max_t linear_address , max_t size) {
     if(!kasan::is_enabled()) return;
-    poison_address(linear_address , align_round_up(size , KASAN_GRANUL_SIZE) , KASAN_SHADOW_MAGIC_UNPOISONED);
+    poison_address(linear_address , align_round_up(linear_address+size , KASAN_GRANUL_SIZE)-linear_address , KASAN_SHADOW_MAGIC_UNPOISONED);
 }
 
 __no_sanitize_address__

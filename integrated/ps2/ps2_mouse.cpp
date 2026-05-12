@@ -13,19 +13,20 @@ struct mouse_data {
 bool ps2_mouse_driver::prepare(void) {
     char_device *device = create_empty_device<char_device>();
     // interrupt : 1 (IRQ 12)
-    // etc resource : data queue, phase
-    designate_resources_count(device , 0 , 1 , 0 , 3);
+    // etc resource : phase
+    designate_resources_count(device , 0 , 1 , 0 , 1);
     
     dev::register_device(this , device);
     debug::out::printf("device id = 0x%X\n" , device->id);
     return true;
 }
 
-void ps2::ps2_interrupt_handler_irq12(struct Registers *regs) {
+Registers *ps2::ps2_interrupt_handler_irq12(Registers *regs) {
     byte data = io_read_byte(PS2_DATA_PORT);
-    if(data == 0xFA) return; // Ignore ACK
+    if(data == 0xFA) return regs; // Ignore ACK
 
     debug::out::printf("M : %X\n" , data);
+    return regs;
 }
 
 bool ps2_mouse_driver::open(char_device *device) {

@@ -1,4 +1,4 @@
-#include <kernel/driver/general_input_system.hpp>
+#include <kernel/input/general_input_system.hpp>
 #include <kernel/driver/device_driver.hpp>
 #include <kernel/mem/kmem_manager.hpp>
 
@@ -25,6 +25,7 @@ max_t input::register_input_type(const char *input_type) {
     input_device_collection *collection = (input_device_collection *)memory::pmem_alloc(sizeof(input_device_collection));
     collection->init();
     collection->id = inputdev_collection_mgr->add(collection);
+    collection->registered_input_readers.init();
     strncpy(collection->name , input_type , 24);
     return collection->id;
 }
@@ -94,7 +95,7 @@ void input::report_input(max_t inputdev_id , const input_event &event) {
     auto *input_dev = unified_input_device_container->get(inputdev_id);
     auto inputreader_ll = input_dev->registered_input_readers;
 
-    input_event event_copy;
+    input_event event_copy = event;
     event_copy.input_type_id = input_dev->collection_ptr->id;
     event_copy.inputdev_id   = input_dev->inputdev_id;
 

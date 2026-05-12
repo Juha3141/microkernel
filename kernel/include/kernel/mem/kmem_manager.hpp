@@ -108,7 +108,7 @@ namespace memory {
         
         max_t get_currently_using_mem(void);
         max_t total_memory;
-        LinkedList<NodesManager>nodes_managers;
+        LinkedList<NodesManager*>nodes_managers;
     };
 }
 

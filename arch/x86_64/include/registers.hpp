@@ -1,42 +1,44 @@
 #ifndef _REGISTERS_HPP_
 #define _REGISTERS_HPP_
 
-#include <kernel/types.hpp>
+// Don't include types.hpp, as types.hpp itself includes registers.hpp!
 
 struct Registers {
-    qword rax;  // 0
-    qword rbx;  // 1
-    qword rcx;  // 2
-    qword rdx;  // 3
+    unsigned long long rax;  // 0
+    unsigned long long rbx;  // 1
+    unsigned long long rcx;  // 2
+    unsigned long long rdx;  // 3
 
-    qword rdi;  // 4
-    qword rsi;  // 5
+    unsigned long long rdi;  // 4
+    unsigned long long rsi;  // 5
     
-    qword r8;   // 6
-    qword r9;   // 7
-    qword r10;  // 8
-    qword r11;  // 9
-    qword r12;  // 10
-    qword r13;  // 11
-    qword r14;  // 12
-    qword r15;  // 13
+    unsigned long long r8;   // 6
+    unsigned long long r9;   // 7
+    unsigned long long r10;  // 8
+    unsigned long long r11;  // 9
+    unsigned long long r12;  // 10
+    unsigned long long r13;  // 11
+    unsigned long long r14;  // 12
+    unsigned long long r15;  // 13
 
-    qword rbp;  // 14
-    qword rsp;  // 15
+    unsigned long long rbp;  // 14
+    unsigned long long rsp;  // 15
 
-    qword cs;   // 16
-    qword ss;   // 17
-    qword ds;   // 18
-    qword es;   // 19
-    qword fs;   // 20
-    qword gs;   // 21
+    unsigned long long cs;   // 16
+    unsigned long long ss;   // 17
+    unsigned long long ds;   // 18
+    unsigned long long es;   // 19
+    unsigned long long fs;   // 20
+    unsigned long long gs;   // 21
 
-    qword rflags; // 22
-    qword rip;    // 23
+    unsigned long long rflags; // 22
+    unsigned long long rip;    // 23
     
-    qword cr0;    // 24
-    qword cr2;    // 24
-    qword cr3;    // 24
+    unsigned long long cr0;    // 24
+    unsigned long long cr2;    // 24
+    unsigned long long cr3;    // 24
+
+    unsigned long long error_code; // Only used in exception handling
 };
 
 #endif

@@ -5,17 +5,37 @@
 #include <kernel/driver/char_device_driver.hpp>
 #include <queue.hpp>
 
-#define INPUT_TYPE_KEYUP   
-#define INPUT_TYPE_KEYDOWN 
+#define INPUT_TYPE_KEYUP   1
+#define INPUT_TYPE_KEYDOWN 2
+#define INPUT_TYPE_KEYUP_SPECIAL   3
+#define INPUT_TYPE_KEYDOWN_SPECIAL 4
+
+#include <kernel/input/keyboard_codes.hpp>
 
 /// @brief Rudimentary input event
 struct input_event {
-    max_t type;
-    max_t data;
+    max_t type = 0;
+    max_t data = 0;
 
     // no need to fill in
-    max_t inputdev_id;
-    max_t input_type_id;
+    max_t inputdev_id = 0;
+    max_t input_type_id = 0;
+    
+    input_event() = default;
+    input_event(max_t t , max_t d) : type(t) , data(d) {}
+    input_event(const input_event& event) {
+        this->data = event.data;
+        this->type = event.type;
+        this->input_type_id = event.inputdev_id;
+        this->input_type_id = event.input_type_id;
+    }
+    input_event operator=(const input_event &event) {
+        this->data = event.data;
+        this->type = event.type;
+        this->input_type_id = event.inputdev_id;
+        this->input_type_id = event.input_type_id;
+        return *this;
+    }
 };
 
 struct input_device;

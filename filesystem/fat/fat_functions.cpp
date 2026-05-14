@@ -263,7 +263,7 @@ int fat::get_filename_from_lfn(char *file_name , lfn_entry_t *entries) {
     int k = 0;
     word character;
     int lfn_entry_count = entries[0].seq_number^0x40; // Number of entry = First entry sequence number^0x40
-    if(entries[0].seq_number == 0xE5) {
+    if(entries[0].seq_number == FAT_FILENAME_REMOVED) {
         return 0;
     }
     for(int i = lfn_entry_count-1; i >= 0; i--) {
@@ -838,6 +838,7 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
     int offset = 0;
     int entry_count;
     int lfn_entry_count;
+    qword allocation_size;
     dword dir_cluster_size;
     sfn_entry_t *sfn_entry;
     lfn_entry_t *lfn_entry;
@@ -846,12 +847,14 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
 
     entry_count = get_directory_info(dir_location->block_device , dir_location->block_location , ginfo);
     dir_cluster_size = get_file_cluster_count(dir_location->block_device , dir_location->block_location , ginfo);
-    directory = (byte *)memory::pmem_alloc(dir_cluster_size*vbr->sectors_per_cluster*vbr->bytes_per_sector);
-    
+    allocation_size = dir_cluster_size*vbr->sectors_per_cluster*vbr->bytes_per_sector;
+    directory = (byte *)memory::pmem_alloc(allocation_size);
+
     debug::out::printf("entry_count   : %d\n" , entry_count);
     debug::out::printf("cluster count : %d\n" , dir_cluster_size);
     debug::out::printf("root dir size : %lld\n" , ginfo.root_dir_size);
-    debug::out::printf("allocation size = %lld\n" , dir_cluster_size*vbr->sectors_per_cluster*vbr->bytes_per_sector);
+    debug::out::printf("allocation size = %lld\n" , allocation_size);
+    debug::out::printf("directory : 0x%llx ~ 0x%llx\n" , directory , directory+allocation_size);
     if(dir_location->block_location == ginfo.root_dir_loc) {
         dir_location->block_device->driver->read(dir_location->block_device , dir_location->block_location , ginfo.root_dir_size , directory);
     }
@@ -863,24 +866,28 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
     char temp_file_name[(LFN_ENTRY_MAXCOUNT*(5+6+2))+1];
     
     debug::out::printf("directory location : %d\n" , dir_location->block_location);
-    for(i = 0; i < entry_count; i++) {
+    for(; offset < entry_count*sizeof(sfn_entry_t);) {
         sfn_entry = (sfn_entry_t *)(directory+offset);
         lfn_entry = (lfn_entry_t *)(directory+offset);
+        debug::out::printf("entry loc : 0x%llx\n" , sfn_entry);
         if(lfn_entry->attribute == FAT_ATTRIBUTE_LFN) {
             lfn_entry_count = lfn_entry->seq_number^0x40;
             if(get_filename_from_lfn(temp_file_name , lfn_entry) == 0) {
                 offset += sizeof(sfn_entry_t);
                 continue;
             }
-            
-            // increment the offset, lfn entries + one sfn entry
-            offset += lfn_entry_count*sizeof(lfn_entry_t)+sizeof(sfn_entry_t);
+            offset += lfn_entry_count*sizeof(lfn_entry_t);
+            // increment the offset, lfn entries + one sfn entry(later)
             file_count++;
 
             file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , *((sfn_entry_t *)(directory+offset)) , ginfo);
+            offset += sizeof(sfn_entry_t);
             file_list.add_rear(new_file_info);
+            debug::out::printf("lfn after : 0x%llx\n" , directory+offset);
         }
-        else if(sfn_entry->attribute == FAT_ATTRIBUTE_VOLUMELABEL) {
+        // skip the volume label
+        else if(sfn_entry->attribute == FAT_ATTRIBUTE_VOLUMELABEL
+             || sfn_entry->file_name[0] == FAT_FILENAME_REMOVED) {
             offset += sizeof(sfn_entry_t);
         }
         else {
@@ -888,6 +895,7 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
             file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , *sfn_entry , ginfo);
             file_list.add_rear(new_file_info);
             offset += sizeof(sfn_entry_t);
+            debug::out::printf("sfn after : 0x%llx\n" , directory+offset);
         }
     }
     memory::pmem_free(directory);

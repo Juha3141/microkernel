@@ -11,28 +11,42 @@ public:
     String(const String& str_obj);
     String(size_t len);
     String(const char *str);
+    ~String();
 
-    size_t size() const;
-    size_t max_size() const;
-    bool empty() const;
+    size_t size() const { return length; }
+    size_t max_size() const { return capacity; }
+    bool empty() const { return (length == 0); }
 
     ///////// Change in capacity ///////// 
     void reserve(size_t sz);
     void clear();
 
-    const char *c_str();
+    char *c_str() const { return c_string; }
 
-    char& operator[](int64_t idx);
+    // Truncate the last character from the string
+    // Returns false if 
+    bool backspace();
+
+    char& operator[](int64_t idx) const { return c_string[idx]; }
     String& operator+=(const String& str);
     String& operator+=(const char *str);
+    String& operator+=(const char& c);
 
-    String& substr(int idx , int size);
-    String& substr(int idx);
+    String operator+(const String& rhs);
+    String operator+(const char *str);
+    String operator+(const char &c);
+
+    String& operator=(const char *str);
+    String& operator=(const String &str);
+
+    String substr(max_t idx , max_t size) const;
+    String substr(max_t idx) const;
 private:
-    char *c_string;
-    size_t length;
-    size_t capacity;
+    char *c_string = nullptr;
+    size_t length = 0;
+    size_t capacity = 0;
 };
+
 
 extern "C" void *memset(void *dest , int c , size_t n);
 extern "C" void *memcpy(void *dest , const void *src , size_t n);

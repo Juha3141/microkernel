@@ -73,7 +73,7 @@ namespace debug {
         void raw_printf(const char *fmt , ...);
 
         // debug_interface functions
-        void clear_screen(debug_color_t color);
+        void clear_screen();
         
         void print_str(const char *str);
         void set_cursor_position(int x , int y);

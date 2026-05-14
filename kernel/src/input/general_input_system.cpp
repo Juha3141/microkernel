@@ -66,7 +66,7 @@ void input::report_input(const char *input_type , const input_event &event) {
 }
 
 void input::report_input(input_device_collection *collection , const input_event &event) {
-    auto inputreader_ll = collection->registered_input_readers;
+    auto &inputreader_ll = collection->registered_input_readers;
     auto ptr = inputreader_ll.get_start_node();
 
     // fill out the information of where the input came from
@@ -93,7 +93,7 @@ void input::report_input(general_device *device , const input_event &event) {
 
 void input::report_input(max_t inputdev_id , const input_event &event) {
     auto *input_dev = unified_input_device_container->get(inputdev_id);
-    auto inputreader_ll = input_dev->registered_input_readers;
+    auto &inputreader_ll = input_dev->registered_input_readers;
 
     input_event event_copy = event;
     event_copy.input_type_id = input_dev->collection_ptr->id;

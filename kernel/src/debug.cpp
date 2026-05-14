@@ -185,9 +185,8 @@ __no_sanitize_address__ void debug::out::raw_printf(const char *fmt , ...) {
     va_end(ap);
 }
 
-__no_sanitize_address__ void debug::out::clear_screen(debug_color_t color) {
-    current_debug_interface()->clear_screen(color);
-    debug_info.background_color = color;
+__no_sanitize_address__ void debug::out::clear_screen() {
+    current_debug_interface()->clear_screen(debug_info.background_color);
 }
 
 __no_sanitize_address__ void debug::out::print_str(const char *str) { current_debug_interface()->print_str(str); }

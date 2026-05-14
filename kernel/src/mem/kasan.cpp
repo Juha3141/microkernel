@@ -89,8 +89,6 @@ __no_sanitize_address__
 void kasan::poison_address(max_t laddr , max_t size , byte value) {
     if(!kasan::is_enabled()) return;
     if(size < KASAN_GRANUL_SIZE) {
-        debug::out::printf(DEBUG_WARNING , "Unsupported poisoning size : %lld\n" , size);
-        debug::out::printf(DEBUG_WARNING , "Caller = 0x%llx\n" , CALLER_PC);
         return;
     }
 
@@ -112,7 +110,7 @@ void kasan::poison_address(max_t laddr , max_t size , byte value) {
 __no_sanitize_address__
 void kasan::unpoison_address(max_t linear_address , max_t size) {
     if(!kasan::is_enabled()) return;
-    poison_address(linear_address , align_round_up(linear_address+size , KASAN_GRANUL_SIZE)-linear_address , KASAN_SHADOW_MAGIC_UNPOISONED);
+    poison_address(linear_address , size , KASAN_SHADOW_MAGIC_UNPOISONED);
 }
 
 __no_sanitize_address__

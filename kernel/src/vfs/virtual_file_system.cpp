@@ -145,7 +145,10 @@ file_info *vfs::create_file_info_struct(
     // mount flag
     new_file->is_mounted = false;
     // file physical location
-    memcpy(&new_file->file_loc_info , &file_loc , sizeof(physical_file_location));
+    new_file->file_loc_info.block_device   = file_loc.block_device;
+    new_file->file_loc_info.block_location = file_loc.block_location;
+    new_file->file_loc_info.fs_driver      = file_loc.fs_driver;
+
     // file type
     new_file->file_type = file_type;
 
@@ -213,17 +216,21 @@ static file_info *get_file_by_cache_and_phys(const general_file_name file_path ,
     int last_hit_loc = 0;
 
     // failed to initialize the vfs manager
-    if(!vfs_mgr->is_initialized_properly) return 0x00;
+    if(!vfs_mgr->is_initialized_properly) return nullptr;
+    if(file_path.root_directory == nullptr && strlen(file_path.file_name) == 0) return nullptr;
 
     level_count = get_file_name_list(file_path , file_list);
 
     file_info *file = vfs_mgr->search_object_last(level_count , file_path.root_directory , file_list , last_hit_loc);
+    
+    // file does not exist
+    if(file == nullptr) return nullptr;
     if(file != 0x00 && strcmp(file->file_name , file_list[level_count-1]) == 0) { // cash hit
         memory::pmem_free(file_list);
 
         return file;
     }
-    debug::out::printf(DEBUG_TEXT , "last cash hit : %s(file=0x%lx), hit_loc : %d\n" , file->file_name , file , last_hit_loc);
+    debug::out::printf(DEBUG_TEXT , "last cash hit : %s(file=0x%llx), hit_loc : %d\n" , file->file_name , file , last_hit_loc);
     
     file_info *tree_file = file;
     for(int i = last_hit_loc; i < level_count-levels_to_exclude; i++) {
@@ -695,6 +702,7 @@ int vfs::read_directory(file_info *directory) {
     physical_file_location *file_loc = fsdev::get_physical_loc_info(directory);
     if(file_loc == 0x00) return -1;
 
+    debug::out::printf("file_loc->fs_driver : 0x%llx\n" , file_loc->fs_driver);
     int file_count = file_loc->fs_driver->read_directory(directory , file_info_list);
     auto *ptr = file_info_list.get_start_node();
 
@@ -702,6 +710,7 @@ int vfs::read_directory(file_info *directory) {
         directory->file_list = new LinkedList<file_info_s*>;
         directory->file_list->init();
     }
+    // Update/add file_info to the list
     while(ptr != 0x00) {
         file_info *new_file = ptr->object;
         LinkedList<file_info*>::node_s *file_node = directory->file_list->search(
@@ -713,13 +722,36 @@ int vfs::read_directory(file_info *directory) {
             new_file->parent_dir = directory;
             directory->file_list->add_rear(new_file);
         }
-        // already exist, just discard
-        else {
-            discard_file_info(new_file);
-        }
-
         ptr = ptr->next;
     }
     
     return file_count;
+}
+
+static void reverse_string(char *str) {
+    int len = strlen(str);
+    for(int i = 0; i < len/2; i++) {
+        char t = str[len-1-i];
+        str[len-1-i] = str[i];
+        str[i] = t;
+    }
+}
+
+void vfs::get_full_filename(file_info *file , String& filename) {
+    file_info *ptr = file;
+    if(ptr == get_root_directory()) {
+        filename = ptr->file_name;
+        return;
+    }
+    filename.clear();
+    while(ptr != nullptr) {
+        String tmp_str(ptr->file_name);
+        reverse_string(tmp_str.c_str());
+
+        filename += tmp_str;
+        filename += vfs_mgr->dir_identifier;
+        ptr = ptr->parent_dir;
+    }
+    filename.backspace();
+    reverse_string(filename.c_str());
 }

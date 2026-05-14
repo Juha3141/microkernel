@@ -152,6 +152,8 @@ namespace vfs {
     long lseek(file_info *file , long cursor , int option);
     
     int read_directory(file_info *file);
+
+    void get_full_filename(file_info *file , String& filename);
 }
 
 #endif

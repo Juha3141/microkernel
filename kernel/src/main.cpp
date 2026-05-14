@@ -23,6 +23,8 @@
 
 #include <kernel/init.hpp>
 
+#include <kernel/embedded_shell.hpp>
+
 // For testing
 
 #include <random.hpp>
@@ -52,7 +54,7 @@ extern "C" void kernel_main(LoaderArgument *loader_argument , max_t kernel_vmem_
 #endif
 
     debug::init(loader_argument);
-    debug::out::clear_screen(0x00);
+    debug::out::clear_screen();
     debug::out::printf("Hello world from the higher-half kernel!\n");
 
     debug::out::printf("========================== Kernel memory map ==========================\n");
@@ -103,34 +105,7 @@ extern "C" void sanitized_kernel_main(LoaderArgument *loader_argument) {
         debug::panic("Unable to find any boot device!!\n");
     }
     vfs::init(root_device);
-
-    file_info *root_dir = vfs::get_root_directory();
-    int file_count = vfs::read_directory(root_dir);
-    auto *fp = root_dir->file_list->get_start_node();
-    debug::out::printf("files on the root directory ------------\n");
-    while(fp != nullptr) {
-        file_info *file = fp->object;
-
-        debug::out::printf("%s\n" , file->file_name);
-        fp = fp->next;
-    }
-    
-    InputReader kbd_reader;
-    kbd_reader.open("keyboard");
-    while(1) {
-        input_event event;
-        if(kbd_reader.read(event)) {
-            if(event.type == INPUT_TYPE_KEYDOWN) {
-                debug::out::printf("%c" , event.data);
-            }
-            else {
-                debug::out::printf("event received : %d(%s)\n" , event.data , 
-                (event.type == INPUT_TYPE_KEYDOWN_SPECIAL) ? "KEYDOWN_SPECIAL" : 
-                (event.type == INPUT_TYPE_KEYUP_SPECIAL   ? "KEYUP_SPECIAL" : "KEYUP"));
-            }
-        }
-    }
-    
+    eshell::start();
     debug::out::printf("memory usage : %dKB\n" , memory::pmem_usage()/1024);
 }
 

@@ -9,52 +9,21 @@ public:
         max_t id;
         T object;
 
-        node_s *previous;
-        node_s *next;
+        node_s *previous = nullptr;
+        node_s *next = nullptr;
+
+        node_s() = default;
+        node_s(const node_s &n) : previous(nullptr) , next(nullptr) , id(n.id) , object(n.object) {}
+        node_s(const node_s *n) : previous(nullptr) , next(nullptr) , id(n->id) , object(n->object) {}
+        ~node_s() {}
     };
 
-    void init(void) {
-        count = 0;
-        id_index = 0;
-        start_node = 0x00;
-        
-        last_node = start_node;
-    }
-    node_s *add_front(T obj) { // id
-        node_s *new_node = new node_s();
-        new_node->object = obj;
+    LinkedList() = default;
+    ~LinkedList();
 
-        if(start_node == 0x00) {
-            start_node = new_node;
-            new_node->previous = 0x00;
-            new_node->next = 0x00;
-            last_node = new_node;
-            return new_node;
-        }
-        new_node->previous = 0x00;
-        connect_node(new_node , start_node);
-        new_node->id = allocate_id();
-            
-        start_node = new_node;
-        count++;
-        return new_node;
-    }
-    node_s *add_rear(T obj) {
-        node_s *new_node = new node_s();
-        new_node->object = obj;
-        if(start_node == 0x00) {
-            start_node = new_node;
-            new_node->previous = 0x00;
-            new_node->next = 0x00;
-            last_node = new_node;
-            return new_node;
-        }
-        new_node->next = 0x00;
-        connect_node(last_node , new_node);
-        last_node = new_node;
-        count++;
-        return new_node;
-    }
+    void init(void);
+    node_s *add_front(T obj);
+    node_s *add_rear(T obj);
     bool remove(node_s *node) { return remove_node(node); }
     bool remove(T obj) { return remove_node(get_node(obj)); }
     bool remove(max_t id) { return remove_node(get_node(id)); }
@@ -63,27 +32,8 @@ public:
     /// @tparam T 
     /// @param id ID
     /// @return The node_s structure corresponding to the provided id
-    node_s *get_node(max_t id) const {
-        node_s *ptr = start_node;
-        while(ptr != 0x00) {
-            if(ptr->id == id) {
-                return ptr;
-            }
-            ptr = ptr->next;
-        }
-        return 0x00;
-    }
-        
-    node_s *get_node(const T &obj) const {
-        node_s *ptr = start_node;
-        while(ptr != 0x00) {
-            if(ptr->object == obj) {
-                return ptr;
-            }
-            ptr = ptr->next;
-        }
-        return 0x00;
-    }
+    node_s *get_node(max_t id) const;
+    node_s *get_node(const T &obj) const;
     inline node_s *get_start_node(void) const { return start_node; }
     max_t size() const { return count; }
 
@@ -105,10 +55,10 @@ public:
     }
 
 protected:
-    node_s *start_node;
-    node_s *last_node;
-    max_t id_index;
-    max_t count;
+    node_s *start_node = nullptr;
+    node_s *last_node = nullptr;
+    max_t id_index = 0;
+    max_t count = 0;
 
 private:
     void connect_node(node_s *first , node_s *next) {
@@ -125,5 +75,92 @@ private:
     }
     inline max_t allocate_id(void) { return id_index++; }
 };
+
+template <typename T>
+void LinkedList<T>::init() {
+    count = 0;
+    id_index = 0;
+    start_node = nullptr;
+    
+    last_node = start_node;
+}
+
+template <typename T>
+LinkedList<T>::node_s *LinkedList<T>::add_front(T obj) { // id
+    node_s *new_node = new node_s();
+    new_node->object = obj;
+
+    if(start_node == 0x00) {
+        start_node = new_node;
+        new_node->previous = 0x00;
+        new_node->next = 0x00;
+        last_node = new_node;
+        count = 1;
+        return new_node;
+    }
+    new_node->previous = 0x00;
+    connect_node(new_node , start_node);
+    new_node->id = allocate_id();
+        
+    start_node = new_node;
+    count++;
+    return new_node;
+}
+
+template <typename T>
+LinkedList<T>::node_s *LinkedList<T>::add_rear(T obj) { // id{
+    node_s *new_node = new node_s();
+    new_node->object = obj;
+    if(start_node == 0x00) {
+        start_node = new_node;
+        new_node->previous = 0x00;
+        new_node->next = 0x00;
+        last_node = new_node;
+
+        count = 1;
+        return new_node;
+    }
+    new_node->next = 0x00;
+    connect_node(last_node , new_node);
+    last_node = new_node;
+    count++;
+    return new_node;
+}
+
+template <typename T>
+LinkedList<T>::node_s *LinkedList<T>::get_node(max_t id) const {
+    node_s *ptr = start_node;
+    while(ptr != 0x00) {
+        if(ptr->id == id) {
+            return ptr;
+        }
+        ptr = ptr->next;
+    }
+    return 0x00;
+}
+
+template <typename T>
+LinkedList<T>::node_s *LinkedList<T>::get_node(const T &obj) const {
+    node_s *ptr = start_node;
+    while(ptr != 0x00) {
+        if(ptr->object == obj) {
+            return ptr;
+        }
+        ptr = ptr->next;
+    }
+    return 0x00;
+}
+
+template <typename T>
+LinkedList<T>::~LinkedList() {
+    node_s *ptr = start_node;
+    if(ptr == nullptr) return;
+    
+    while(ptr != nullptr) {
+        auto next = ptr->next;
+        delete ptr;
+        ptr = next;
+    }
+}
 
 #endif

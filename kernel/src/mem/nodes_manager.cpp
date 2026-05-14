@@ -17,7 +17,7 @@ void memory::NodesManager::init(max_t start_address , max_t end_address) {
 	memory_usage = 0;
 	allocation_available = true;
 
-	memset(node_start , 0 , sizeof(Node));
+	unsanitized_memset(node_start , 0 , sizeof(Node));
 }
 
 __no_sanitize_address__
@@ -150,13 +150,13 @@ max_t memory::NodesManager::free(max_t address) {
 		if(node->next == 0x00) {
 			// debug::out::printf("No next free\n");
 			node->previous->next = 0x00;
-			memset(node , 0 , sizeof(struct Node));
+			unsanitized_memset(node , 0 , sizeof(struct Node));
 		}
 	}
 	// If the first node is usable, and there is no next nodes, then the node will be removed.
 	// But, if the first node is being used, or there is next nodes, then the node is not going to be removed.
 	if(node_start->occupied == 0) { // If it sooths the condition,
-		memset(node_start , 0 , sizeof(struct Node));		  // Erase the node(Set everything to 0)
+		unsanitized_memset(node_start , 0 , sizeof(struct Node));		  // Erase the node(Set everything to 0)
 	}
 	return node_size;
 }

@@ -221,6 +221,7 @@ void *memory::pmem_alloc(max_t size , max_t alignment) {
 }
 
 void memory::pmem_free(void *ptr) {
+	if(ptr == nullptr) return;
 #ifdef CONFIG_USE_KASAN
 	kasan_pmem_free_hook(ptr);
 #else

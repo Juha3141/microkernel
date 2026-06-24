@@ -53,8 +53,6 @@ String& String::operator+=(const char *str) {
     max_t new_len = length;
     max_t add_len = strlen(str);
     new_len += add_len;
-    debug::out::printf("str to be added : %s\n" , str);
-    debug::out::printf("new_len : %d\n" , new_len);
     // update the capacity
     if(new_len > capacity) {
         capacity = max(capacity*2+1 , new_len*2+1);

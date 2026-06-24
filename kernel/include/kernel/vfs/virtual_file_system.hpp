@@ -131,7 +131,8 @@ namespace vfs {
         const physical_file_location file_loc ,
         const char *file_name ,
         int file_type ,
-        int file_size);
+        int file_size , 
+        file_info *parent_dir);
 
     bool mount(file_info *file , block_device *device);
     bool unmount(file_info *file , block_device *device);

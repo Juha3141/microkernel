@@ -290,3 +290,13 @@ const char *memory::memmap_type_to_str(unsigned int type) {
     }
     return "Miscellaneous";
 }
+
+max_t memory::pmem_total_size() {
+	max_t total_size = 0;
+	auto ptr = memory::global_kmemmap();
+	while(ptr != nullptr) {
+		if(ptr->type == MEMORYMAP_USABLE) total_size += (ptr->end_address - ptr->start_address);
+		ptr = ptr->next;
+	}
+	return total_size;
+}

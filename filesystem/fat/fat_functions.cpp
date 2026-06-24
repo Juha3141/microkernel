@@ -1,11 +1,12 @@
 #include "fat.hpp"
 
 #include <kernel/vfs/virtual_file_system.hpp>
+#include <kernel/vfs/file_system_driver.hpp>
 
 #define LFN_MAXLENGTH      256
 #define LFN_ENTRY_MAXCOUNT 32
 
-file_info *fat::write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , const sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
+file_info *fat::write_file_info_by_sfn(file_info *dir_file , physical_file_location *dir_loc , const char *file_name , const sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
     int file_type = 0;
     switch(sfn_entry.attribute) {
         case FAT_ATTRIBUTE_READONLY:
@@ -35,13 +36,12 @@ file_info *fat::write_file_info_by_sfn(const physical_file_location *rootdir_loc
     debug::out::printf("sfn_entry.starting_cluster  = 0x%08x\n" , cluster_location);
     debug::out::printf("sfn_entry.file_size         = %dB\n" , sfn_entry.file_size);
 */
-    
     physical_file_location file_ploc = {
         .block_location = fat::cluster_to_sector(cluster_location , ginfo) , 
-        .block_device = rootdir_loc->block_device , 
-        .fs_driver = rootdir_loc->fs_driver ,  
+        .block_device = dir_loc->block_device , 
+        .fs_driver = dir_loc->fs_driver ,  
     };
-    return vfs::create_file_info_struct(file_ploc , file_name , file_type , sfn_entry.file_size);
+    return vfs::create_file_info_struct(file_ploc , file_name , file_type , sfn_entry.file_size , dir_file);
 }
 
 /*********************** Cluster Related ***********************/
@@ -98,7 +98,7 @@ static dword fat12_find_next_cluster(block_device *device , dword cluster , fat:
     word ret_cluster;
     device->driver->read(device , sector_address , 1 , fat_area);
     max_t b_index = (max_t)(index%((common_vbr_t *)ginfo.vbr)->bytes_per_sector);
-    
+    debug::out::printf("b_index = %lld\n" , b_index);
     ret_cluster = fat_area[b_index]|(fat_area[b_index+1] << 8);
     
     if(cluster%2) ret_cluster >>= 4; // odd
@@ -833,7 +833,7 @@ bool fat::get_sfn_entry(block_device *device , dword directory_addr , const char
     return false;
 }
 
-int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_info*> &file_list , general_fat_info_t &ginfo) {
+int fat::get_file_list(file_info *dir_file , LinkedList<file_info*> &file_list , general_fat_info_t &ginfo) {
     int i;
     int offset = 0;
     int entry_count;
@@ -844,6 +844,7 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
     lfn_entry_t *lfn_entry;
     byte *directory;
     common_vbr_t *vbr = (common_vbr_t *)ginfo.vbr;
+    physical_file_location *dir_location = fsdev::get_physical_loc_info(dir_file);
 
     entry_count = get_directory_info(dir_location->block_device , dir_location->block_location , ginfo);
     dir_cluster_size = get_file_cluster_count(dir_location->block_device , dir_location->block_location , ginfo);
@@ -861,43 +862,35 @@ int fat::get_file_list(physical_file_location *dir_location , LinkedList<file_in
     else {
         read_cluster(dir_location->block_device , sector_to_cluster(dir_location->block_location , ginfo) , dir_cluster_size , directory , ginfo);
     }
-    
-    int file_count = 0;
     char temp_file_name[(LFN_ENTRY_MAXCOUNT*(5+6+2))+1];
     
     debug::out::printf("directory location : %d\n" , dir_location->block_location);
-    for(; offset < entry_count*sizeof(sfn_entry_t);) {
+    for(; offset < entry_count*sizeof(sfn_entry_t); offset += sizeof(sfn_entry_t)) {
         sfn_entry = (sfn_entry_t *)(directory+offset);
         lfn_entry = (lfn_entry_t *)(directory+offset);
-        debug::out::printf("entry loc : 0x%llx\n" , sfn_entry);
         if(lfn_entry->attribute == FAT_ATTRIBUTE_LFN) {
             lfn_entry_count = lfn_entry->seq_number^0x40;
             if(get_filename_from_lfn(temp_file_name , lfn_entry) == 0) {
-                offset += sizeof(sfn_entry_t);
                 continue;
             }
             offset += lfn_entry_count*sizeof(lfn_entry_t);
             // increment the offset, lfn entries + one sfn entry(later)
-            file_count++;
 
-            file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , *((sfn_entry_t *)(directory+offset)) , ginfo);
-            offset += sizeof(sfn_entry_t);
+            file_info *new_file_info = write_file_info_by_sfn(dir_file , dir_location , temp_file_name , *((sfn_entry_t *)(directory+offset)) , ginfo);
             file_list.add_rear(new_file_info);
-            debug::out::printf("lfn after : 0x%llx\n" , directory+offset);
+            debug::out::printf("LFN, file_name = %s\n" , temp_file_name);
         }
         // skip the volume label
         else if(sfn_entry->attribute == FAT_ATTRIBUTE_VOLUMELABEL
              || sfn_entry->file_name[0] == FAT_FILENAME_REMOVED) {
-            offset += sizeof(sfn_entry_t);
+            continue;
         }
         else {
             get_filename_from_sfn(temp_file_name , sfn_entry);
-            file_info *new_file_info = write_file_info_by_sfn(dir_location , temp_file_name , *sfn_entry , ginfo);
+            file_info *new_file_info = write_file_info_by_sfn(dir_file , dir_location , temp_file_name , *sfn_entry , ginfo);
             file_list.add_rear(new_file_info);
-            offset += sizeof(sfn_entry_t);
-            debug::out::printf("sfn after : 0x%llx\n" , directory+offset);
         }
     }
     memory::pmem_free(directory);
-    return file_count;
+    return file_list.size();
 }

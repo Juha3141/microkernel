@@ -78,7 +78,7 @@ file_info *fat16::fat16_driver::get_file_handle(const general_file_name file_nam
         debug::out::printf("next : %dcluster (%dsector)\n" , cluster , fat::cluster_to_sector(cluster , ginfo));
     }
     
-    file_info *new_file = fat::write_file_info_by_sfn(rootdir_file_loc , file_name.file_name , sfn_entry , ginfo);
+    file_info *new_file = fat::write_file_info_by_sfn(file_name.root_directory , rootdir_file_loc , file_name.file_name , sfn_entry , ginfo);
     return new_file;
 }
 
@@ -226,7 +226,7 @@ int fat16::fat16_driver::read_directory(file_info *file , LinkedList<file_info*>
     fat::get_vbr(file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
     fat16::get_ginfo(ginfo , &vbr);
 
-    return fat::get_file_list(file_loc , file_list , ginfo);
+    return fat::get_file_list(file , file_list , ginfo);
 }
 
 ////////////////// FAT12 //////////////////

@@ -101,7 +101,7 @@ namespace fat {
         dword invalid_cluster_info;
     }general_fat_info_t;
 
-    file_info *write_file_info_by_sfn(const physical_file_location *rootdir_loc , const char *file_name , const sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo);
+    file_info *write_file_info_by_sfn(file_info *file_dir , physical_file_location *dir_loc , const char *file_name , const sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo);
 
     dword cluster_to_sector(dword cluster_num , general_fat_info_t &ginfo);
     dword sector_to_cluster(dword sector_num , general_fat_info_t &ginfo);
@@ -130,7 +130,7 @@ namespace fat {
     bool mark_entry_removed(block_device *device , dword directory_addr , const char *sfn_name , general_fat_info_t &ginfo);
     bool get_sfn_entry(block_device *device , dword directory_addr , const char *file_name , sfn_entry_t *destination , general_fat_info_t &ginfo);
     
-    int get_file_list(physical_file_location *dir_location , LinkedList<file_info*> &file_list , general_fat_info_t &ginfo);
+    int get_file_list(file_info *dir_file , LinkedList<file_info*> &file_list , general_fat_info_t &ginfo);
 };
 
 #endif

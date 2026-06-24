@@ -111,7 +111,7 @@ max_t memory::NodesManager::free(max_t address) {
 	// If next node is usable, and present, the node can be merged.
 	memory_usage -= node->size+sizeof(struct Node);
 	if((node->next != 0x00) && (node->next->occupied == 0) && (node->next->signature == MEMMANAGER_SIGNATURE)) {
-		// debug::out::printf("Next mergable\n");
+		debug::out::printf("Next mergable\n");
 		merged = true;
 		current_node = node;									// current_node : Saves the current node for later
 		node_ptr = node;									// Save the current node, and move to next node
@@ -129,7 +129,7 @@ max_t memory::NodesManager::free(max_t address) {
 	// If the previous node is usable, and present, the node can be merged.
 	// (Why are we merging and seperating the segment? Because, it can reduce the external fragmentation)
 	if((node->previous != 0x00) && (node->previous->occupied == 0) && (node->previous->signature == MEMMANAGER_SIGNATURE)) {
-		// debug::out::printf("Previous mergable\n");
+		debug::out::printf("Previous mergable\n");
 		merged = true;
 		current_node = node;				// current_node : Saves the current node for later
 		node_ptr = node;
@@ -145,12 +145,10 @@ max_t memory::NodesManager::free(max_t address) {
 		write_node_data(node_ptr , 0 , (((max_t)current_node->next)-((max_t)node_ptr)-sizeof(struct Node)) , 0 , (max_t)current_node->next);
 	}
 	if(merged == false) {
-		// debug::out::printf("No merge\n");
 		node->occupied = 0;
-		if(node->next == 0x00) {
-			// debug::out::printf("No next free\n");
-			node->previous->next = 0x00;
-			unsanitized_memset(node , 0 , sizeof(struct Node));
+		node->previous->next = node->next;
+		if(node->next != 0x00) {
+			node->next->previous = node->previous;
 		}
 	}
 	// If the first node is usable, and there is no next nodes, then the node will be removed.

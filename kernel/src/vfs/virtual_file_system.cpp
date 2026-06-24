@@ -113,7 +113,7 @@ void vfs::VirtualFileSystemManager::get_file_base_name(const char *full_file_pat
 /// Standard vfs functions
 
 void vfs::init(block_device *root_device) {
-    file_info *root_file = create_file_info_struct({0x00 , 0x00 , 0x00} , "@" , FILE_TYPE_DIRECTORY , 0);
+    file_info *root_file = create_file_info_struct({0 , nullptr , nullptr} , "@" , FILE_TYPE_DIRECTORY , 0 , nullptr);
     vfs_mgr = memory::new_global_object<VirtualFileSystemManager>();
     // mount the file
     if(vfs::mount(root_file , root_device) == false) {
@@ -137,7 +137,8 @@ file_info *vfs::create_file_info_struct(
         const physical_file_location file_loc ,
         const char *file_name ,
         int file_type ,
-        int file_size) {
+        int file_size , 
+        file_info *parent_dir) {
     file_info *new_file = new file_info;
     memset(new_file , 0 , sizeof(file_info));
     // file name
@@ -157,6 +158,8 @@ file_info *vfs::create_file_info_struct(
     new_file->who_open_list->init();
 
     new_file->file_list = nullptr;
+    // parent directory
+    new_file->parent_dir = parent_dir;
     return new_file;
 }
 
@@ -226,6 +229,9 @@ static file_info *get_file_by_cache_and_phys(const general_file_name file_path ,
     // file does not exist
     if(file == nullptr) return nullptr;
     if(file != 0x00 && strcmp(file->file_name , file_list[level_count-1]) == 0) { // cash hit
+        for(int i = 0; i < level_count; i++) {
+            memory::pmem_free(file_list[i]);
+        }
         memory::pmem_free(file_list);
 
         return file;
@@ -239,14 +245,18 @@ static file_info *get_file_by_cache_and_phys(const general_file_name file_path ,
 
         file_info *new_file_handle = pfileloc->fs_driver->get_file_handle({file_list[i] , tree_file});
         if(new_file_handle == 0x00) {
-            memory::pmem_free(file_list);
-            return 0x00;
+            tree_file = nullptr;
+            goto END;
         }
 
         vfs_mgr->add_object(new_file_handle , tree_file);
         tree_file = new_file_handle;
     }
 
+END:
+    for(int i = 0; i < level_count; i++) {
+        memory::pmem_free(file_list[i]);
+    }
     memory::pmem_free(file_list);
     return tree_file;
 }
@@ -694,36 +704,34 @@ static void discard_file_info(file_info *file) {
 /// @brief Read the files in the directory and store the file_info structure to the "file_list" cache.
 ///        This function does not return any sort of list or file names. Instead, it stores the list of file into the
 ///        file_list structure in file_info structure. 
+///        IMPORTANT : 
+///        Keep in note that the "file_list" in file_info structure is automatically updated whenever changes in file occurs. 
 /// @param root_directory file_info of the directory
 /// @return File count
 int vfs::read_directory(file_info *directory) {
-    LinkedList<file_info*> file_info_list;
-    file_info_list.init();
+    if(directory == nullptr) return -1;
+    if(directory->file_type != FILE_TYPE_DIRECTORY) return -1;
+    
+    LinkedList<file_info*> *file_info_list;
     physical_file_location *file_loc = fsdev::get_physical_loc_info(directory);
     if(file_loc == 0x00) return -1;
 
-    debug::out::printf("file_loc->fs_driver : 0x%llx\n" , file_loc->fs_driver);
-    int file_count = file_loc->fs_driver->read_directory(directory , file_info_list);
-    auto *ptr = file_info_list.get_start_node();
+    // if the file_list already exists, do nothing
+    if(directory->file_list != nullptr) {
+        return directory->file_list->size();
+    }
 
-    if(directory->file_list == 0x00) {
-        directory->file_list = new LinkedList<file_info_s*>;
-        directory->file_list->init();
+    file_info_list = new LinkedList<file_info*>;
+    file_info_list->init();
+
+    if(file_loc->fs_driver == nullptr) {
+        debug::out::printf(DEBUG_ERROR , "file_loc invalid! file_loc->fs_driver = nullptr\n");
+        return -1;
     }
-    // Update/add file_info to the list
-    while(ptr != 0x00) {
-        file_info *new_file = ptr->object;
-        LinkedList<file_info*>::node_s *file_node = directory->file_list->search(
-            [new_file](file_info *o) { return (strcmp(o->file_name , new_file->file_name) == 0); }
-        );
-        
-        // does not exist, register new one
-        if(file_node == 0x00) {
-            new_file->parent_dir = directory;
-            directory->file_list->add_rear(new_file);
-        }
-        ptr = ptr->next;
-    }
+    int file_count = file_loc->fs_driver->read_directory(directory , *file_info_list);
+    auto *ptr = file_info_list->get_start_node();
+
+    directory->file_list = file_info_list;
     
     return file_count;
 }

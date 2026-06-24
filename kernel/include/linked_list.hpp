@@ -45,13 +45,13 @@ public:
     template <typename F>
     node_s *search(F check) {
         node_s *ptr = start_node;
-        while(ptr != 0x00) {
+        while(ptr != nullptr) {
             if(check(ptr->object)) {
                 return ptr;
             }
             ptr = ptr->next;
         }
-        return 0x00;
+        return nullptr;
     }
 
 protected:
@@ -67,6 +67,7 @@ private:
     }
     bool remove_node(node_s *target) {
         if(target == 0x00) return false;
+        
         if(target->previous == 0x00) start_node = target->next;
         else target->previous->next = target->next;
         count--;

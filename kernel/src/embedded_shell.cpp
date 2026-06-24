@@ -68,10 +68,12 @@ struct shell_commands_t {
 };
 
 shell_commands_t commands_list[] = {
+    {"help"   , "show commands" , eshell::cmd::help} , 
     {"cd" , "enter a directory" , eshell::cmd::cd} , 
     {"ls" , "list files in the current directory" , eshell::cmd::ls} , 
     {"clear" , "clears the screen" , eshell::cmd::clear} , 
-    {"echo" , "echo" , eshell::cmd::echo} , 
+    {"echo"  , "echo" , eshell::cmd::echo} , 
+    {"mem"   , "show mem usage" , eshell::cmd::mem} , 
 };
 
 void eshell::start() {
@@ -99,7 +101,6 @@ void eshell::start() {
         char **argv = (char **)memory::pmem_alloc(parsed_arguments.size()*sizeof(char *));
         max_t i = 0;
         while(ptr != nullptr) {
-            debug::out::printf("arg %d : \"%s\"\n" , i , ptr->object->c_str());
             argv[i++] = (char *)ptr->object->c_str();
             ptr = ptr->next;
         }
@@ -120,12 +121,29 @@ void eshell::start() {
     }
 }
 
+int eshell::cmd::help(file_info* &current_dir , int argc , char **argv) {
+    int cmd_max_char = 0;
+    const int cmd_count = sizeof(commands_list)/sizeof(shell_commands_t);
+    for(int i = 0; i < cmd_count; i++) {
+        cmd_max_char = max(cmd_max_char , strlen(commands_list[i].cmd));
+    }
+
+    for(int i = 0; i < cmd_count; i++) {
+        int space_count = cmd_max_char-strlen(commands_list[i].cmd);
+        debug::out::printf("%s" , commands_list[i].cmd);
+        for(int i = 0; i < space_count; i++) {
+            debug::out::printf(" ");
+        }
+        debug::out::printf("  %s\n" , commands_list[i].help);
+    }
+    return 0;
+}
+
 int eshell::cmd::cd(file_info* &current_dir , int argc , char **argv) {
     if(argc > 2) debug::out::printf("cd : too many arguments!\n");
     if(argc == 1) {
         String full_name;
         vfs::get_full_filename(current_dir , full_name);
-        debug::out::printf("%s\n\n" , full_name.c_str());
         return 0;
     }
 
@@ -143,7 +161,6 @@ int eshell::cmd::cd(file_info* &current_dir , int argc , char **argv) {
 }
 
 int eshell::cmd::ls(file_info* &current_dir , int argc , char **argv) {
-    debug::out::printf("ls, current_dir : %s\n" , current_dir->file_name);
     int file_count = vfs::read_directory(current_dir);
     debug::out::printf("%d files\n" , file_count);
     max_t max_file_name_len = 0;
@@ -185,5 +202,12 @@ int eshell::cmd::echo(file_info* &current_dir , int argc , char **argv) {
         if(i != argc-1) debug::out::printf(" ");
     }
     debug::out::printf("\n");
+    return 0;
+}
+
+int eshell::cmd::mem(file_info* &current_dir , int argc , char **argv) {
+    max_t usage = memory::pmem_usage();
+    debug::out::printf("total : %lldMB\n" , memory::pmem_total_size()/1024/1024);
+    debug::out::printf("usage : %lld.%d%dkB\n" , usage/1024 , (usage*10/1024)%10 , (usage*100/1024)%10);
     return 0;
 }

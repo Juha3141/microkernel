@@ -39,7 +39,12 @@ fsdev::file_system_driver *fsdev::detect_fs(block_device *device) {
 max_t fsdev::discard_driver(const char *fs_name) { return fsdriver_container->discard(search_driver(fs_name)); }
 max_t fsdev::discard_driver(max_t driver_id) { return fsdriver_container->discard(search_driver(driver_id));}
 
-physical_file_location *fsdev::get_physical_loc_info(file_info *file) {
-    if(file->is_mounted == true) return &file->mount_loc_info;
-    return &file->file_loc_info;
+physical_file_location *fsdev::get_physical_loc_info(file_t *file) {
+    if(file->info->is_mounted == true) return &file->info->mount_loc_info;
+    return &file->info->file_loc_info;
+}
+
+physical_file_location *fsdev::get_physical_loc_info(file_info *finfo) {
+    if(finfo->is_mounted == true) return &finfo->mount_loc_info;
+    return &finfo->file_loc_info;
 }

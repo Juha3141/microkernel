@@ -30,12 +30,12 @@ namespace eshell {
     void start();
 
     namespace cmd {
-        int help(file_info* &current_dir , int argc , char **argv);
-        int cd(file_info* &current_dir , int argc , char **argv);
-        int ls(file_info* &current_dir , int argc , char **argv);
-        int clear(file_info* &current_dir , int argc , char **argv);
-        int echo(file_info* &current_dir , int argc , char **argv);
-        int mem(file_info* &current_dir , int argc , char **argv);
+        int help(file_t* &current_dir , int argc , char **argv);
+        int cd(file_t* &current_dir , int argc , char **argv);
+        int ls(file_t* &current_dir , int argc , char **argv);
+        int clear(file_t* &current_dir , int argc , char **argv);
+        int echo(file_t* &current_dir , int argc , char **argv);
+        int mem(file_t* &current_dir , int argc , char **argv);
     }
 }
 

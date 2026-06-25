@@ -49,6 +49,8 @@ typedef struct block_cache_s {
     max_t linear_block_addr;
 }block_cache_t;
 
+typedef struct file_info_s file_info;
+
 typedef struct open_info_s {
     max_t task_id;
     max_t open_flag;
@@ -65,15 +67,25 @@ typedef struct open_info_s {
     LinkedList<block_cache_t*> *new_cache_linked_list;
 }open_info_t;
 
+typedef struct file_s {
+    char name[FILE_NAME_SIZE];
+    bool is_symlink;
+    file_info *symlink_dir_info;
+    bool is_mounted_unimplemented;
+    file_info *mounted_dir_info;
+
+    file_info *info;
+}file_t;
+
 typedef struct file_info_s {
-    char file_name[FILE_NAME_SIZE]; /* Doesn't contain the path, only contains the name of itself */
+    char physical_name[FILE_NAME_SIZE];
     word file_type; /* FILE_TYPE_ */
     max_t file_size;
 
     /* For tree structure */
-    file_info_s *parent_dir;
+    file_t *parent_dir;
     // cached
-    LinkedList<file_info_s*> *file_list; /* only for directory */
+    LinkedList<file_t*> *file_list; /* only for directory */
     
     /* physical information */
     bool is_mounted; 
@@ -88,7 +100,7 @@ typedef struct general_file_name_s {
     char *file_name;
 
     // root directory
-    file_info *root_directory;
+    file_t *root_directory;
 }general_file_name;
 
 typedef struct directory_cache_info_s {
@@ -96,24 +108,23 @@ typedef struct directory_cache_info_s {
     char *full_directory_name;
     
     // pointer to the file info
-    file_info *file;
-    
+    file_t *file;
 }directory_cache_info;
 
 namespace vfs {
     struct VirtualFileSystemManager { // General VFS manager
-        void init(file_info *rdir , block_device *root_device , char dir_ident);
-        void add_object(file_info *file , file_info *directory);
-        bool remove_object(const char *file_name , file_info *directory);
+        void init(file_t *rdir , block_device *root_device , char dir_ident);
+        void add_object(file_t *file , file_t *directory);
+        bool remove_object(const char *file_name , file_t *directory);
 
-        file_info *search_object_last(int level_count , file_info *search_root , char **file_links , int &last_hit_loc);
+        file_t *search_object_last(int level_count , file_t *search_root , char **file_links , int &last_hit_loc);
         int auto_parse_dir_count(const char *file_name);
         int auto_parse_name(const char *file_name , char **parsed);
 
         void get_file_base_name(const char *full_file_path , char *base_name);
 
         // root directory
-        file_info *fs_root_dir;
+        file_t *fs_root_dir;
         // root device
         block_device *root_dev;
         // directory identifier, default '/'
@@ -125,36 +136,39 @@ namespace vfs {
 
     void init(block_device *root_device); 
 
-    file_info *get_root_directory(void);
+    file_t *get_root_directory(void);
 
+    // create new file_t struct
+    file_t *create_file_struct(const char *file_name , file_info *info);
+    // create new file_info struct
     file_info *create_file_info_struct(
         const physical_file_location file_loc ,
-        const char *file_name ,
+        const char *phys_file_name ,
         int file_type ,
-        int file_size , 
-        file_info *parent_dir);
+        max_t file_size , 
+        file_t *parent_dir);
 
-    bool mount(file_info *file , block_device *device);
-    bool unmount(file_info *file , block_device *device);
+    bool mount(file_t *file , block_device *device);
+    bool unmount(file_t *file , block_device *device);
 
     // general function for general purpose
     bool create(const general_file_name file_path , word file_type);
-    file_info *open(const general_file_name file_path , int option);
-    bool flush(file_info *file);
-    bool close(file_info *file);
+    file_t *open(const general_file_name file_path , int option);
+    bool flush(file_t *file);
+    bool close(file_t *file);
     bool remove(const general_file_name file_path);
 
     bool rename(const general_file_name file_path , const char *new_name);
     bool move(const general_file_name file_path , const general_file_name new_directory);
 
-    long read(file_info *file , max_t size , void *buffer);
-    long write(file_info *file , max_t size , const void *buffer);
+    long read(file_t *file , max_t size , void *buffer);
+    long write(file_t *file , max_t size , const void *buffer);
 
-    long lseek(file_info *file , long cursor , int option);
+    long lseek(file_t *file , long cursor , int option);
     
-    int read_directory(file_info *file);
+    int read_directory(file_t *file);
 
-    void get_full_filename(file_info *file , String& filename);
+    void get_full_filename(file_t *file , String& filename);
 }
 
 #endif

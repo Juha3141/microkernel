@@ -58,7 +58,7 @@ static void release_str_ll(LinkedList<String*>&ll) {
     }
 }
 
-typedef int (*shell_command_func_t)(file_info* &current_dir , int argc , char **argv);
+typedef int (*shell_command_func_t)(file_t* &current_dir , int argc , char **argv);
 
 struct shell_commands_t {
     const char *cmd;
@@ -82,7 +82,7 @@ void eshell::start() {
     InputReader kbd_reader;
     kbd_reader.open("keyboard");
     String current_dir_name("@");
-    file_info *current_dir_f = vfs::open({current_dir_name.c_str() , nullptr} , FILE_OPEN_READONLY);
+    file_t *current_dir_f = vfs::open({current_dir_name.c_str() , nullptr} , FILE_OPEN_READONLY);
     
     while(1) {
         String str;
@@ -121,7 +121,7 @@ void eshell::start() {
     }
 }
 
-int eshell::cmd::help(file_info* &current_dir , int argc , char **argv) {
+int eshell::cmd::help(file_t* &current_dir , int argc , char **argv) {
     int cmd_max_char = 0;
     const int cmd_count = sizeof(commands_list)/sizeof(shell_commands_t);
     for(int i = 0; i < cmd_count; i++) {
@@ -139,7 +139,7 @@ int eshell::cmd::help(file_info* &current_dir , int argc , char **argv) {
     return 0;
 }
 
-int eshell::cmd::cd(file_info* &current_dir , int argc , char **argv) {
+int eshell::cmd::cd(file_t* &current_dir , int argc , char **argv) {
     if(argc > 2) debug::out::printf("cd : too many arguments!\n");
     if(argc == 1) {
         String full_name;
@@ -147,56 +147,60 @@ int eshell::cmd::cd(file_info* &current_dir , int argc , char **argv) {
         return 0;
     }
 
-    file_info *new_info = vfs::open({argv[1] , current_dir} , FILE_OPEN_READONLY);
-    if(new_info == nullptr) {
-        new_info = vfs::open({argv[1] , nullptr} , FILE_OPEN_READONLY);
+    file_t *new_dir = vfs::open({argv[1] , current_dir} , FILE_OPEN_READONLY);
+    if(new_dir == nullptr) {
+        new_dir = vfs::open({argv[1] , nullptr} , FILE_OPEN_READONLY);
     }
-    debug::out::printf("new_info : 0x%llx\n" , new_info);
-    if(new_info == nullptr) {
+    debug::out::printf("new_dir : 0x%llx\n" , new_dir);
+    if(new_dir == nullptr) {
         debug::out::printf("\"%s\" : No such directory\n" , argv[1]);
         return -1;
     }
-    current_dir = new_info;
+    if(new_dir->info->file_type != FILE_TYPE_DIRECTORY) {
+        debug::out::printf("\"%s\" is not a directory\n" , argv[1]);
+        return -1;
+    }
+    current_dir = new_dir;
     return 0;
 }
 
-int eshell::cmd::ls(file_info* &current_dir , int argc , char **argv) {
+int eshell::cmd::ls(file_t* &current_dir , int argc , char **argv) {
     int file_count = vfs::read_directory(current_dir);
     debug::out::printf("%d files\n" , file_count);
     max_t max_file_name_len = 0;
     
-    auto ptr = current_dir->file_list->get_start_node();
+    auto ptr = current_dir->info->file_list->get_start_node();
     while(ptr != nullptr) {
-        max_file_name_len = max(strlen(ptr->object->file_name) , max_file_name_len);
+        max_file_name_len = max(strlen(ptr->object->name) , max_file_name_len);
         ptr = ptr->next;
     }
 
-    ptr = current_dir->file_list->get_start_node();
+    ptr = current_dir->info->file_list->get_start_node();
     while(ptr != nullptr) {
-        max_t f_len = strlen(ptr->object->file_name);
-        debug::out::printf("%s" , ptr->object->file_name);
+        max_t f_len = strlen(ptr->object->name);
+        debug::out::printf("%s" , ptr->object->name);
         for(int i = 0; i < max_file_name_len-f_len+3; i++) { debug::out::printf(" "); }
 
-        if(ptr->object->file_type == FILE_TYPE_DIRECTORY) {
+        if(ptr->object->info->file_type == FILE_TYPE_DIRECTORY) {
             debug::out::printf("DIR\n");
         }
-        else if(ptr->object->file_type == FILE_TYPE_DEVICE_FILE) {
+        else if(ptr->object->info->file_type == FILE_TYPE_DEVICE_FILE) {
             debug::out::printf("DEV\n");
         }
         else {
-            debug::out::printf("%lld(%d)\n" , ptr->object->file_size , ptr->object->file_type);
+            debug::out::printf("%lld(%d)\n" , ptr->object->info->file_size , ptr->object->info->file_type);
         }
         ptr = ptr->next;
     }
     return 0;
 }
 
-int eshell::cmd::clear(file_info* &current_dir , int argc , char **argv) {
+int eshell::cmd::clear(file_t* &current_dir , int argc , char **argv) {
     debug::out::clear_screen();
     return 0;
 }
 
-int eshell::cmd::echo(file_info* &current_dir , int argc , char **argv) {
+int eshell::cmd::echo(file_t* &current_dir , int argc , char **argv) {
     for(int i = 1; i < argc; i++) {
         debug::out::printf("%s" , argv[i]);
         if(i != argc-1) debug::out::printf(" ");
@@ -205,7 +209,7 @@ int eshell::cmd::echo(file_info* &current_dir , int argc , char **argv) {
     return 0;
 }
 
-int eshell::cmd::mem(file_info* &current_dir , int argc , char **argv) {
+int eshell::cmd::mem(file_t* &current_dir , int argc , char **argv) {
     max_t usage = memory::pmem_usage();
     debug::out::printf("total : %lldMB\n" , memory::pmem_total_size()/1024/1024);
     debug::out::printf("usage : %lld.%d%dkB\n" , usage/1024 , (usage*10/1024)%10 , (usage*100/1024)%10);

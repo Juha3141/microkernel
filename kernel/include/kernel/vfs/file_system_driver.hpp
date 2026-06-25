@@ -27,7 +27,7 @@ namespace fsdev {
         virtual bool create(const general_file_name file_name , word file_type) = 0;
 
         // Get file handle by file name
-        virtual file_info *get_file_handle(const general_file_name file_name) = 0;
+        virtual file_t *get_file_handle(const general_file_name file_name) = 0;
 
         // remove the file by file name
         virtual bool remove(const general_file_name file_name) = 0;
@@ -35,7 +35,7 @@ namespace fsdev {
         // Rename the file
         virtual bool rename(const general_file_name file_name , const char *new_file_name) = 0;
         // Move the file
-        virtual bool move(const general_file_name file_name , file_info *new_directory) = 0;
+        virtual bool move(const general_file_name file_name , file_t *new_directory) = 0;
 
         /*
          * "Cluster" here indicates the group of linear blocks that forms one unit of allocation for new space. 
@@ -46,17 +46,17 @@ namespace fsdev {
         /// @param file file
         /// @param linear_block_addr Linear block address of file
         /// @return Sector address of the cluster
-        virtual max_t get_cluster_start_address(file_info *file , max_t linear_block_addr) = 0;
+        virtual max_t get_cluster_start_address(file_t *file , max_t linear_block_addr) = 0;
 
         /// @brief Get the number of sector that consists one cluster
         /// @param file file
         /// @return Number of sector of a cluster
-        virtual max_t get_cluster_size(file_info *file) = 0;
+        virtual max_t get_cluster_size(file_t *file) = 0;
         
         /// @brief Allocate a new blocks to file (allocate one cluster to the file)
         /// @param file file
         /// @return Start address of the cluster 
-        virtual max_t allocate_new_cluster_to_file(file_info *file) = 0;
+        virtual max_t allocate_new_cluster_to_file(file_t *file) = 0;
 
         /// @brief Read the directory, save the file_info structure to the linked list
         /// ***Note : This function must create a new file_info structure and store to the linked list. 
@@ -65,14 +65,14 @@ namespace fsdev {
         /// @param file the directory to read
         /// @param file_list Where the file_info structures are stored
         /// @return Number of files
-        virtual int read_directory(file_info *file , LinkedList<file_info*> &file_list) = 0;
+        virtual int read_directory(file_t *file , LinkedList<file_t*> &file_list) = 0;
 
         /// @brief Apply the change of file_info. Note that this function Cannot change the file name. 
         ///        This function can only change the file size or other things. 
         /// @param file file
         /// @param new_size new file size
         /// @return True if succeed
-        virtual bool apply_new_file_info(file_info *file , max_t new_size/* , to-do : date*/) = 0;
+        virtual bool apply_new_file_info(file_t *file , max_t new_size/* , to-do : date*/) = 0;
 
         char fs_string[32];
     };
@@ -87,7 +87,8 @@ namespace fsdev {
     max_t discard_driver(const char *fs_name);
     max_t discard_driver(max_t driver_id);
 
-    physical_file_location *get_physical_loc_info(file_info *file);
+    physical_file_location *get_physical_loc_info(file_t *file);
+    physical_file_location *get_physical_loc_info(file_info *finfo);
 };
 
 typedef struct fsdev::file_system_driver file_device_driver;

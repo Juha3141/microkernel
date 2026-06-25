@@ -57,7 +57,7 @@ bool fat16::fat16_driver::create(const general_file_name file_name , word file_t
     return true;
 }
 
-file_info *fat16::fat16_driver::get_file_handle(const general_file_name file_name) {
+file_t *fat16::fat16_driver::get_file_handle(const general_file_name file_name) {
     physical_file_location *rootdir_file_loc = fsdev::get_physical_loc_info(file_name.root_directory);
     // The juxtaposition of namespaces
     fat::general_fat_info_t ginfo;
@@ -78,8 +78,8 @@ file_info *fat16::fat16_driver::get_file_handle(const general_file_name file_nam
         debug::out::printf("next : %dcluster (%dsector)\n" , cluster , fat::cluster_to_sector(cluster , ginfo));
     }
     
-    file_info *new_file = fat::write_file_info_by_sfn(file_name.root_directory , rootdir_file_loc , file_name.file_name , sfn_entry , ginfo);
-    return new_file;
+    file_info *new_file = fat::write_file_info_by_sfn(file_name.root_directory , rootdir_file_loc , file_name.file_name ,  sfn_entry , ginfo);
+    return vfs::create_file_struct(file_name.file_name , new_file);
 }
 
 bool fat16::fat16_driver::remove(const general_file_name file_name) {
@@ -117,11 +117,11 @@ bool fat16::fat16_driver::rename(const general_file_name file_name , const char 
     return false;
 }
 
-bool fat16::fat16_driver::move(const general_file_name file_name , file_info *new_directory) {
+bool fat16::fat16_driver::move(const general_file_name file_name , file_t *new_directory) {
     return false;
 }
 
-max_t fat16::fat16_driver::get_cluster_size(file_info *file) {
+max_t fat16::fat16_driver::get_cluster_size(file_t *file) {
     fat16::fat16_vbr_t vbr;
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
     fat::get_vbr(file_loc->block_device , &vbr , sizeof(fat16::fat16_vbr_t));
@@ -129,7 +129,7 @@ max_t fat16::fat16_driver::get_cluster_size(file_info *file) {
     return vbr.sectors_per_cluster;
 }
 
-max_t fat16::fat16_driver::allocate_new_cluster_to_file(file_info *file) {
+max_t fat16::fat16_driver::allocate_new_cluster_to_file(file_t *file) {
     fat::general_fat_info_t ginfo;
     fat16::fat16_vbr_t vbr;
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
@@ -165,7 +165,7 @@ bool fat16::fat16_driver::get_root_directory(physical_file_location &file_loc) {
     return true;
 }
 
-max_t fat16::fat16_driver::get_cluster_start_address(file_info *file , max_t linear_block_addr) {
+max_t fat16::fat16_driver::get_cluster_start_address(file_t *file , max_t linear_block_addr) {
     physical_file_location *file_loc;
     fat::general_fat_info_t ginfo;
     fat16::fat16_vbr_t vbr;
@@ -192,8 +192,8 @@ max_t fat16::fat16_driver::get_cluster_start_address(file_info *file , max_t lin
     return sector_loc;
 }
 
-bool fat16::fat16_driver::apply_new_file_info(file_info *file , max_t new_size) {
-    physical_file_location *rootdir_file_loc = fsdev::get_physical_loc_info(file->parent_dir);
+bool fat16::fat16_driver::apply_new_file_info(file_t *file , max_t new_size) {
+    physical_file_location *rootdir_file_loc = fsdev::get_physical_loc_info(file->info->parent_dir);
     // The juxtaposition of namespaces
     fat::general_fat_info_t ginfo;
     fat16::fat16_vbr_t vbr;
@@ -201,7 +201,7 @@ bool fat16::fat16_driver::apply_new_file_info(file_info *file , max_t new_size) 
     fat16::get_ginfo(ginfo , &vbr);
 
     sfn_entry_t sfn_entry;
-    if(fat::get_sfn_entry(rootdir_file_loc->block_device , rootdir_file_loc->block_location , file->file_name , &sfn_entry , ginfo) == false) {
+    if(fat::get_sfn_entry(rootdir_file_loc->block_device , rootdir_file_loc->block_location , file->name , &sfn_entry , ginfo) == false) {
         debug::out::printf("sfn entry not found!\n");
         return 0x00;
     }
@@ -218,7 +218,7 @@ bool fat16::fat16_driver::apply_new_file_info(file_info *file , max_t new_size) 
     return true;
 }
 
-int fat16::fat16_driver::read_directory(file_info *file , LinkedList<file_info*> &file_list) {
+int fat16::fat16_driver::read_directory(file_t *file , LinkedList<file_t*> &file_list) {
     physical_file_location *file_loc = fsdev::get_physical_loc_info(file);
     fat::general_fat_info_t ginfo;
     fat16::fat16_vbr_t vbr;

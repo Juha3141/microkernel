@@ -6,7 +6,7 @@
 #define LFN_MAXLENGTH      256
 #define LFN_ENTRY_MAXCOUNT 32
 
-file_info *fat::write_file_info_by_sfn(file_info *dir_file , physical_file_location *dir_loc , const char *file_name , const sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
+file_info *fat::write_file_info_by_sfn(file_t *dir_file , physical_file_location *dir_loc , const char *phys_file_name , const sfn_entry_t &sfn_entry , fat::general_fat_info_t &ginfo) {
     int file_type = 0;
     switch(sfn_entry.attribute) {
         case FAT_ATTRIBUTE_READONLY:
@@ -41,7 +41,7 @@ file_info *fat::write_file_info_by_sfn(file_info *dir_file , physical_file_locat
         .block_device = dir_loc->block_device , 
         .fs_driver = dir_loc->fs_driver ,  
     };
-    return vfs::create_file_info_struct(file_ploc , file_name , file_type , sfn_entry.file_size , dir_file);
+    return vfs::create_file_info_struct(file_ploc , phys_file_name , file_type , sfn_entry.file_size , dir_file);
 }
 
 /*********************** Cluster Related ***********************/
@@ -833,7 +833,7 @@ bool fat::get_sfn_entry(block_device *device , dword directory_addr , const char
     return false;
 }
 
-int fat::get_file_list(file_info *dir_file , LinkedList<file_info*> &file_list , general_fat_info_t &ginfo) {
+int fat::get_file_list(file_t *dir_file , LinkedList<file_t*> &file_list , general_fat_info_t &ginfo) {
     int i;
     int offset = 0;
     int entry_count;
@@ -877,7 +877,8 @@ int fat::get_file_list(file_info *dir_file , LinkedList<file_info*> &file_list ,
             // increment the offset, lfn entries + one sfn entry(later)
 
             file_info *new_file_info = write_file_info_by_sfn(dir_file , dir_location , temp_file_name , *((sfn_entry_t *)(directory+offset)) , ginfo);
-            file_list.add_rear(new_file_info);
+            file_t *new_file = vfs::create_file_struct(temp_file_name , new_file_info);
+            file_list.add_rear(new_file);
             debug::out::printf("LFN, file_name = %s\n" , temp_file_name);
         }
         // skip the volume label
@@ -887,8 +888,12 @@ int fat::get_file_list(file_info *dir_file , LinkedList<file_info*> &file_list ,
         }
         else {
             get_filename_from_sfn(temp_file_name , sfn_entry);
+            
+            // Don't really have to add "." and ".." directory
+            if(strcmp(temp_file_name , ".") == 0||strcmp(temp_file_name , "..") == 0) continue;
             file_info *new_file_info = write_file_info_by_sfn(dir_file , dir_location , temp_file_name , *sfn_entry , ginfo);
-            file_list.add_rear(new_file_info);
+            file_t *new_file = vfs::create_file_struct(temp_file_name , new_file_info);
+            file_list.add_rear(new_file);
         }
     }
     memory::pmem_free(directory);

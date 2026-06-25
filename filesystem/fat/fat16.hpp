@@ -38,20 +38,20 @@ namespace fat16 {
 
         bool create(const general_file_name file_name , word file_type);
 
-        file_info *get_file_handle(const general_file_name file_name);
+        file_t *get_file_handle(const general_file_name file_name);
 
         bool remove(const general_file_name file_name);
 
         bool rename(const general_file_name file_name , const char *new_file_name);
-        bool move(const general_file_name file_name , file_info *new_directory);
+        bool move(const general_file_name file_name , file_t *new_directory);
 
-        max_t get_cluster_start_address(file_info *file , max_t linear_block_addr);
-        max_t get_cluster_size(file_info *file);
-        max_t allocate_new_cluster_to_file(file_info *file);
+        max_t get_cluster_start_address(file_t *file , max_t linear_block_addr);
+        max_t get_cluster_size(file_t *file);
+        max_t allocate_new_cluster_to_file(file_t *file);
 
-        int read_directory(file_info *file , LinkedList<file_info*> &file_list);
+        int read_directory(file_t *file , LinkedList<file_t*> &file_list);
 
-        bool apply_new_file_info(file_info *file , max_t new_size);
+        bool apply_new_file_info(file_t *file , max_t new_size);
     };
 
     void register_driver(void);

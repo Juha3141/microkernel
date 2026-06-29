@@ -33,6 +33,7 @@ namespace eshell {
         int help(file_t* &current_dir , int argc , char **argv);
         int cd(file_t* &current_dir , int argc , char **argv);
         int ls(file_t* &current_dir , int argc , char **argv);
+        int read(file_t* &current_dir , int argc , char **argv);
         int clear(file_t* &current_dir , int argc , char **argv);
         int echo(file_t* &current_dir , int argc , char **argv);
         int mem(file_t* &current_dir , int argc , char **argv);

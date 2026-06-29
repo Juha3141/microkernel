@@ -71,23 +71,32 @@ shell_commands_t commands_list[] = {
     {"help"   , "show commands" , eshell::cmd::help} , 
     {"cd" , "enter a directory" , eshell::cmd::cd} , 
     {"ls" , "list files in the current directory" , eshell::cmd::ls} , 
-    {"clear" , "clears the screen" , eshell::cmd::clear} , 
-    {"echo"  , "echo" , eshell::cmd::echo} , 
-    {"mem"   , "show mem usage" , eshell::cmd::mem} , 
+    {"read"   , "read a file" , eshell::cmd::read} , 
+    {"clear"  , "clears the screen" , eshell::cmd::clear} , 
+    {"echo"   , "echo" , eshell::cmd::echo} , 
+    {"mem"    , "show mem usage" , eshell::cmd::mem} , 
 };
 
 void eshell::start() {
     debug::out::printf("Entering the Embedded Shell\n");
-    
+    debug::out::printf(DEBUG_INFO , "  _______ _            __  __ _                _                        _   _____           _           _   \n");
+    debug::out::printf(DEBUG_INFO , " |__   __| |          |  \\/  (_)              | |                      | | |  __ \\         (_)         | |  \n");
+    debug::out::printf(DEBUG_INFO , "    | |  | |__   ___  | \\  / |_  ___ _ __ ___ | | _____ _ __ _ __   ___| | | |__) | __ ___  _  ___  ___| |_ \n");
+    debug::out::printf(DEBUG_INFO , "    | |  | '_ \\ / _ \\ | |\\/| | |/ __| '__/ _ \\| |/ / _ \\ '__| '_ \\ / _ \\ | |  ___/ '__/ _ \\| |/ _ \\/ __| __|\n");
+    debug::out::printf(DEBUG_INFO , "    | |  | | | |  __/ | |  | | | (__| | | (_) |   <  __/ |  | | | |  __/ | | |   | | | (_) | |  __/ (__| |_ \n");
+    debug::out::printf(DEBUG_INFO , "    |_|  |_| |_|\\___| |_|  |_|_|\\___|_|  \\___/|_|\\_\\___|_|  |_| |_|\\___|_| |_|   |_|  \\___/| |\\___|\\___|\\__|\n");
+    debug::out::printf(DEBUG_INFO , "                                                                                          _/ |              \n");
+    debug::out::printf(DEBUG_INFO , "                                                                                         |__/               \n");
     InputReader kbd_reader;
     kbd_reader.open("keyboard");
     String current_dir_name("@");
     file_t *current_dir_f = vfs::open({current_dir_name.c_str() , nullptr} , FILE_OPEN_READONLY);
+    eshell::cmd::help(current_dir_f , 1 , nullptr);
     
     while(1) {
         String str;
         vfs::get_full_filename(current_dir_f , current_dir_name);
-        debug::out::printf("eshell: %s > " , current_dir_name.c_str());
+        debug::out::printf(DEBUG_INFO , "eshell: %s > " , current_dir_name.c_str());
         read_input(kbd_reader , str);
 
         LinkedList<String*>parsed_arguments;
@@ -160,6 +169,7 @@ int eshell::cmd::cd(file_t* &current_dir , int argc , char **argv) {
         debug::out::printf("\"%s\" is not a directory\n" , argv[1]);
         return -1;
     }
+    vfs::close(current_dir);
     current_dir = new_dir;
     return 0;
 }
@@ -192,6 +202,29 @@ int eshell::cmd::ls(file_t* &current_dir , int argc , char **argv) {
         }
         ptr = ptr->next;
     }
+    return 0;
+}
+
+int eshell::cmd::read(file_t* &current_dir , int argc , char **argv) {
+    if(argc != 2) debug::out::printf("Usage : read [file name]\n");
+
+    file_t *file = vfs::open({argv[1] , current_dir} , FILE_OPEN_READONLY);
+    if(file == nullptr) {
+        debug::out::printf("Error : file \"%s\" not found\n" , argv[1]);
+        return -1;
+    }
+
+    max_t file_size = file->info->file_size;
+    debug::out::printf("file size : %lld\n" , file_size);
+    debug::out::printf("--------------------------------\n");
+    char buffer[516];
+    for(max_t offset = 0; offset <= file_size; offset += 512) {
+        vfs::read(file , 512 , buffer);
+        debug::out::printf("%s\n" , buffer);
+    }
+    debug::out::printf("--------------------------------\n");
+    memory::pmem_free(buffer);
+    vfs::close(file);
     return 0;
 }
 

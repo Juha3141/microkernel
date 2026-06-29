@@ -9,9 +9,16 @@ extern char __kernel_main_end__;
 
 #define DUMP_STACK_LVL_SAFE(N) \
     debug::out::printf(DEBUG_WARNING , "      %d. pc=0x%llx\n" , N , __builtin_return_address(N)); \
-    if(__builtin_return_address(N) >= &__kernel_main_start__ && __builtin_return_address(N) <= &__kernel_main_end__) return; \
+    if(__builtin_return_address(N) >= &__kernel_main_start__ && __builtin_return_address(N) <= &__kernel_main_end__ \
+    || (max_t)__builtin_return_address(N) >= TO_VMEM(max_phys_addr)) return; \
 
 static inline void dump_stack_until_main(void) {
+    max_t max_phys_addr = 0;
+    auto ptr = memory::global_kmemmap();
+    while(ptr != nullptr) {
+        max_phys_addr = max(max_phys_addr , ptr->end_address);
+        ptr = ptr->next;
+    }
     DUMP_STACK_LVL_SAFE(3)
     DUMP_STACK_LVL_SAFE(4)
     DUMP_STACK_LVL_SAFE(5)

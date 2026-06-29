@@ -236,12 +236,12 @@ static void handle_dot_directories(file_t *directory) {
     bool dotdot_exists = false;
     while(ptr != nullptr) {
         if(strcmp(ptr->object->name , ".") == 0) {
-            memory::pmem_free(ptr->object->info);
+            delete ptr->object->info;
             ptr->object->info = directory->info;
             dot_exists = true;
         } 
         else if(strcmp(ptr->object->name , "..") == 0) {
-            memory::pmem_free(ptr->object->info);
+            delete ptr->object->info;
             ptr->object->info = directory->info->parent_dir->info;
             dotdot_exists = true;
         }
@@ -369,7 +369,6 @@ file_t *vfs::open(const general_file_name file_path , int option) {
     open_info->new_cache_linked_list->init();
     open_info->cache_hash_table->init(512 , [](max_t&d,max_t s){d=s;} , [](max_t d,max_t s){ return (bool)(d==s); } , 
     [](max_t key) { return (hash_index_t)(key%512); });
-    debug::out::printf("who_open_list : 0x%lx\n" , file->info->who_open_list);
     file->info->who_open_list->add_rear(open_info);
     return file;
 }
@@ -542,8 +541,9 @@ static block_cache_t *get_cache_data(file_t *file , max_t linear_block_addr , op
     
     // actual physical location of the block
     max_t block_phys_location = cluster_start_phys_location+(linear_block_addr%cluster_size);
-
+    debug::out::printf("block_phys_location = %lld\n" , block_phys_location);
     cache = open_info->cache_hash_table->search(block_phys_location);
+    debug::out::printf("cache found from hash table = 0x%llx\n" , cache);
     if(cache != 0x00) return cache;
 
     LinkedList<block_cache_t*>::node_s *n = open_info->new_cache_linked_list->search(
@@ -551,11 +551,9 @@ static block_cache_t *get_cache_data(file_t *file , max_t linear_block_addr , op
     );
     if(n != 0x00) return n->object;
     // we actually need to create new cache page now..
-
-    // cache does not exist, create new cache
-    debug::out::printf("cluster location : %d\n" , cluster_start_phys_location);
     
     unsigned char *temp_buffer = (unsigned char *)memory::pmem_alloc(cluster_size*block_size);
+    debug::out::printf("temp_buffer size = %lld\n" , cluster_size*block_size);
     file_loc->block_device->driver->read(file_loc->block_device , cluster_start_phys_location , cluster_size , temp_buffer);
     
     block_cache_t **caches_ptr = (block_cache_t **)memory::pmem_alloc(cluster_size*sizeof(block_cache_t *));
@@ -587,9 +585,8 @@ long vfs::read(file_t *file , max_t size , void *buffer) {
     max_t end_offset = 0;
     max_t block_size;
     max_t block_start;
-    max_t block_end;
     max_t block_count;
-    
+    debug::disable();
     physical_file_location *file_loc;
     if(file->info == nullptr||file->info->who_open_list == nullptr) return 0; // error
     current_task_id = 0x00; // currently not implemented yet!
@@ -606,26 +603,29 @@ long vfs::read(file_t *file , max_t size , void *buffer) {
     open_offset = who_opened->object->open_offset;
     end_offset = min(who_opened->object->maximum_offset , open_offset+size);
     block_start = open_offset/block_size;
-    block_end = (open_offset+size)/block_size;
-    block_count = block_end-block_start+1;
-/*
+    block_count = size/block_size + (((open_offset+size)%block_size == 0) ? 0 : 1);
+
     debug::out::printf("block_size : %d\n" , block_size);
 
     debug::out::printf("read size : %d\n" , end_offset-open_offset);
 
     debug::out::printf("open_offset : %d\n" , open_offset);
     debug::out::printf("block_start : %ld\n" , block_start);
-    debug::out::printf("block_end   : %ld\n" , block_end);
-*/
+    debug::out::printf("block_count : %ld\n" , block_count);
+
     block_cache_t **caches = (block_cache_t **)memory::pmem_alloc(block_count*sizeof(block_cache_t*));
 
     // Calculate & Copy
     max_t off = open_offset;
     max_t buffer_offset = 0; 
     max_t read_size = 0;
-    for(max_t b = block_start; b <= block_end; b++) {
+    for(max_t b = block_start; b < block_start+block_count; b++) {
         caches[b-block_start] = get_cache_data(file , b , who_opened->object);
-        debug::out::printf("cache : 0x%X\n" , caches[b-block_start]);
+        debug::out::printf("cache : 0x%llx\n" , caches[b-block_start]);
+        debug::out::printf("   block    = 0x%llx\n" , caches[b-block_start]->block);
+        debug::out::printf("   block_sz = %lld\n" , caches[b-block_start]->block_size);
+        debug::out::printf("   flushed  = %lld\n" , caches[b-block_start]->flushed);
+        debug::out::printf("   lba      = %lld\n" , caches[b-block_start]->linear_block_addr);
         max_t boff = off%block_size;
         max_t bsize = min(end_offset-off , block_size-boff);
         memcpy((void *)((max_t)buffer+buffer_offset) , (void *)((max_t)caches[b-block_start]->block+boff) , bsize);
@@ -637,6 +637,7 @@ long vfs::read(file_t *file , max_t size , void *buffer) {
     debug::out::printf("read_size : %d\n" , read_size);
 
     memory::pmem_free(caches);
+    debug::enable();
     return read_size;
 }
 

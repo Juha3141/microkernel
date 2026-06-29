@@ -98,7 +98,6 @@ static dword fat12_find_next_cluster(block_device *device , dword cluster , fat:
     word ret_cluster;
     device->driver->read(device , sector_address , 1 , fat_area);
     max_t b_index = (max_t)(index%((common_vbr_t *)ginfo.vbr)->bytes_per_sector);
-    debug::out::printf("b_index = %lld\n" , b_index);
     ret_cluster = fat_area[b_index]|(fat_area[b_index+1] << 8);
     
     if(cluster%2) ret_cluster >>= 4; // odd
@@ -888,8 +887,8 @@ int fat::get_file_list(file_t *dir_file , LinkedList<file_t*> &file_list , gener
         }
         else {
             get_filename_from_sfn(temp_file_name , sfn_entry);
-            
-            // Don't really have to add "." and ".." directory
+
+            // Do NOT add "." and ".." directory
             if(strcmp(temp_file_name , ".") == 0||strcmp(temp_file_name , "..") == 0) continue;
             file_info *new_file_info = write_file_info_by_sfn(dir_file , dir_location , temp_file_name , *sfn_entry , ginfo);
             file_t *new_file = vfs::create_file_struct(temp_file_name , new_file_info);

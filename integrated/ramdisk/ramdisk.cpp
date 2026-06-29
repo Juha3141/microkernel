@@ -43,12 +43,13 @@ max_t ramdisk_driver::read(block_device *device , max_t sector_address , max_t c
     max_t offset = 0 , mem_addr , tmp;
     max_t linear_addr = TO_VMEM(info->physical_address);
     max_t start_addr = linear_addr+(sector_address*info->bytes_per_sector);
-    for(mem_addr = start_addr; mem_addr < (start_addr+(count*info->bytes_per_sector)); mem_addr += sizeof(max_t)) {
-        if(mem_addr >= (linear_addr+(info->total_sector_count*info->bytes_per_sector))) break;
-        *((max_t *)((max_t)buffer+offset)) = *((max_t *)mem_addr);
-        offset += sizeof(max_t);
-    }
-    return (mem_addr-start_addr);
+    max_t ramdisk_limit = info->total_sector_count*info->bytes_per_sector+linear_addr;
+    max_t sz   = min(start_addr+count*info->bytes_per_sector , ramdisk_limit)-start_addr;
+    // check for address
+    if(start_addr >= ramdisk_limit) return 0;
+    
+    memcpy(buffer , (void *)start_addr , sz);
+    return sz;
 }
 
 max_t ramdisk_driver::write(block_device *device , max_t sector_address , max_t count , void *buffer) {
@@ -56,12 +57,13 @@ max_t ramdisk_driver::write(block_device *device , max_t sector_address , max_t 
     max_t offset = 0 , mem_addr , tmp;
     max_t linear_addr = TO_VMEM(info->physical_address);
     max_t start_addr = linear_addr+(sector_address*info->bytes_per_sector);
-    for(mem_addr = start_addr; mem_addr < (start_addr+(count*info->bytes_per_sector)); mem_addr += sizeof(max_t)) {
-        if(mem_addr >= (linear_addr+(info->total_sector_count*info->bytes_per_sector))) break;
-        *((max_t *)mem_addr) = *((max_t *)((max_t)buffer+offset));
-        offset += sizeof(max_t);
-    }
-    return (mem_addr-start_addr);
+    max_t ramdisk_limit = info->total_sector_count*info->bytes_per_sector+linear_addr;
+    max_t sz   = min(start_addr+count*info->bytes_per_sector , ramdisk_limit)-start_addr;
+    // check for address
+    if(start_addr >= ramdisk_limit) return 0;
+    
+    memcpy((void *)start_addr , buffer , sz);
+    return sz;
 }
 
 bool ramdisk_driver::get_geometry(block_device *device , device_geometry &geometry) {

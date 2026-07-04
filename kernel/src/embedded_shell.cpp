@@ -213,16 +213,24 @@ int eshell::cmd::read(file_t* &current_dir , int argc , char **argv) {
         debug::out::printf("Error : file \"%s\" not found\n" , argv[1]);
         return -1;
     }
+    if(file->info->file_type == FILE_TYPE_DIRECTORY) {
+        debug::out::printf("Error : cannot read a directory\n");
+        return -1;
+    }
 
     max_t file_size = file->info->file_size;
     debug::out::printf("file size : %lld\n" , file_size);
     debug::out::printf("--------------------------------\n");
-    char buffer[516];
-    for(max_t offset = 0; offset <= file_size; offset += 512) {
-        vfs::read(file , 512 , buffer);
-        debug::out::printf("%s\n" , buffer);
+    
+    constexpr int chunk_sz = 256;
+    char buffer[chunk_sz];
+    for(max_t offset = 0; offset <= file_size; offset += chunk_sz) {
+        int read_size = vfs::read(file , chunk_sz , buffer);
+        buffer[read_size] = '\0';
+        
+        debug::out::printf("%s" , buffer);
     }
-    debug::out::printf("--------------------------------\n");
+    debug::out::printf("\n\n--------------------------------\n");
     memory::pmem_free(buffer);
     vfs::close(file);
     return 0;

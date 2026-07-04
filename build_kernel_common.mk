@@ -15,7 +15,7 @@ MAINBINARYFOLDER = $(BINARYFOLDER)/$(CURRENTFOLDER)
 ifeq ($(COMPILE_TYPE),kernel)
 # COMPILE_TYPE = kernel
 
-SUBDIRECTORIES = $(subst $(COMMON_SRCFOLDER),$(MAINBINARYFOLDER),$(sort $(dir $(wildcard $(COMMON_SRCFOLDER)/*/))))
+SUBDIRECTORIES = $(subst $(SEARCH_LOCATION),$(MAINBINARYFOLDER),$(sort $(dir $(wildcard $(SEARCH_LOCATION)/*/))))
 SETUPTARGETS = $(subst .cpp,.obj,$(addprefix $(SEARCH_LOCATION)/,$(KERNEL_SETUP_SOURCES)))
 MAINTARGETS  = $(filter-out $(SETUPTARGETS), \
 	$(subst .cpp,.obj,$(wildcard $(SEARCH_LOCATION)/*.cpp) $(wildcard $(SEARCH_LOCATION)/*/*.cpp)))
@@ -33,6 +33,8 @@ all: prepare $(subst .obj,.setupobj,$(SETUPTARGETS)) $(MAINTARGETS) $(ASMTARGETS
 
 prepare:
 	mkdir -p $(MAINBINARYFOLDER)
+
+	@echo "Subdirectories : $(SUBDIRECTORIES)"
 
 ifneq "$(SUBDIRECTORIES)" ""
 	mkdir -p $(subst .,$(MAINBINARYFOLDER),$(SUBDIRECTORIES))

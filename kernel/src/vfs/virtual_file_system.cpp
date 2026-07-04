@@ -236,13 +236,9 @@ static void handle_dot_directories(file_t *directory) {
     bool dotdot_exists = false;
     while(ptr != nullptr) {
         if(strcmp(ptr->object->name , ".") == 0) {
-            delete ptr->object->info;
-            ptr->object->info = directory->info;
             dot_exists = true;
         } 
         else if(strcmp(ptr->object->name , "..") == 0) {
-            delete ptr->object->info;
-            ptr->object->info = directory->info->parent_dir->info;
             dotdot_exists = true;
         }
 
@@ -251,6 +247,7 @@ static void handle_dot_directories(file_t *directory) {
 
     if(!dotdot_exists) {
         // If this is root directory, ".." points to itself
+        debug::out::printf("directory->info->parent_dir = 0x%llx\n" , directory->info->parent_dir);
         file_t *file = vfs::create_file_struct(".." , directory->info->parent_dir ? directory->info->parent_dir->info : directory->info);
         file_list->add_front(file);
     }
@@ -295,12 +292,13 @@ static file_t *get_file_by_cache_and_phys(const general_file_name file_path , in
     file_t *tree_file = file;
     for(int i = last_hit_loc; i < level_count-levels_to_exclude; i++) {
         debug::out::printf("file_list[i] = %s\n" , file_list[i]);
-        physical_file_location *pfileloc = fsdev::get_physical_loc_info(file);
+        physical_file_location *pfileloc = fsdev::get_physical_loc_info(tree_file);
 
         LinkedList<file_t*>* &file_t_list = tree_file->info->file_list;
         if(file_t_list == nullptr) {
             file_t_list = new LinkedList<file_t*>;
-            pfileloc->fs_driver->read_directory(file , *file_t_list);
+            // cache the file list in the directory using fs driver
+            pfileloc->fs_driver->read_directory(tree_file , *file_t_list);
             handle_dot_directories(file);
         }
         
@@ -336,7 +334,7 @@ bool vfs::create(const general_file_name file_path , word file_type) {
     char *temp_name = (char *)memory::pmem_alloc(strlen(file_path.file_name)+1);
 
     directory = get_file_by_cache_and_phys(file_path , 1);
-        if(directory == 0x00) {
+    if(directory == 0x00) {
         memory::pmem_free(temp_name);
         return false;
     }
@@ -588,6 +586,7 @@ long vfs::read(file_t *file , max_t size , void *buffer) {
     max_t block_count;
     debug::disable();
     physical_file_location *file_loc;
+    if(file->info->file_type == FILE_TYPE_DIRECTORY) return 0;
     if(file->info == nullptr||file->info->who_open_list == nullptr) return 0; // error
     current_task_id = 0x00; // currently not implemented yet!
     

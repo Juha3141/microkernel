@@ -66,10 +66,13 @@ private:
         next->previous = first;
     }
     bool remove_node(node_s *target) {
-        if(target == 0x00) return false;
+        if(target == nullptr) return false;
         
-        if(target->previous == 0x00) start_node = target->next;
+        if(target->previous == nullptr) start_node = target->next;
         else target->previous->next = target->next;
+
+        if(target->next == nullptr) last_node = target->previous;
+        else target->next->previous = target->previous;
         count--;
         delete target;
         return true;

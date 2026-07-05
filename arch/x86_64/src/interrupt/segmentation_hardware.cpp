@@ -22,32 +22,30 @@ extern x86_64::GDTContainer *gdt_container;
 
 /// @brief Hardware-level segmentation initialization, based on kseginfo and ksegvalues
 /// @param kseginfo Information for Default kernel segment 
-/// @param ksegvalues Actual segment value(or anything like that) of the default kernel segment
-void segmentation::hardware::init(kernel_segments_info kseginfo , kernel_segments_value &ksegvalues) {
+/// @return Actual segment value(or anything like that) of the default kernel segment
+segmentation::kernel_segments_value segmentation::hardware::init(kernel_segments_info kseginfo) {
     interrupt::hardware::disable();
     
     gdt_container = memory::new_global_object<x86_64::GDTContainer>();
     gdt_container->init(GDT_ENTRYCOUNT);
 
-    ksegvalues.kernel_code = register_system_segment(kseginfo.kernel_code.start_address , kseginfo.kernel_code.length , kseginfo.kernel_code.segment_type);
-    ksegvalues.kernel_data = register_system_segment(kseginfo.kernel_data.start_address , kseginfo.kernel_data.length , kseginfo.kernel_data.segment_type);
+    kernel_segments_value ksegvalues;
+    ksegvalues.kernel_code = register_system_segment(kseginfo.kernel_code.start_address , kseginfo.kernel_code.length , kseginfo.kernel_code.segment_type , SEGMENT_PRIVILEGE_KERNEL);
+    ksegvalues.kernel_data = register_system_segment(kseginfo.kernel_data.start_address , kseginfo.kernel_data.length , kseginfo.kernel_data.segment_type , SEGMENT_PRIVILEGE_KERNEL);
 
     gdt_container->reg.size = GDT_ENTRYCOUNT*sizeof(struct x86_64::GDTEntry);
     max_t gdtr_ptr = (max_t)&gdt_container->reg;
-    debug::out::printf("gdtr_ptr      : 0x%X\n" , gdtr_ptr);
-    debug::out::printf("gdt base_addr : 0x%X\n" , gdt_container->entries);
-    debug::out::printf(DEBUG_INFO , "sizeof(GDTEntry) : %d\n" , sizeof(x86_64::GDTEntry));
-    debug::out::printf(DEBUG_INFO , "sizeof(LDTEntry) : %d\n" , sizeof(x86_64::LDTEntry));
 
     __asm__ ("lgdt [%0]"::"r"(gdtr_ptr));
+    return ksegvalues;
 }
 
-segment_t segmentation::hardware::register_system_segment(max_t start_address , max_t length , word segment_type) {
+segment_t segmentation::hardware::register_system_segment(max_t start_address , max_t length , word segment_type , word privilege) {
     segment_t segment_value = 0x00;
     
     // Determine type according to segment_type
     byte type , flags , rpl;
-    x86_64::gdt::convert_type_flags(segment_type , type , flags , rpl);
+    x86_64::gdt::convert_type_flags(segment_type , privilege , type , flags , rpl);
     if(length > 0xFFFFF) { // Enable Granularity?
         flags |= GDT_FLAGS_G; // Granularity = 1 : Multiply 4096 to limit
         length = length >> 12;
@@ -58,12 +56,12 @@ segment_t segmentation::hardware::register_system_segment(max_t start_address , 
     return segment_value;
 }
 
-segment_t segmentation::hardware::register_task_segment(max_t start_address , max_t length , word segment_type) {
+segment_t segmentation::hardware::register_task_segment(max_t start_address , max_t length , word segment_type , word privilege) {
     segment_t segment_value = 0x00;
     
     // Determine type according to segment_type
     byte type , flags , rpl;
-    x86_64::gdt::convert_type_flags(segment_type , type , flags , rpl);
+    x86_64::gdt::convert_type_flags(segment_type , privilege , type , flags , rpl);
     if(length > 0xFFFFF) { // Enable Granularity?
         flags |= GDT_FLAGS_G; // Granularity = 1 : Multiply 4096 to limit
         length = length >> 12;

@@ -5,87 +5,44 @@
 
 #include <string.hpp>
 
-segmentation::SegmentationManager *segment_mgr;
-
-bool segmentation::SegmentationManager::register_segment(const char *segment_name , segment_t segment_value , word segment_type , max_t task_id) {
-    max_t index = this->add_empty_space();
-    if(index == INVALID) return false;
-
-    strcpy((*container[index]).name , segment_name);
-    (*container[index]).value = segment_value;
-
-    if(((segment_type & SEGMENT_TYPE_TASK_SEGMENT) == SEGMENT_TYPE_TASK_SEGMENT) && (task_id == INVALID)) {
-        debug::out::printf(DEBUG_WARNING , "Undetermined/invalid task id given to task segment(\"%s\")\n" , segment_name);
-        return false;
-    }
-    return true;
-}
-
-static bool checkfunc(segmentation::segment_info_t &data , const char *name) {
-    return (strcmp(data.name , name) == 0);
-}
-
-segment_t segmentation::SegmentationManager::discard_segment(const char *segment_name) {
-    segment_t value;
-
-    max_t id = search(
-        [segment_name](segment_info_t &data){ return (bool)(strcmp(data.name , segment_name) == 0); }
-    );
-    if(id == INVALID) return 0x00;
-    value = this->get(id).value;
-    if(discard(id) == false) return 0x00;
-
-    return value;
-}
-
-segment_t segmentation::SegmentationManager::search_segment(const char *segment_name) {
-    max_t id = search(
-        [segment_name](segment_info_t &data) { return (strcmp(data.name , segment_name) == 0); }
-    );
-    if(id == INVALID) return SEGMENT_VALUE_INVALID;
-    return this->get(id).value;
-}
+FixedArray<segmentation::segment_info_t> *segment_mgr;
 
 #ifdef CONFIG_USE_SEGMENTATION
 
 void segmentation::init(void) {
     // default kernel segments
     struct kernel_segments_info kseginfo;
-    struct kernel_segments_value ksegvalue;
-    segment_mgr = memory::new_global_object<segmentation::SegmentationManager>();
+    segment_mgr = memory::new_global_object<FixedArray<segmentation::segment_info_t>>();
     segment_mgr->init(CONFIG_SEGMENTATION_SEGMENT_MAXCOUNT);
     
-    /* Use 1-to-1 correspondence for kernel segment */
+    /* Use flat model for kernel segment */
     kseginfo.kernel_code.start_address = 0x00;
     kseginfo.kernel_code.length = ARCHITECTURE_LIMIT;
-    kseginfo.kernel_code.segment_type = SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_CODE_SEGMENT|SEGMENT_TYPE_KERNEL_PRIVILEGE;
+    kseginfo.kernel_code.segment_type = SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_CODE_SEGMENT|SEGMENT_TYPE_FLAT;
+    kseginfo.kernel_code.privilege = SEGMENT_PRIVILEGE_KERNEL;
     
     kseginfo.kernel_data.start_address = 0x00;
     kseginfo.kernel_data.length = ARCHITECTURE_LIMIT;
-    kseginfo.kernel_data.segment_type = SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_DATA_SEGMENT|SEGMENT_TYPE_KERNEL_PRIVILEGE;
+    kseginfo.kernel_data.segment_type = SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_DATA_SEGMENT|SEGMENT_TYPE_FLAT;
+    kseginfo.kernel_data.privilege = SEGMENT_PRIVILEGE_KERNEL;
 
     // Initialize both hardware/software
-    segmentation::hardware::init(kseginfo , ksegvalue);
-    segment_mgr->register_segment(SEGMENT_NAME_CODE , ksegvalue.kernel_code , kseginfo.kernel_code.segment_type);
-    segment_mgr->register_segment(SEGMENT_NAME_DATA , ksegvalue.kernel_data , kseginfo.kernel_data.segment_type);
+    auto [code_segment_value , data_segment_value] = segmentation::hardware::init(kseginfo);
+    kseginfo.kernel_code.value = code_segment_value;
+    kseginfo.kernel_data.value = data_segment_value;
 
-    segmentation::register_segment(SEGMENT_NAME_1TO1_USER_CODE , 0x00 , ARCHITECTURE_LIMIT , SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_CODE_SEGMENT|SEGMENT_TYPE_USER_PRIVILEGE);
-    segmentation::register_segment(SEGMENT_NAME_1TO1_USER_DATA , 0x00 , ARCHITECTURE_LIMIT , SEGMENT_TYPE_SYSTEM_SEGMENT|SEGMENT_TYPE_DATA_SEGMENT|SEGMENT_TYPE_USER_PRIVILEGE);
+    segment_mgr->add(kseginfo.kernel_code);
+    segment_mgr->add(kseginfo.kernel_data);
 
-    set_to_code_segment(SEGMENT_NAME_CODE);
-    set_to_data_segment(SEGMENT_NAME_DATA);
+    set_to_code_segment(SEGMENT_ID_KERNEL_CODE);
+    set_to_data_segment(SEGMENT_ID_KERNEL_DATA);
 }
     
-bool segmentation::get_segment_info(const char *segment_name , segmentation::segment_info_t &segment_info) {
-    max_t id = segment_mgr->search(
-        [segment_name](segment_info_t &data) { return (bool)(strcmp(data.name , segment_name) == 0); }
-    );
-    if(id == INVALID) return false;
-    memcpy(&segment_info , &(segment_mgr[id]) , sizeof(segment_info_t));
-    return true;
+bool segmentation::get_segment_info(max_t id , segmentation::segment_info_t &segment_info) {
+    return segment_mgr->get(id , segment_info);
 }
     
-bool segmentation::get_segment_info(segment_t segment_value , segmentation::segment_info_t &segment_info) {
+bool segmentation::get_segment_info_from_val(segment_t segment_value , segmentation::segment_info_t &segment_info) {
     max_t id = segment_mgr->search(
         [segment_value](segment_info_t &data){ return (bool)(data.value == segment_value); }
     );
@@ -94,45 +51,54 @@ bool segmentation::get_segment_info(segment_t segment_value , segmentation::segm
     return true;
 }
 
-segment_t segmentation::get_segment_value(const char *segment_name) {
-    max_t id = segment_mgr->search(
-        [segment_name](segment_info_t &data){ return (bool)(strcmp(data.name , segment_name) == 0); } 
-    );
-    if(id == INVALID) return SEGMENT_VALUE_INVALID;
-    return segment_mgr->get(id).value;
+segment_t segmentation::get_segment_value(max_t id) {
+    segment_info_t seginfo;
+    if(!segment_mgr->get(id , seginfo)) return INVALID;
+
+    return seginfo.value;
 }
 
-bool segmentation::register_segment(const char *segment_name , max_t start_address , max_t length , word segment_type , max_t task_id) {
+max_t segmentation::create_segment(max_t start_address , max_t length , word segment_type , word privilege) {
     segment_t segment;
+    segment_info_t info = {
+        .start_address = start_address , 
+        .length = length , 
+        .segment_type = segment_type , 
+        .privilege = privilege , 
+    };
     if((segment_type & SEGMENT_TYPE_SYSTEM_SEGMENT) == SEGMENT_TYPE_SYSTEM_SEGMENT) {
-        segment = segmentation::hardware::register_system_segment(start_address , length , segment_type);
+        segment = segmentation::hardware::register_system_segment(start_address , length , segment_type , privilege);
     }
     else if((segment_type & SEGMENT_TYPE_TASK_SEGMENT) == SEGMENT_TYPE_TASK_SEGMENT) {
-        segment = segmentation::hardware::register_task_segment(start_address , length , segment_type);
+        segment = segmentation::hardware::register_task_segment(start_address , length , segment_type , privilege);
     }
-    if(segment == SEGMENT_VALUE_INVALID) {
-        return false;
-    }
-    return segment_mgr->register_segment(segment_name , segment , segment_type , task_id);
+    if(segment == SEGMENT_VALUE_INVALID) return false;
+    info.value = segment;
+
+    return segment_mgr->add(info);
 }
 
-bool segmentation::discard_segment(const char *segment_name) {
-    segment_t segment = segment_mgr->discard_segment(segment_name);
-    if(segment == SEGMENT_VALUE_INVALID) {
-        return false;
-    }
-    segmentation::hardware::discard_segment(segment);
+bool segmentation::discard_segment(max_t id) {
+    segment_info_t info;
+    if(!segment_mgr->get(id , info)) return false;
+
+    segment_mgr->discard(id);
+    segmentation::hardware::discard_segment(info.value);
     return true;
 }
 
-void segmentation::set_to_code_segment(const char *segment_name , ptr_t new_point) {
-    segment_t segment = segment_mgr->search_segment(segment_name);
+void segmentation::set_to_code_segment(max_t id , ptr_t new_point) {
+    segment_t segment = get_segment_value(id);
+    if(segment == INVALID) return;
+
     if(new_point == ARCHITECTURE_LIMIT) segmentation::hardware::set_to_code_segment(segment);
     else segmentation::hardware::set_to_code_segment(segment , new_point);
 }
 
-void segmentation::set_to_data_segment(const char *segment_name) {
-    segment_t segment = segment_mgr->search_segment(segment_name);
+void segmentation::set_to_data_segment(max_t id) {
+    segment_t segment = get_segment_value(id);
+    if(segment == INVALID) return;
+
     segmentation::hardware::set_to_data_segment(segment);
 }
 

@@ -57,7 +57,7 @@ bool interrupt::hardware::register_interrupt(int number , ptr_t handler_ptr , wo
     if((interrupt_option & INTERRUPT_HANDLER_LEVEL_USER) == INTERRUPT_HANDLER_LEVEL_USER)     flags |= IDT_FLAGS_DPL3;
     idt_container->entries[number].flags = flags;
     idt_container->entries[number].type = type & 0x0F;
-    idt_container->entries[number].selector = segmentation::get_segment_value(SEGMENT_NAME_CODE); 
+    idt_container->entries[number].selector = segmentation::get_segment_value(SEGMENT_ID_KERNEL_CODE); 
     idt_container->entries[number].reserved = 0x00;
     idt_container->entries[number].IST 
 #ifdef CONFIG_USE_IST

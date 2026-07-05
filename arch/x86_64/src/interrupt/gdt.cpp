@@ -3,7 +3,7 @@
 // where do I initialize gdt container?
 x86_64::GDTContainer *gdt_container;
 
-void x86_64::gdt::convert_type_flags(word segment_type , byte &type , byte &flags , byte &rpl) {
+void x86_64::gdt::convert_type_flags(word segment_type , word privilege , byte &type , byte &flags , byte &rpl) {
     // determine real "gdt" type
     rpl = 0; // default : kernel
     type = GDT_TYPE_RW; // read/writeable
@@ -14,7 +14,7 @@ void x86_64::gdt::convert_type_flags(word segment_type , byte &type , byte &flag
     if((segment_type & SEGMENT_TYPE_TASK_SEGMENT) == SEGMENT_TYPE_TASK_SEGMENT) {
         type |= GDT_TYPE_LDT;
     }
-    if((segment_type & SEGMENT_TYPE_USER_PRIVILEGE) == SEGMENT_TYPE_USER_PRIVILEGE) {
+    if(privilege == SEGMENT_PRIVILEGE_USER) {
         flags |= GDT_FLAGS_DPL3;
         rpl = 3;
     }
